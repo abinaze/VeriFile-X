@@ -60,4 +60,4 @@ Report security vulnerabilities to [SECURITY.md](SECURITY.md).
 ---
 
 **Author:** Abinaze Binoy  
-**Contact:** abinazebinoy@example.com
+**Contact:** abinazebinoy@gmail.com
