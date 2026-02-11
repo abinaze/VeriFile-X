@@ -10,7 +10,7 @@
 
 **DO NOT** open public issues for security vulnerabilities.
 
-Please report security issues privately to: [your.email@example.com]
+Please report security issues privately to: abinazebinoy@gmail.com]
 
 Include:
 - Description of the vulnerability
