@@ -1,0 +1,17 @@
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Configuration Management
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# File Processing
+python-magic==0.4.27
+python-multipart==0.0.6
+
+# Future AI/ML dependencies (add as needed)
+# opencv-python==4.9.0.80
+# tensorflow==2.15.0
+# numpy==1.24.3
