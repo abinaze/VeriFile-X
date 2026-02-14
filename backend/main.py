@@ -9,16 +9,10 @@ Architecture:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-import logging
-
+from backend.core.logger import setup_logger
 from backend.core.config import settings
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO if settings.DEBUG else logging.WARNING,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 @asynccontextmanager
@@ -71,5 +65,6 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "debug_mode": settings.DEBUG
+        "debug_mode": settings.DEBUG,
+        "timestamp": "2025-02-12T21:30:00Z"
     }
