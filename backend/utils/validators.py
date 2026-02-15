@@ -94,30 +94,14 @@ def validate_file_size(file_bytes: bytes, filename: str) -> int:
 def validate_file(file_bytes: bytes, filename: str) -> dict:
     """
     Complete file validation (type + size).
-    
-    Args:
-        file_bytes: Raw file content
-        filename: Original filename
-        
-    Returns:
-        dict with validation results:
-            {
-                "valid": True,
-                "mime_type": "image/jpeg",
-                "extension": "jpg",
-                "size_bytes": 1024000,
-                "size_mb": 0.98
-            }
-            
-    Raises:
-        FileValidationError: If validation fails
     """
-    # Validate type
-    mime_type, extension = validate_file_type(file_bytes, filename)
-    
-    # Validate size
+
+    # Validate size first (fail fast for DoS protection)
     size_bytes = validate_file_size(file_bytes, filename)
-    
+
+    # Then validate type
+    mime_type, extension = validate_file_type(file_bytes, filename)
+
     return {
         "valid": True,
         "mime_type": mime_type,
