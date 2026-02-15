@@ -8,7 +8,7 @@ from datetime import datetime
 
 from backend.core.config import settings
 from backend.core.logger import setup_logger
-from backend.api.routes import upload
+from backend.api.routes import upload, analyze
 
 logger = setup_logger(__name__)
 
@@ -39,7 +39,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(upload.router)
-
+app.include_router(analyze.router)
 
 @app.get("/")
 async def root():
