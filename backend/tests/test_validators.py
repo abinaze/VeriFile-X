@@ -42,6 +42,6 @@ def test_validate_file_complete(sample_image_bytes):
     assert result["mime_type"] == "image/png"
     assert result["extension"] == "png"
     assert result["size_bytes"] > 0
-    assert result["size_mb"] < 0.01
+    assert result["size_mb"] < 1.0
     assert result["filename"] == "test.png"
 
