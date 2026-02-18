@@ -25,3 +25,10 @@ pytest-cov==4.1.0
 # Image Processing & Forensics
 Pillow==10.2.0
 imagehash==4.3.1
+
+# AI Detection & Analysis
+numpy==1.26.3
+scipy==1.11.4
+scikit-learn==1.4.0
+opencv-python==4.9.0.80
+slowapi==0.1.9
