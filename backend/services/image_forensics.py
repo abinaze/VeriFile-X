@@ -235,7 +235,8 @@ class ImageForensics:
         exif_data = self.extract_exif()
         hashes = self.generate_hashes()
         tampering = self.detect_tampering_indicators(exif_data)
-        
+        ai_detection = self.detect_ai_generation()
+
         # Basic image properties
         image_info = {
             "filename": self.filename,
@@ -257,13 +258,29 @@ class ImageForensics:
             "exif_data": exif_data,
             "hashes": hashes,
             "tampering_analysis": tampering,
+	    "ai_detection": ai_detection,
             "summary": {
                 "has_metadata": exif_data.get("has_exif", False),
                 "suspicious_flags_count": len(tampering["suspicious_flags"]),
-                "authenticity_confidence": tampering["confidence"]
+                "authenticity_confidence": tampering["confidence"],
+	        "ai_probability": ai_detection["ai_probability"],
+            "ai_classification": ai_detection["classification"]
             }
         }
         
         logger.info(f"Forensic report generated: {report['summary']}")
         
         return report
+
+    def detect_ai_generation(self) -> Dict[str, Any]:
+        """
+        Detect if image is AI-generated.
+        
+        Returns:
+            AI detection report
+        """
+        from backend.services.ai_detector import AIDetector
+        
+        logger.info(f"Running AI detection for {self.filename}")
+        detector = AIDetector(self.image_bytes, self.filename)
+        return detector.detect()
