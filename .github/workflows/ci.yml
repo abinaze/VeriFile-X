@@ -1,0 +1,57 @@
+name: VeriFile-X CI
+
+# Trigger on every push and pull request to main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Cache pip dependencies (speeds up CI runs)
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 4. Install system dependency for python-magic
+      - name: Install libmagic
+        run: sudo apt-get install -y libmagic1
+
+      # 5. Install Python dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      # 6. Run tests with coverage
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest backend/tests/ -v --tb=short
+
+      # 7. Upload coverage (optional, shows % on GitHub)
+      - name: Generate coverage report
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest backend/tests/ --cov=backend --cov-report=term-missing
