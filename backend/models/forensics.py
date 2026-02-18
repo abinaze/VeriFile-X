@@ -38,4 +38,22 @@ class ForensicReport(BaseModel):
     exif_data: Dict[str, Any]
     hashes: Dict[str, str]
     tampering_analysis: TamperingAnalysis
-    summary: ForensicReportSummary
+    ai_detection: Dict[str, Any]
+    summary: Dict[str, Any]
+
+
+class AIDetectionSignals(BaseModel):
+    """Detection signals for AI analysis."""
+    noise: Dict[str, Any]
+    frequency: Dict[str, Any]
+    jpeg: Dict[str, Any]
+    color: Dict[str, Any]
+
+
+class AIDetection(BaseModel):
+    """AI-generated image detection results."""
+    ai_probability: float
+    classification: str
+    confidence: str
+    detection_signals: AIDetectionSignals
+    summary: Dict[str, int]
