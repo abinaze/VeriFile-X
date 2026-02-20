@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriFile-X | Digital Forensics Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --navy-900: #0a1628;
+            --navy-800: #0f1f3a;
+            --navy-700: #1a2942;
+            --navy-600: #1e3a5f;
+            --blue-500: #2563eb;
+            --blue-400: #3b82f6;
+            --cyan-400: #22d3ee;
+            --slate-100: #f1f5f9;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-600: #475569;
+            --red-500: #ef4444;
+            --orange-500: #f97316;
+            --green-500: #10b981;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%);
+            color: var(--slate-100);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: rgba(10, 22, 40, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(37, 99, 235, 0.2);
+            padding: 1.25rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--blue-400) 0%, var(--cyan-400) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--slate-300);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--cyan-400);
+        }
+
+        .btn {
+            padding: 0.75rem 1.75rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-400) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid var(--blue-400);
+            color: var(--blue-400);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 5rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(34, 211, 238, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff 0%, var(--cyan-400) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--slate-400);
+            margin-bottom: 2.5rem;
+            line-height: 1.8;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 4rem;
+            margin-top: 4rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--cyan-400) 0%, var(--blue-400) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: var(--slate-400);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Analysis Section */
+        .analysis-section {
+            max-width: 1280px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: var(--slate-400);
+            font-size: 1.1rem;
+        }
+
+        .upload-container {
+            background: rgba(26, 41, 66, 0.5);
+            border: 2px dashed rgba(37, 99, 235, 0.3);
+            border-radius: 16px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .upload-container:hover {
+            border-color: var(--blue-400);
+            background: rgba(26, 41, 66, 0.7);
+        }
+
+        .upload-container.drag-over {
+            border-color: var(--cyan-400);
+            background: rgba(37, 99, 235, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            filter: grayscale(100%) brightness(0.8);
+        }
+
+        .upload-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtitle {
+            color: var(--slate-400);
+            margin-bottom: 2rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 4rem;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner-container {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin-bottom: 2rem;
+        }
+
+        .spinner-container div {
+            position: absolute;
+            border: 4px solid transparent;
+            border-top-color: var(--blue-400);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner-container div:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            animation-duration: 1s;
+        }
+
+        .spinner-container div:nth-child(2) {
+            width: 60px;
+            height: 60px;
+            margin: 10px;
+            border-top-color: var(--cyan-400);
+            animation-duration: 0.7s;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.1rem;
+            color: var(--slate-300);
+        }
+
+        /* Results */
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, rgba(26, 41, 66, 0.6) 0%, rgba(30, 58, 95, 0.4) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .result-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--cyan-400);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric {
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--slate-400);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--slate-100);
+        }
+
+        .metric-value.large {
+            font-size: 2.5rem;
+        }
+
+        /* AI Probability Bar */
+        .probability-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(15, 31, 58, 0.8);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 1rem;
+            position: relative;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green-500) 0%, var(--orange-500) 50%, var(--red-500) 100%);
+            border-radius: 6px;
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 1rem;
+        }
+
+        .badge-authentic {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green-500);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-suspicious {
+            background: rgba(249, 115, 22, 0.15);
+            color: var(--orange-500);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        .badge-ai {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red-500);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .hash-display {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: var(--cyan-400);
+            word-break: break-all;
+            background: rgba(15, 31, 58, 0.6);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        /* Features */
+        .features {
+            max-width: 1280px;
+            margin: 6rem auto;
+            padding: 0 2rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, rgba(26, 41, 66, 0.4) 0%, rgba(30, 58, 95, 0.2) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            border-radius: 12px;
+            padding: 2.5rem;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--blue-400);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+        }
+
+        .feature-number {
+            display: inline-block;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--blue-500) 0%, var(--cyan-400) 100%);
+            border-radius: 12px;
+            line-height: 48px;
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            color: var(--slate-400);
+            line-height: 1.7;
+        }
+
+        /* Error */
+        .error {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            color: var(--red-500);
+            margin-top: 2rem;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        /* Footer */
+        .footer {
+            background: rgba(10, 22, 40, 0.8);
+            border-top: 1px solid rgba(37, 99, 235, 0.2);
+            padding: 3rem 2rem 2rem;
+            margin-top: 6rem;
+        }
+
+        .footer-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--slate-400);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--cyan-400);
+        }
+
+        .footer-bottom {
+            color: var(--slate-600);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2.25rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .stats {
+                gap: 2rem;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">VeriFile-X</div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#analysis">Analysis</a></li>
+                <li><a href="/docs">API Docs</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X">GitHub</a></li>
+            </ul>
+            <button class="btn btn-primary" onclick="scrollToAnalysis()">Start Analysis</button>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Enterprise Digital Forensics Platform</h1>
+            <p class="hero-subtitle">Advanced AI-powered image analysis, cryptographic verification, and threat intelligence for comprehensive file authenticity assessment.</p>
+            <div class="hero-buttons">
+                <button class="btn btn-primary" onclick="scrollToAnalysis()">Analyze File Now</button>
+                <button class="btn btn-secondary" onclick="window.location.href='/docs'">API Documentation</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number">70-80%</div>
+                    <div class="stat-label">AI Detection Accuracy</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">&lt;1s</div>
+                    <div class="stat-label">Analysis Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Privacy Guaranteed</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Analysis Section -->
+    <section class="analysis-section" id="analysis">
+        <div class="section-header">
+            <h2>File Analysis Engine</h2>
+            <p>Upload any image for instant forensic analysis and AI detection</p>
+        </div>
+
+        <div class="upload-container" id="uploadZone">
+            <div class="upload-icon">📊</div>
+            <div class="upload-title">Drop File or Click to Upload</div>
+            <div class="upload-subtitle">Supported: JPEG, PNG, WebP | Maximum 10MB</div>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+            <button class="btn btn-primary">Select File</button>
+        </div>
+
+        <div class="loading" id="loadingSection">
+            <div class="spinner-container">
+                <div></div>
+                <div></div>
+            </div>
+            <div class="loading-text">Running forensic analysis pipeline...</div>
+        </div>
+
+        <div class="error" id="errorSection"></div>
+
+        <div class="results" id="resultsSection">
+            <div class="results-grid">
+                <!-- AI Detection -->
+                <div class="result-card">
+                    <h3>AI Detection</h3>
+                    <div class="metric">
+                        <div class="metric-label">AI Probability</div>
+                        <div class="metric-value large" id="aiPercentage">0%</div>
+                        <div class="probability-bar">
+                            <div class="probability-fill" id="probabilityBar"></div>
+                        </div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Classification</div>
+                        <div class="metric-value" id="classification">-</div>
+                        <div id="classificationBadge"></div>
+                    </div>
+                </div>
+
+                <!-- File Info -->
+                <div class="result-card">
+                    <h3>File Intelligence</h3>
+                    <div class="metric">
+                        <div class="metric-label">Format</div>
+                        <div class="metric-value" id="format">-</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Dimensions</div>
+                        <div class="metric-value" id="dimensions">-</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Size</div>
+                        <div class="metric-value" id="fileSize">-</div>
+                    </div>
+                </div>
+
+                <!-- Authenticity -->
+                <div class="result-card">
+                    <h3>Authenticity Status</h3>
+                    <div class="metric">
+                        <div class="metric-label">Confidence</div>
+                        <div class="metric-value" id="confidence">-</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Metadata</div>
+                        <div class="metric-value" id="hasMetadata">-</div>
+                    </div>
+                    <div id="statusBadges"></div>
+                </div>
+            </div>
+
+            <!-- Hashes -->
+            <div class="result-card">
+                <h3>Cryptographic Hashes</h3>
+                <div class="metric">
+                    <div class="metric-label">SHA-256</div>
+                    <div class="hash-display" id="sha256">-</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Perceptual Hash</div>
+                    <div class="hash-display" id="phash">-</div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="resetAnalysis()">Analyze Another File</button>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="section-header">
+            <h2>Core Capabilities</h2>
+            <p>Multi-layered forensic analysis powered by statistical AI and cryptographic verification</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-number">01</div>
+                <h3>AI Detection Engine</h3>
+                <p>Statistical analysis using noise patterns, frequency domain evaluation, JPEG artifacts, and color entropy to detect AI-generated images with 70-80% accuracy.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-number">02</div>
+                <h3>Metadata Extraction</h3>
+                <p>Comprehensive EXIF analysis including GPS coordinates, camera information, timestamps, and software traces for complete file provenance verification.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-number">03</div>
+                <h3>Cryptographic Hashing</h3>
+                <p>Multi-algorithm hash generation (SHA-256, MD5, perceptual) for integrity verification, duplicate detection, and similarity analysis across file variants.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-number">04</div>
+                <h3>Tampering Detection</h3>
+                <p>Advanced pattern recognition identifies editing software traces, missing metadata, and inconsistencies indicating file manipulation or forgery.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-number">05</div>
+                <h3>Zero File Storage</h3>
+                <p>Privacy-first architecture with all processing in-memory. No file persistence, no databases, immediate disposal after analysis completion.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-number">06</div>
+                <h3>Enterprise Security</h3>
+                <p>Multi-layer validation, rate limiting, TLS encryption, and strict CORS policies ensure secure analysis without exposure to malicious payloads.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#features">Features</a>
+                <a href="/docs">API Docs</a>
+                <a href="https://github.com/abinaze/VeriFile-X">GitHub</a>
+                <a href="https://github.com/abinaze/VeriFile-X/blob/main/docs/ARCHITECTURE.md">Architecture</a>
+                <a href="/health">Status</a>
+                <a href="mailto:abinazebinoy@gmail.com">Contact</a>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 VeriFile-X | Enterprise Digital Forensics Platform | Built by Abinaze Binoy</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+        
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const loadingSection = document.getElementById('loadingSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorSection = document.getElementById('errorSection');
+
+        function scrollToAnalysis() {
+            document.getElementById('analysis').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+        });
+
+        async function handleFile(file) {
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                showError('Unsupported file type. Please upload JPEG, PNG, or WebP.');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                showError('File exceeds 10MB limit.');
+                return;
+            }
+
+            uploadZone.style.display = 'none';
+            loadingSection.classList.add('active');
+            errorSection.classList.remove('active');
+            resultsSection.classList.remove('active');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/analyze/image`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Analysis failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                showError(error.message);
+                uploadZone.style.display = 'block';
+            } finally {
+                loadingSection.classList.remove('active');
+            }
+        }
+
+        function displayResults(data) {
+            resultsSection.classList.add('active');
+
+            const aiProb = data.ai_detection.ai_probability;
+            const aiPercent = Math.round(aiProb * 100);
+            
+            document.getElementById('aiPercentage').textContent = `${aiPercent}%`;
+            document.getElementById('probabilityBar').style.width = `${aiPercent}%`;
+
+            const classification = data.ai_detection.classification
+                .replace(/_/g, ' ')
+                .split(' ')
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' ');
+            document.getElementById('classification').textContent = classification;
+
+            const badgeDiv = document.getElementById('classificationBadge');
+            if (aiProb < 0.3) {
+                badgeDiv.innerHTML = '<span class="status-badge badge-authentic">AUTHENTIC</span>';
+            } else if (aiProb < 0.7) {
+                badgeDiv.innerHTML = '<span class="status-badge badge-suspicious">SUSPICIOUS</span>';
+            } else {
+                badgeDiv.innerHTML = '<span class="status-badge badge-ai">AI-GENERATED</span>';
+            }
+
+            document.getElementById('confidence').textContent = data.ai_detection.confidence.toUpperCase();
+            document.getElementById('format').textContent = data.file_info.format || 'Unknown';
+            document.getElementById('dimensions').textContent = `${data.file_info.width} × ${data.file_info.height}`;
+            document.getElementById('fileSize').textContent = `${(data.file_info.file_size_bytes / (1024 * 1024)).toFixed(2)} MB`;
+            document.getElementById('hasMetadata').textContent = data.summary.has_metadata ? 'Present' : 'Absent';
+            document.getElementById('sha256').textContent = data.hashes.sha256 || 'N/A';
+            document.getElementById('phash').textContent = data.hashes.perceptual_hash || 'N/A';
+
+            const statusBadges = document.getElementById('statusBadges');
+            if (data.summary.suspicious_flags_count > 0) {
+                statusBadges.innerHTML = `<span class="status-badge badge-suspicious">${data.summary.suspicious_flags_count} Suspicious Flags</span>`;
+            } else {
+                statusBadges.innerHTML = '';
+            }
+        }
+
+        function showError(message) {
+            errorSection.textContent = `Error: ${message}`;
+            errorSection.classList.add('active');
+        }
+
+        function resetAnalysis() {
+            uploadZone.style.display = 'block';
+            resultsSection.classList.remove('active');
+            errorSection.classList.remove('active');
+            fileInput.value = '';
+        }
+    </script>
+</body>
+</html>
