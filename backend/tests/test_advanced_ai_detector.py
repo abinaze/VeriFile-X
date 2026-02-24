@@ -65,5 +65,5 @@ def test_forensics_integration(sample_image_bytes):
     
     assert "ai_detection" in report
     assert "all_signals" in report["ai_detection"]
-    # FIXED: Now uses UltraAdvancedDetector which has 13 signals
+    # Uses UltraAdvancedDetector which has 13 signals
     assert report["summary"]["total_detection_signals"] == 13
