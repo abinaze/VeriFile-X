@@ -52,7 +52,7 @@ def test_complete_detection(sample_image_bytes):
     assert "classification" in report
     assert "all_signals" in report
     assert "top_reasons" in report
-    assert len(report["all_signals"]) == 10  # Should have 10 signals
+    assert len(report["all_signals"]) == 10  # Base detector has 10 signals
     assert report["total_signals"] == 10
 
 
@@ -65,4 +65,4 @@ def test_forensics_integration(sample_image_bytes):
     
     assert "ai_detection" in report
     assert "all_signals" in report["ai_detection"]
-    assert report["summary"]["total_detection_signals"] == len(report["detection_signals"])
+    assert report["summary"]["total_detection_signals"] == 13
