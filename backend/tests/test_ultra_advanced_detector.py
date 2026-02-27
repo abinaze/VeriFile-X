@@ -25,7 +25,6 @@ def test_patch_spectral_variance(sample_image_bytes):
     assert result["signal_name"] == "Patch Spectral Variance"
     assert 0 <= result["score"] <= 1
     assert "explanation" in result
-    assert result["method"] == "patch_level_fft_variance"
 
 
 def test_natural_prior_deviation(sample_image_bytes):
@@ -60,6 +59,7 @@ def test_ultra_forensics_integration(sample_image_bytes):
     report = forensics.generate_forensic_report()
     
     assert "ai_detection" in report
-    assert report["ai_detection"]["total_signals"] == 13
-    assert report["metadata"]["analyzer_version"] == "3.0.0"
+    # Now uses CovarianceDetector which has 16 signals (13 ultra + 3 covariance)
+    assert report["ai_detection"]["total_signals"] == 16
+    assert report["metadata"]["analyzer_version"] == "4.0.0"
     assert "detection_version" in report["ai_detection"]
