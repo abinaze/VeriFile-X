@@ -8,12 +8,8 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 
 # File Processing
-python-magic==0.4.27 ; platform_system != "Windows"
-python-magic-bin==0.4.14 ; platform_system == "Windows"
+python-magic==0.4.27
 python-multipart==0.0.6
-
-# Future AI/ML dependencies 
-# tensorflow==2.15.0
 
 # Testing
 pytest==7.4.3
