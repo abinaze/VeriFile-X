@@ -8,12 +8,14 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 
 # File Processing
-python-magic==0.4.27 ; platform_system != "Windows"
-python-magic-bin==0.4.14 ; platform_system == "Windows"
+python-magic-bin==0.4.14
+python-magic==0.4.27
 python-multipart==0.0.6
 
-# Future AI/ML dependencies 
+# Future AI/ML dependencies (add as needed)
+# opencv-python==4.9.0.80
 # tensorflow==2.15.0
+# numpy==1.24.3
 
 # Testing
 pytest==7.4.3
@@ -31,7 +33,3 @@ scipy==1.11.4
 scikit-learn==1.4.0
 opencv-python==4.9.0.80
 slowapi==0.1.9
-
-# Advanced Image Analysis
-PyWavelets==1.4.1
-scikit-image==0.22.0

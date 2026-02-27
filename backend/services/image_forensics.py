@@ -1,5 +1,5 @@
 """
-Image forensics service with ultra-advanced AI detection.
+Image forensics service with covariance-enhanced AI detection.
 """
 from typing import Dict, Any
 from datetime import datetime
@@ -10,7 +10,7 @@ import imagehash
 from io import BytesIO
 
 from backend.core.logger import setup_logger
-from backend.services.ultra_advanced_detector import UltraAdvancedDetector
+from backend.services.covariance_detector import CovarianceDetector
 
 logger = setup_logger(__name__)
 
@@ -81,19 +81,14 @@ class ImageForensics:
         for key, value in exif_data.items():
             if isinstance(value, str) and any(kw in value.lower() for kw in ai_keywords):
                 suspicious_flags.append(f"AI generation marker in {key}")
-        if len(suspicious_flags) == 0:
-            confidence = "high"
-        elif len(suspicious_flags) <= 2:
-            confidence = "medium"
-        else:
-            confidence = "low"
+        confidence = "high" if len(suspicious_flags) == 0 else "medium" if len(suspicious_flags) <= 2 else "low"
         logger.info(f"Tampering analysis complete: {len(suspicious_flags)} flags")
         return {"suspicious_flags": suspicious_flags, "confidence": confidence}
     
     def detect_ai_generation(self) -> Dict[str, Any]:
-        """Run ultra-advanced AI detection."""
-        logger.info(f"Running ultra-advanced AI detection for {self.filename}")
-        detector = UltraAdvancedDetector(self.image_bytes, self.filename)
+        """Run covariance-enhanced AI detection."""
+        logger.info(f"Running covariance-enhanced AI detection for {self.filename}")
+        detector = CovarianceDetector(self.image_bytes, self.filename)
         return detector.detect()
     
     def generate_forensic_report(self) -> Dict[str, Any]:
@@ -117,7 +112,7 @@ class ImageForensics:
         report = {
             "metadata": {
                 "analysis_timestamp": datetime.now().isoformat(),
-                "analyzer_version": "3.0.0"
+                "analyzer_version": "4.0.0"
             },
             "file_info": image_info,
             "exif_data": exif_data,
