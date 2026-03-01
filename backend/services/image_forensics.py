@@ -1,5 +1,5 @@
 """
-Image forensics service with covariance-enhanced AI detection.
+Image forensics service with statistical modeling AI detection.
 """
 from typing import Dict, Any
 from datetime import datetime
@@ -10,7 +10,7 @@ import imagehash
 from io import BytesIO
 
 from backend.core.logger import setup_logger
-from backend.services.covariance_detector import CovarianceDetector
+from backend.services.statistical_detector import StatisticalDetector
 
 logger = setup_logger(__name__)
 
@@ -86,9 +86,9 @@ class ImageForensics:
         return {"suspicious_flags": suspicious_flags, "confidence": confidence}
     
     def detect_ai_generation(self) -> Dict[str, Any]:
-        """Run covariance-enhanced AI detection."""
-        logger.info(f"Running covariance-enhanced AI detection for {self.filename}")
-        detector = CovarianceDetector(self.image_bytes, self.filename)
+        """Run statistical modeling AI detection."""
+        logger.info(f"Running statistical modeling AI detection for {self.filename}")
+        detector = StatisticalDetector(self.image_bytes, self.filename)
         return detector.detect()
     
     def generate_forensic_report(self) -> Dict[str, Any]:
@@ -112,7 +112,7 @@ class ImageForensics:
         report = {
             "metadata": {
                 "analysis_timestamp": datetime.now().isoformat(),
-                "analyzer_version": "4.0.0"
+                "analyzer_version": "5.0.0"
             },
             "file_info": image_info,
             "exif_data": exif_data,
