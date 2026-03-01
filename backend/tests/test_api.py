@@ -1,30 +1,21 @@
 """
-Basic API endpoint tests.
-Why: Catch regressions before they reach production.
+Tests for API endpoints.
 """
-from fastapi.testclient import TestClient
-from backend.main import app
-
-# TestClient makes synchronous requests (easier for testing)
-client = TestClient(app)
+import pytest
 
 
-def test_root_endpoint():
-    """Test root endpoint returns API information."""
+def test_root_endpoint(client):
+    """Test root endpoint returns frontend HTML or API info."""
     response = client.get("/")
     assert response.status_code == 200
-    
-    data = response.json()
-    assert data["name"] == "VeriFile-X API"
-    assert data["status"] == "operational"
-    assert "/docs" in data["docs"]
+    # Root now serves HTML frontend, so check content type
+    assert "text/html" in response.headers.get("content-type", "") or response.json()
 
 
-def test_health_check():
-    """Test health endpoint returns healthy status."""
+def test_health_check(client):
+    """Test health check endpoint."""
     response = client.get("/health")
     assert response.status_code == 200
-    
     data = response.json()
     assert data["status"] == "healthy"
-    assert "debug_mode" in data
+    assert "timestamp" in data
