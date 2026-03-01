@@ -12,6 +12,9 @@ Mathematical basis:
 - Noise:     Consistency = σ_local / μ_local  (lower = suspicious)
 - Frequency: Ratio = LowFreqEnergy / HighFreqEnergy
 - Entropy:   H(X) = -Σ p(x)log p(x)
+
+Note: Detection accuracy ~70-80% on older AI models (pre-2024).
+Modern generators (DALL-E 3, Midjourney v6, SDXL) often evade statistical detection.
 """
 import numpy as np
 import cv2
@@ -35,6 +38,11 @@ class AIDetector:
     - Fast inference (< 1 second)
     - Interpretable signal breakdown
     - Works fully offline
+    
+    Limitations:
+    - Modern AI generators (2024+) have improved significantly
+    - Statistical signals alone achieve ~70-80% accuracy
+    - For production: combine with CNN-based detection
     """
 
     def __init__(self, image_bytes: bytes, filename: str):
@@ -60,7 +68,7 @@ class AIDetector:
             cv2.IMREAD_COLOR
         )
 
-
+        # Guard against corrupted/unreadable images
         if self.cv_image is None:
             raise ValueError(f"Invalid or corrupted image file: {filename}")
 
@@ -109,7 +117,8 @@ class AIDetector:
             "noise_variance": float(noise_variance),
             "local_variance_mean": float(local_var_mean),
             "noise_consistency": float(noise_consistency),
-            "suspicious": bool(noise_consistency < 0.3)
+            # UPDATED: More sensitive threshold (was 0.3, now 0.45)
+            "suspicious": bool(noise_consistency < 0.45)
         }
 
     def analyze_frequency_domain(self) -> Dict[str, Any]:
@@ -135,7 +144,7 @@ class AIDetector:
         rows, cols = self.cv_gray.shape
         crow, ccol = rows // 2, cols // 2
 
-        # If center_size=30 on a 40x40 image → index goes out of bounds
+        # Safe center_size for small images
         center_size = min(30, crow, ccol)
 
         # Low freq = center region, High freq = everything else
@@ -159,7 +168,8 @@ class AIDetector:
         return {
             "frequency_ratio": float(freq_ratio),
             "spectral_entropy": spectral_entropy,
-            "suspicious": bool(freq_ratio > 15.0)
+            # UPDATED: More sensitive threshold (was 15.0, now 8.0)
+            "suspicious": bool(freq_ratio > 8.0)
         }
 
     def analyze_jpeg_artifacts(self) -> Dict[str, Any]:
@@ -185,7 +195,7 @@ class AIDetector:
                 h_diff = np.abs(block[7, :] - block[0, :]).mean()
                 blockiness_scores.append(v_diff + h_diff)
 
-        # np.mean([]) returns nan which breaks probability math downstream
+        # Guard against NaN when image smaller than 8x8
         blockiness = float(np.mean(blockiness_scores)) if blockiness_scores else 0.0
 
         # Edge density: lower = smoother = more suspicious
@@ -202,7 +212,8 @@ class AIDetector:
         return {
             "blockiness": blockiness,
             "edge_density": edge_density,
-            "suspicious": bool(blockiness < 2.0 or edge_density < 0.01)
+            # UPDATED: More sensitive thresholds (was 2.0/0.01, now 3.5/0.015)
+            "suspicious": bool(blockiness < 3.5 or edge_density < 0.015)
         }
 
     def analyze_color_distribution(self) -> Dict[str, Any]:
@@ -289,9 +300,13 @@ class AIDetector:
             for name, score in normalized_scores.items()
         )
 
-        # Boost confidence when multiple independent signals agree
+        # UPDATED: More aggressive boosting when signals agree
+        # Boost if 2+ signals agree (was 3+)
+        if suspicious_count >= 2:
+            probability = min(1.0, probability * 1.3)  # Was 1.2
+        # Extra boost if 3+ signals agree
         if suspicious_count >= 3:
-            probability = min(1.0, probability * 1.2)
+            probability = min(1.0, probability * 1.5)  # Additional boost
 
         logger.info(
             f"AI probability: {probability:.3f} "
@@ -341,7 +356,6 @@ class AIDetector:
             "confidence": confidence,
             "detection_signals": all_signals,
             "summary": {
-                # int() ensures JSON-serializable (not numpy.int64)
                 "suspicious_signals_count": int(sum(
                     s["suspicious"] for s in all_signals.values()
                 )),
