@@ -31,3 +31,7 @@ slowapi==0.1.9
 # Advanced Image Analysis
 PyWavelets==1.4.1
 scikit-image==0.22.0
+psutil==5.9.0
+
+# Performance Testing
+psutil==5.9.0
