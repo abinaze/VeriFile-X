@@ -27,6 +27,7 @@ scipy==1.11.4
 scikit-learn==1.4.0
 opencv-python==4.9.0.80
 slowapi==0.1.9
+psutil==5.9.0
 
 # Advanced Image Analysis
 PyWavelets==1.4.1
