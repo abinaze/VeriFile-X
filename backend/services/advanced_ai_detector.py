@@ -547,3 +547,17 @@ class AdvancedAIDetector:
         )
         
         return result
+
+# Note: Apply this fix by editing line ~95-105 in analyze_fft_radial_spectrum()
+# Add this check before polyfit:
+
+# if len(log_r) < 3 or len(log_power) < 3:
+#     return {
+#         "signal_name": "FFT Radial Spectrum",
+#         "score": 0.0,
+#         "confidence": 0.3,
+#         "explanation": "Image too small for FFT analysis",
+#         "raw_value": 0.0,
+#         "expected_range": "N/A",
+#         "method": "fft_radial_spectrum"
+#     }
