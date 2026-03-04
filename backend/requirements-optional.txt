@@ -1,0 +1,6 @@
+# Optional dependencies for advanced features
+
+# Performance monitoring (requires C++ compiler on Windows)
+# Install with: pip install psutil
+# Alternative for Windows: Download pre-built wheel from https://pypi.org/project/psutil/#files
+psutil>=5.9.0

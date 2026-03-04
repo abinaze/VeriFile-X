@@ -1,4 +1,4 @@
-# Web Framework
+# Core Framework
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 
@@ -28,11 +28,23 @@ scikit-learn==1.4.0
 opencv-python==4.9.0.80
 slowapi==0.1.9
 
-
 # Advanced Image Analysis
 PyWavelets==1.4.1
 scikit-image==0.22.0
-psutil==5.9.0
 
-# Performance Testing
-psutil==5.9.0
+# Cryptography
+cryptography==41.0.7
+
+# Deep Learning Detection (Week 4)
+torch==2.1.0
+torchvision==0.16.0
+diffusers==0.25.0
+transformers==4.36.0
+accelerate==0.25.0
+huggingface_hub==0.20.0
+safetensors==0.4.1
+ftfy==6.1.1
+regex==2023.12.25
+
+# CLIP Detection
+clip @ git+https://github.com/openai/CLIP.git
