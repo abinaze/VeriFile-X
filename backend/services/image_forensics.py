@@ -1,5 +1,5 @@
 """
-Image forensics service with statistical modeling AI detection.
+Image forensics service with advanced ensemble AI detection.
 """
 from typing import Dict, Any
 from datetime import datetime
@@ -10,13 +10,13 @@ import imagehash
 from io import BytesIO
 
 from backend.core.logger import setup_logger
-from backend.services.statistical_detector import StatisticalDetector
+from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
 
 logger = setup_logger(__name__)
 
 
 class ImageForensics:
-    """Complete image forensics analysis pipeline."""
+    """Complete image forensics analysis pipeline with advanced detection."""
     
     def __init__(self, image_bytes: bytes, filename: str):
         """Initialize forensics analyzer."""
@@ -86,10 +86,15 @@ class ImageForensics:
         return {"suspicious_flags": suspicious_flags, "confidence": confidence}
     
     def detect_ai_generation(self) -> Dict[str, Any]:
-        """Run statistical modeling AI detection."""
-        logger.info(f"Running statistical modeling AI detection for {self.filename}")
-        detector = StatisticalDetector(self.image_bytes, self.filename)
-        return detector.detect()
+        """Run advanced ensemble AI detection."""
+        logger.info(f"Running advanced ensemble AI detection for {self.filename}")
+        detector = AdvancedEnsembleDetector(self.image_bytes, self.filename)
+        result = detector.detect()
+        
+        # Clean up GPU resources
+        detector.cleanup()
+        
+        return result
     
     def generate_forensic_report(self) -> Dict[str, Any]:
         """Generate complete forensic report."""
@@ -112,7 +117,7 @@ class ImageForensics:
         report = {
             "metadata": {
                 "analysis_timestamp": datetime.now().isoformat(),
-                "analyzer_version": "5.0.0"
+                "analyzer_version": "6.0.0"
             },
             "file_info": image_info,
             "exif_data": exif_data,
