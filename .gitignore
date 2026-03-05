@@ -41,3 +41,13 @@ logs/
 # Virtual Environment
 venv/
 .venv/
+
+# Reference data (too large for git)
+data/reference/real/
+data/reference/ai/
+
+# But keep the database file (it's small)
+!data/reference/clip_database.pkl
+
+# Keep directory structure
+!data/reference/.gitkeep
