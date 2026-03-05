@@ -60,8 +60,8 @@ def test_statistical_forensics_integration(sample_image_bytes):
     report = forensics.generate_forensic_report()
     
     assert "ai_detection" in report
-    assert report["ai_detection"]["total_signals"] == 19
-    assert report["metadata"]["analyzer_version"] == "5.0.0"
+    assert report["ai_detection"]["total_signals"] == 21
+    assert report["metadata"]["analyzer_version"] == "6.0.0"
     assert "detection_version" in report["ai_detection"]
 
 

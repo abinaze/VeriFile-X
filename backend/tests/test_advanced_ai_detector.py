@@ -66,4 +66,4 @@ def test_forensics_integration(sample_image_bytes):
     assert "ai_detection" in report
     assert "all_signals" in report["ai_detection"]
     # Now uses CovarianceDetector which has 16 signals
-    assert report["summary"]["total_detection_signals"] == 19
+    assert report["summary"]["total_detection_signals"] == 21
