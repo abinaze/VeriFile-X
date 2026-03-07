@@ -16,15 +16,18 @@ def test_cache_singleton():
     assert cache2 is cache3
     
     # All should reference the same instance
+    cache1.clear()  # Clear first
     cache1.set('test', 'value', 1.0)
     assert cache2.get('test') == 'value'
     assert cache3.get('test') == 'value'
+    cache1.clear()  # Clean up
 
 
 def test_cache_basic_operations():
     """Test basic cache get/set operations."""
     cache = ModelCache()
     cache.clear()
+    cache.reset_stats()
     
     # Cache miss
     assert cache.get('model1') is None
@@ -42,6 +45,8 @@ def test_cache_basic_operations():
     assert stats['memory_mb'] == 100.0
     assert stats['cache_hits'] >= 1
     assert stats['cache_misses'] >= 1
+    
+    cache.clear()  # Clean up
 
 
 def test_cache_lru_eviction():
@@ -68,12 +73,15 @@ def test_cache_lru_eviction():
     assert cache.get('model2') is None       # Evicted
     assert cache.get('model3') is not None  # Still there
     assert cache.get('model4') is not None  # Newly added
+    
+    cache.clear()  # Clean up
 
 
 def test_cache_memory_limit():
     """Test memory limit enforcement."""
     cache = ModelCache()
     cache.clear()
+    original_limit = cache.max_memory_mb
     cache.max_memory_mb = 500  # 500MB limit
     cache.max_models = 10
     
@@ -91,11 +99,16 @@ def test_cache_memory_limit():
     stats = cache.stats()
     assert stats['memory_mb'] <= 500.0
     assert stats['evictions'] >= 1
+    
+    # Restore and clean up
+    cache.max_memory_mb = original_limit
+    cache.clear()
 
 
 def test_cache_clear():
     """Test cache clearing."""
     cache = ModelCache()
+    cache.clear()  # Start fresh
     
     cache.set('model1', 'data1', 100.0)
     cache.set('model2', 'data2', 100.0)
@@ -131,11 +144,15 @@ def test_cache_statistics():
     assert stats['hit_rate'] > 0
     assert 'models' in stats
     assert 'model1' in stats['models']
+    
+    cache.clear()  # Clean up
 
 
 def test_cache_disabled():
     """Test cache when disabled."""
     cache = ModelCache()
+    cache.clear()
+    original_setting = cache.enable_cache
     cache.enable_cache = False
     
     # Set should not cache
@@ -148,3 +165,7 @@ def test_cache_disabled():
     cache.enable_cache = True
     cache.set('model2', 'data2', 100.0)
     assert cache.get('model2') == 'data2'
+    
+    # Restore and clean up
+    cache.enable_cache = original_setting
+    cache.clear()
