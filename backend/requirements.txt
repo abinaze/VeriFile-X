@@ -35,7 +35,7 @@ scikit-image==0.22.0
 # Cryptography
 cryptography==41.0.7
 
-# Deep Learning Detection (Week 4)
+# Deep Learning Detection
 torch==2.1.0
 torchvision==0.16.0
 diffusers==0.25.0
