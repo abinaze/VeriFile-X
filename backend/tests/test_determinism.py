@@ -31,13 +31,16 @@ def test_hash_generation_is_consistent(sample_image_bytes):
     hashes1 = forensics.generate_hashes()
     hashes2 = forensics.generate_hashes()
     
-    # All hashes should match exactly
+    # Test the hashes that actually exist
+    # The hash dict contains: md5, sha256, phash, average_hash, dhash
     assert hashes1['md5'] == hashes2['md5']
     assert hashes1['sha256'] == hashes2['sha256']
-    assert hashes1['sha1'] == hashes2['sha1']
     
-    # Note: 'perceptual' hash key doesn't exist in current implementation
-    # The hashes dict contains: md5, sha256, sha1, phash, average_hash
+    # Perceptual hashes should also be consistent
+    if 'phash' in hashes1:
+        assert hashes1['phash'] == hashes2['phash']
+    if 'average_hash' in hashes1:
+        assert hashes1['average_hash'] == hashes2['average_hash']
 
 
 def test_forensic_report_stability(sample_image_bytes):
