@@ -72,7 +72,7 @@ def test_forensic_report_stability(sample_image_bytes):
     if ai_prob_1 > 0.01 and ai_prob_2 > 0.01:
         variance = abs(ai_prob_1 - ai_prob_2) / max(ai_prob_1, ai_prob_2)
         assert variance < 0.20, (
-            f"AI probability variance too high: {variance:.3f} "
+            f"AI probability variance too high (expected <20% due to CLIP randomness): {variance:.3f} "
             f"(prob1={ai_prob_1:.3f}, prob2={ai_prob_2:.3f}). "
             f"This is expected until CLIP database is built (#32)."
         )
