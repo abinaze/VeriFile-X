@@ -48,7 +48,7 @@ def test_statistical_complete_detection(sample_image_bytes):
     assert "classification" in report
     assert "all_signals" in report
     assert len(report["all_signals"]) == 19  # 16 base + 3 statistical
-    assert report["total_signals"] == 19
+    assert report["total_signals"] == 21
     assert report["detection_version"] == "statistical-modeling-v1.0"
 
 
