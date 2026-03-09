@@ -5,6 +5,7 @@ Security: Rate limited, validated, privacy-first.
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+import hashlib
 
 from backend.services.image_forensics import ImageForensics
 from backend.utils.validators import validate_file, FileValidationError
@@ -74,8 +75,8 @@ async def analyze_image(
                 f"from {get_remote_address(request)}"
             )
             raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported content type: {file.content_type}. "
+                status_code=415,  # FIXED: Changed from 400 to 415 (Unsupported Media Type)
+                detail=f"Unsupported media type: {file.content_type}. "
                        f"Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}"
             )
 
@@ -89,14 +90,18 @@ async def analyze_image(
                 f"exceeds {MAX_ANALYSIS_SIZE_BYTES} bytes"
             )
             raise HTTPException(
-                status_code=400,
-                detail=f"File too large for analysis. "
+                status_code=413,  # FIXED: Changed from 400 to 413 (Payload Too Large)
+                detail=f"Payload too large. "
                        f"Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
             )
+
+        # OPTIMIZATION: Compute SHA-256 once for caching
+        file_hash = hashlib.sha256(file_bytes).hexdigest()
 
         logger.info(
             f"Analyzing: file={file.filename}, "
             f"size={len(file_bytes)} bytes, "
+            f"sha256={file_hash[:16]}..., "
             f"content_type={file.content_type}"
         )
 
@@ -109,7 +114,7 @@ async def analyze_image(
             )
 
         # Layer 4: Check cache (skip expensive analysis if duplicate)
-        cached_result = forensics_cache.get(file_bytes)
+        cached_result = forensics_cache.get(file_hash)
         if cached_result:
             logger.info(
                 f"Cache HIT: Returning cached result for {file.filename} "
@@ -123,7 +128,7 @@ async def analyze_image(
         report = forensics.generate_forensic_report()
 
         # Store in cache for future duplicate uploads
-        forensics_cache.set(file_bytes, report)
+        forensics_cache.set(file_hash, report)
 
         logger.info(
             f"Analysis complete: file={file.filename}, "
@@ -135,7 +140,15 @@ async def analyze_image(
 
     except FileValidationError as e:
         logger.warning(f"Validation failed: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e))  # IMPROVED: 422 for validation
+
+    except ValueError as e:
+        logger.error(f"Value error during analysis: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid image data")
+
+    except IOError as e:
+        logger.error(f"I/O error during analysis: {str(e)}")
+        raise HTTPException(status_code=422, detail="Unable to process image")
 
     except HTTPException:
         raise
