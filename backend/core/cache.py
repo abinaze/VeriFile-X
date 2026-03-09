@@ -12,7 +12,7 @@ Privacy note:
 - Cache cleared on server restart (no persistence)
 """
 import hashlib
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union
 from datetime import datetime, timedelta
 from backend.core.logger import setup_logger
 
@@ -30,27 +30,46 @@ class ForensicsCache:
     Thread-safe in-memory cache for forensic results.
     Key: SHA-256 hash of file bytes
     Value: forensic report + timestamp
+    
+    OPTIMIZATION: Accepts pre-computed hash to avoid duplicate hashing.
     """
 
     def __init__(self):
         self._cache: Dict[str, Dict[str, Any]] = {}
         logger.info("Forensics cache initialized")
 
-    def _compute_key(self, file_bytes: bytes) -> str:
+    def _compute_key(self, file_identifier: Union[bytes, str]) -> str:
         """
         Compute SHA-256 hash as cache key.
         Same file = same hash = cache hit.
+        
+        OPTIMIZATION: If a string (pre-computed hash) is provided,
+        use it directly to avoid redundant hashing.
+        
+        Args:
+            file_identifier: Either raw file bytes OR pre-computed SHA-256 hash
+            
+        Returns:
+            SHA-256 hash string
         """
-        return hashlib.sha256(file_bytes).hexdigest()
+        if isinstance(file_identifier, str):
+            # Already a hash - use directly (OPTIMIZATION)
+            return file_identifier
+        else:
+            # Compute hash from bytes
+            return hashlib.sha256(file_identifier).hexdigest()
 
-    def get(self, file_bytes: bytes) -> Optional[Dict[str, Any]]:
+    def get(self, file_identifier: Union[bytes, str]) -> Optional[Dict[str, Any]]:
         """
         Retrieve cached result if available and not expired.
-
+        
+        Args:
+            file_identifier: Either raw file bytes OR pre-computed SHA-256 hash
+            
         Returns:
             Cached report dict or None if miss/expired
         """
-        key = self._compute_key(file_bytes)
+        key = self._compute_key(file_identifier)
 
         if key not in self._cache:
             logger.info(f"Cache MISS: {key[:16]}...")
@@ -80,10 +99,14 @@ class ForensicsCache:
         }
         return result
 
-    def set(self, file_bytes: bytes, report: Dict[str, Any]) -> None:
+    def set(self, file_identifier: Union[bytes, str], report: Dict[str, Any]) -> None:
         """
         Store forensic report in cache.
         Evicts oldest entry if cache is full.
+        
+        Args:
+            file_identifier: Either raw file bytes OR pre-computed SHA-256 hash
+            report: Forensic analysis report to cache
         """
         # Evict oldest if at capacity
         if len(self._cache) >= MAX_CACHE_SIZE:
@@ -94,7 +117,7 @@ class ForensicsCache:
             del self._cache[oldest_key]
             logger.info(f"Cache EVICT: {oldest_key[:16]}...")
 
-        key = self._compute_key(file_bytes)
+        key = self._compute_key(file_identifier)
         self._cache[key] = {
             "report": report,
             "cached_at": datetime.now()
