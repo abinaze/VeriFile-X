@@ -1,29 +1,25 @@
 # Contributing to VeriFile-X
 
+Thank you for your interest in contributing!
+
 ## Development Setup
 
+1. Clone the repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run tests: `pytest`
+
+## Code Style
+
+- Follow PEP 8
+- Use type hints
+- Write tests for new features
+
+## Submitting Changes
+
 1. Fork the repository
-2. Clone your fork
-3. Create a feature branch: `git checkout -b feature/your-feature`
-4. Make changes
-5. Test thoroughly
-6. Commit with clear messages
-7. Push and create Pull Request
-
-## Code Standards
-
-- Python: Follow PEP 8
-- Comments: Explain **why**, not what
-- Tests: Required for new features
-- Commits: Atomic and descriptive
-
-## Pull Request Process
-
-1. Update README if needed
-2. Add tests for new functionality
-3. Ensure all tests pass
-4. Request review from maintainer
+2. Create a feature branch
+3. Submit a pull request
 
 ## Questions?
 
-Open an issue with the `question` label.
+Open an issue for questions.
