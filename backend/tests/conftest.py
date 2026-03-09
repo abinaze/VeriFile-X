@@ -10,6 +10,29 @@ from fastapi.testclient import TestClient
 from backend.main import app
 
 
+def pytest_configure(config):
+    """
+    Register custom pytest markers.
+    
+    Markers:
+    - slow: Tests that take >2 seconds (ML model loading, large computations)
+    - integration: Tests that require multiple components
+    - gpu: Tests that require CUDA/GPU
+    """
+    config.addinivalue_line(
+        "markers",
+        "slow: marks tests as slow (deselect with '-m \"not slow\"')"
+    )
+    config.addinivalue_line(
+        "markers",
+        "integration: marks tests as integration tests"
+    )
+    config.addinivalue_line(
+        "markers",
+        "gpu: marks tests that require GPU/CUDA"
+    )
+
+
 @pytest.fixture
 def client():
     """Synchronous test client for API endpoint testing."""
