@@ -1,0 +1,27 @@
+[flake8]
+# Flake8 configuration for VeriFile-X
+
+max-line-length = 120
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    .venv,
+    env,
+    ENV,
+    build,
+    dist,
+    *.egg-info,
+    .pytest_cache,
+    node_modules
+
+# E501: line too long (handled by max-line-length)
+# W503: line break before binary operator (conflicts with black)
+# E203: whitespace before ':' (conflicts with black)
+ignore = E501,W503,E203
+
+per-file-ignores =
+    __init__.py:F401
+    test_*.py:F401,F811
+
+max-complexity = 15
