@@ -1,40 +1,54 @@
-"""
-Application configuration management.
-Uses environment variables for security-sensitive settings.
-"""
 from pydantic_settings import BaseSettings
-from typing import Optional
-
+from typing import List
+import os
 
 class Settings(BaseSettings):
     """
-    Application settings loaded from environment variables.
+    Application settings with environment variable overrides.
     
-    Why Pydantic? Type validation, auto-documentation, easy testing.
+    Environment variables take precedence over defaults.
+    For production, create a .env file based on .env.example
     """
-    # API Settings
-    API_TITLE: str = "VeriFile-X API"
-    API_VERSION: str = "0.1.0"
-    API_DESCRIPTION: str = "Privacy-preserving digital forensics platform"
     
-    # Server Settings
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
-    DEBUG: bool = False
+    # CORS Configuration
+    # Development default: localhost only
+    # Production: Set via CORS_ORIGINS environment variable
+    CORS_ORIGINS: str = os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000"  # Development default
+    )
     
-    # File Processing Limits (privacy + performance)
-    MAX_FILE_SIZE_MB: int = 50
-    ALLOWED_IMAGE_TYPES: list = ["image/jpeg", "image/png", "image/webp"]
-    ALLOWED_VIDEO_TYPES: list = ["video/mp4", "video/mpeg"]
-    ALLOWED_DOC_TYPES: list = ["application/pdf"]
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Parse CORS_ORIGINS into a list."""
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
     
-    # Security
-    CORS_ORIGINS: list = ["http://localhost:3000"]  # Frontend URLs
+    # Debug Mode
+    # IMPORTANT: Set DEBUG=False in production!
+    DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
+    
+    # API Configuration
+    API_V1_PREFIX: str = "/api/v1"
+    PROJECT_NAME: str = "VeriFile-X"
+    VERSION: str = "6.0.0"
+    
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "10"))
+    
+    # File Upload Limits
+    MAX_FILE_SIZE_MB: int = int(os.getenv("MAX_FILE_SIZE_MB", "50"))
+    MAX_ANALYSIS_SIZE_MB: int = int(os.getenv("MAX_ANALYSIS_SIZE_MB", "10"))
+    
+    # Cache Settings
+    CACHE_TTL_MINUTES: int = int(os.getenv("CACHE_TTL_MINUTES", "60"))
+    MAX_CACHE_SIZE: int = int(os.getenv("MAX_CACHE_SIZE", "500"))
+    
+    # Logging
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     
     class Config:
         env_file = ".env"
         case_sensitive = True
 
 
-# Singleton pattern - one instance across app
 settings = Settings()
