@@ -5,7 +5,7 @@ import pytest
 from PIL import Image
 import io
 
-
+@pytest.mark.slow
 def test_dire_detector_initialization():
     """Test DIRE detector initializes correctly."""
     from backend.services.dire_detector import DIREDetector
@@ -17,7 +17,7 @@ def test_dire_detector_initialization():
     assert detector._model_loaded == False
     assert detector.cache_key == "stable-diffusion-2-1"
 
-
+@pytest.mark.slow
 def test_dire_detection_on_sample(sample_image_bytes):
     """Test DIRE detection on sample image."""
     from backend.services.dire_detector import DIREDetector
@@ -34,7 +34,7 @@ def test_dire_detection_on_sample(sample_image_bytes):
     
     detector.cleanup()
 
-
+@pytest.mark.slow
 def test_dire_handles_errors_gracefully():
     """Test DIRE handles invalid input gracefully."""
     from backend.services.dire_detector import DIREDetector

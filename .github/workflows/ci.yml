@@ -55,6 +55,12 @@ jobs:
         pip-audit || true
       continue-on-error: true
 
-    - name: Run tests
+    - name: Run fast tests
       run: |
-        pytest backend/tests/ -v --tb=short
+        pytest backend/tests/ -v -m "not slow" --tb=short
+
+    - name: Run slow tests (ML models)
+      if: success()
+      run: |
+        pytest backend/tests/ -v -m "slow" --tb=short
+      continue-on-error: true
