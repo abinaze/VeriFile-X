@@ -17,18 +17,18 @@ class Settings(BaseSettings):
     # FILE TYPE VALIDATION
     # =========================================================================
     
-    ALLOWED_IMAGE_TYPES: set[str] = {
+    ALLOWED_IMAGE_TYPES: tuple[str, ...] = (
         "image/jpeg",
         "image/png",
         "image/webp"
-    }
+    )
+
+    ALLOWED_VIDEO_TYPES: tuple[str, ...] = ()  # Empty tuple (no video support)
     
-    ALLOWED_VIDEO_TYPES: set[str] = set()  # Empty set - no video support yet
-    
-    ALLOWED_UPLOAD_EXTENSIONS: set[str] = {
+    ALLOWED_UPLOAD_EXTENSIONS: tuple[str, ...] = (
         ".jpg", ".jpeg", ".png", ".webp"
-    }
-    
+    )
+
     # =========================================================================
     # CORS CONFIGURATION
     # =========================================================================
