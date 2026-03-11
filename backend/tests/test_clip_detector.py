@@ -3,7 +3,7 @@ Tests for CLIP detector.
 """
 import pytest
 
-
+@pytest.mark.slow
 def test_clip_detector_initialization():
     """Test CLIP detector can be initialized."""
     from backend.services.clip_detector import CLIPDetector
@@ -12,7 +12,7 @@ def test_clip_detector_initialization():
     assert detector is not None
     assert detector.device in ["cuda", "cpu"]
 
-
+@pytest.mark.slow
 def test_clip_detection_on_sample(sample_image_bytes):
     """Test CLIP detection on sample image."""
     from backend.services.clip_detector import CLIPDetector
@@ -35,7 +35,7 @@ def test_clip_detection_on_sample(sample_image_bytes):
     # Cleanup
     detector.cleanup()
 
-
+@pytest.mark.slow
 def test_clip_handles_errors_gracefully():
     """Test CLIP handles corrupted input gracefully."""
     from backend.services.clip_detector import CLIPDetector

@@ -4,7 +4,7 @@ Tests for CLIP reference database.
 import pytest
 from pathlib import Path
 
-
+@pytest.mark.slow
 def test_clip_database_exists():
     """Test that CLIP database file exists."""
     database_path = Path("data/reference/clip_database.pkl")
@@ -16,7 +16,7 @@ def test_clip_database_exists():
     else:
         pytest.skip("CLIP database not built yet. Run: python scripts/build_clip_database.py")
 
-
+@pytest.mark.slow
 def test_clip_detector_loads_database():
     """Test that CLIP detector loads reference database."""
     from backend.services.clip_detector import CLIPDetector
@@ -37,7 +37,7 @@ def test_clip_detector_loads_database():
     
     detector.cleanup()
 
-
+@pytest.mark.slow
 def test_clip_detection_with_database(sample_image_bytes):
     """Test CLIP detection uses database."""
     from backend.services.clip_detector import CLIPDetector
