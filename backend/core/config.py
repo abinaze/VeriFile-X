@@ -9,7 +9,18 @@ class Settings(BaseSettings):
     Environment variables take precedence over defaults.
     For production, create a .env file based on .env.example
     """
+
+    # File Type Settings
+    ALLOWED_IMAGE_TYPES: Set[str] = {
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    }
     
+    ALLOWED_UPLOAD_EXTENSIONS: Set[str] = {
+        ".jpg", ".jpeg", ".png", ".webp"
+    }
+
     # CORS Configuration
     # Development default: localhost only
     # Production: Set via CORS_ORIGINS environment variable
