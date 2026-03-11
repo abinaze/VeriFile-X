@@ -1,6 +1,9 @@
+"""
+Application configuration with environment variable support.
+"""
 from pydantic_settings import BaseSettings
-from typing import List ,Set
 import os
+
 
 class Settings(BaseSettings):
     """
@@ -9,33 +12,35 @@ class Settings(BaseSettings):
     Environment variables take precedence over defaults.
     For production, create a .env file based on .env.example
     """
-
-    # File Type Settings
-    ALLOWED_IMAGE_TYPES: Set[str] = {
+    
+    # =========================================================================
+    # FILE TYPE VALIDATION
+    # =========================================================================
+    
+    ALLOWED_IMAGE_TYPES: set[str] = {
         "image/jpeg",
         "image/png",
         "image/webp"
     }
     
-    ALLOWED_UPLOAD_EXTENSIONS: Set[str] = {
+    ALLOWED_VIDEO_TYPES: set[str] = set()  # Empty set - no video support yet
+    
+    ALLOWED_UPLOAD_EXTENSIONS: set[str] = {
         ".jpg", ".jpeg", ".png", ".webp"
     }
-
-    # CORS Configuration
-    # Development default: localhost only
-    # Production: Set via CORS_ORIGINS environment variable
-    CORS_ORIGINS: str = os.getenv(
-        "CORS_ORIGINS",
-        "http://localhost:3000"  # Development default
-    )
+    
+    # =========================================================================
+    # CORS CONFIGURATION
+    # =========================================================================
+    
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000")
     
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         """Parse CORS_ORIGINS into a list."""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
     
     # Debug Mode
-    # IMPORTANT: Set DEBUG=False in production!
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     
     # API Configuration
