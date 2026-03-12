@@ -33,24 +33,24 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.API_TITLE,
-    version=settings.API_VERSION,
-    description=settings.API_DESCRIPTION,
-    lifespan=lifespan,
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    debug=settings.DEBUG
 )
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# CORS middleware
+# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS + ["*"],  # Allow frontend
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Register API routers
 app.include_router(upload.router)
