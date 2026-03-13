@@ -8,6 +8,7 @@ from backend.services.advanced_ai_detector import AdvancedAIDetector
 def test_advanced_detector_initialization(sample_image_bytes):
     """Test advanced detector initializes correctly."""
     detector = AdvancedAIDetector(sample_image_bytes, "test.png")
+    
     assert detector.filename == "test.png"
     assert detector.cv_image is not None
 
@@ -52,7 +53,7 @@ def test_complete_detection(sample_image_bytes):
     assert "classification" in report
     assert "all_signals" in report
     assert "top_reasons" in report
-    assert len(report["all_signals"]) == 10  # Should have 10 signals
+    assert len(report["all_signals"]) == 10
     assert report["total_signals"] == 10
 
 
@@ -65,5 +66,5 @@ def test_forensics_integration(sample_image_bytes):
     
     assert "ai_detection" in report
     assert "all_signals" in report["ai_detection"]
-    # Now uses CovarianceDetector which has 16 signals
+    # System has 21 signals: 19 statistical + 1 DIRE + 1 CLIP
     assert report["summary"]["total_detection_signals"] == 21

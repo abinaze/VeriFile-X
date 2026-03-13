@@ -59,7 +59,7 @@ def test_ultra_forensics_integration(sample_image_bytes):
     report = forensics.generate_forensic_report()
     
     assert "ai_detection" in report
-    # Now uses CovarianceDetector which has 16 signals (13 ultra + 3 covariance)
+    # System has 21 signals: 19 statistical + 1 DIRE + 1 CLIP
     assert report["ai_detection"]["total_signals"] == 21
     assert report["metadata"]["analyzer_version"] == "6.0.0"
     assert "detection_version" in report["ai_detection"]
