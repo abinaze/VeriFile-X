@@ -60,6 +60,7 @@ def test_statistical_forensics_integration(sample_image_bytes):
     report = forensics.generate_forensic_report()
     
     assert "ai_detection" in report
+    # System has 21 signals: 19 statistical + 1 DIRE + 1 CLIP
     assert report["ai_detection"]["total_signals"] == 21
     assert report["metadata"]["analyzer_version"] == "6.0.0"
     assert "detection_version" in report["ai_detection"]
@@ -102,7 +103,7 @@ def test_statistical_confidence_weighting(sample_image_bytes):
     # Verify weighted scoring
     total_weight = sum(s["confidence"] for s in report["all_signals"])
     expected_score = sum(
-        s["score"] * s["confidence"] 
+        s["score"] * s["confidence"]
         for s in report["all_signals"]
     ) / total_weight
     
