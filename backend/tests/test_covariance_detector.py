@@ -36,7 +36,7 @@ def test_patch_anisotropy_variance(sample_image_bytes):
     
     assert result["signal_name"] == "Patch Anisotropy Variance"
     assert 0 <= result["score"] <= 1
-    assert result["confidence"] >= 0.3  # May be low for small images
+    assert result["confidence"] >= 0.3
     assert result["method"] == "patch_anisotropy_variance"
 
 
@@ -48,7 +48,7 @@ def test_covariance_complete_detection(sample_image_bytes):
     assert "ai_probability" in report
     assert "classification" in report
     assert "all_signals" in report
-    assert len(report["all_signals"]) == 16  # 13 base + 3 new
+    assert len(report["all_signals"]) == 16
     assert report["total_signals"] == 16
     assert report["detection_version"] == "covariance-advanced-v1.0"
 
@@ -61,6 +61,7 @@ def test_covariance_forensics_integration(sample_image_bytes):
     report = forensics.generate_forensic_report()
     
     assert "ai_detection" in report
+    # System has 21 signals: 19 statistical + 1 DIRE + 1 CLIP
     assert report["ai_detection"]["total_signals"] == 21
     assert report["metadata"]["analyzer_version"] == "6.0.0"
     assert "detection_version" in report["ai_detection"]
@@ -73,10 +74,8 @@ def test_eigenvalue_spread_mathematical_properties(sample_image_bytes):
     
     # Spread should be positive
     assert result["raw_value"] > 0
-    
     # Confidence should be high for this method
     assert result["confidence"] == 0.90
-    
     # Expected range should be documented
     assert "expected_range" in result
 
