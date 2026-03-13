@@ -17,7 +17,7 @@ def test_upload_non_image_file(client):
     files = {"file": ("test.txt", file_content, "text/plain")}
     
     response = client.post("/api/v1/analyze/image", files=files)
-    
+
     # 415 = Unsupported Media Type (RFC 7231)
     assert response.status_code == 415, (
         f"Expected 415 (Unsupported Media Type) for non-image file, "
