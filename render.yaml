@@ -31,8 +31,9 @@ services:
       sizeGB: 1
 
   # Frontend Static Site
-  - type: static
+  - type: web
     name: verifile-x
+    runtime: static
     buildCommand: "echo 'No build needed - static HTML'"
     staticPublishPath: ./frontend
     headers:
