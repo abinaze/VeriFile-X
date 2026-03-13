@@ -1,0 +1,50 @@
+services:
+  # Backend API Service
+  - type: web
+    name: verifile-x-api
+    runtime: python
+    buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.14
+      - key: DEBUG
+        value: false
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: MAX_FILE_SIZE_MB
+        value: 50
+      - key: MAX_ANALYSIS_SIZE_MB
+        value: 10
+      - key: RATE_LIMIT_PER_MINUTE
+        value: 10
+      - key: CACHE_TTL_MINUTES
+        value: 60
+      - key: MAX_CACHE_SIZE
+        value: 500
+      - key: LOG_LEVEL
+        value: INFO
+    healthCheckPath: /api/v1/health
+    disk:
+      name: verifile-cache
+      mountPath: /opt/render/project/.cache
+      sizeGB: 1
+
+  # Frontend Static Site
+  - type: static
+    name: verifile-x
+    buildCommand: "echo 'No build needed - static HTML'"
+    staticPublishPath: ./frontend
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=3600

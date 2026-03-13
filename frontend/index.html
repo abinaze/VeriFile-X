@@ -222,6 +222,13 @@
     </div>
 
     <script>
+        // Auto-detect API URL based on environment
+        const API_URL = window.location.hostname.includes('onrender.com')
+            ? 'https://verifile-x-api.onrender.com'
+            : window.location.hostname === 'localhost'
+            ? 'http://localhost:8000'
+            : '';  // Use relative URL for other environments
+        
         const fileInput = document.getElementById('fileInput');
         const loading = document.getElementById('loading');
         const results = document.getElementById('results');
@@ -237,7 +244,11 @@
             formData.append('file', file);
             
             try {
-                const response = await fetch('/api/v1/analyze/image', {
+                const apiEndpoint = API_URL 
+                    ? `${API_URL}/api/v1/analyze/image`
+                    : '/api/v1/analyze/image';
+                
+                const response = await fetch(apiEndpoint, {
                     method: 'POST',
                     body: formData
                 });
