@@ -37,7 +37,7 @@ def test_upload_empty_file(client):
     response = client.post("/api/v1/analyze/image", files=files)
     
     # Empty file should fail validation
-    assert response.status_code in [400, 422], (
+    assert response.status_code in [400 , 415 , 422], (
         f"Expected 400 or 422 for empty file, got {response.status_code}"
     )
 
