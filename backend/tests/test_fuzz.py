@@ -121,7 +121,7 @@ def test_random_valid_images():
             detector = StatisticalDetector(img_bytes, f"random_{width}x{height}.png")
             report = detector.detect()
             
-            assert report["total_signals"] == 19
+            assert report["total_signals"] == 21  # 19 statistical + DIRE + CLIP
             assert 0 <= report["ai_probability"] <= 1
         except (TypeError, ValueError):
             # Skip if random dimensions cause FFT issues
