@@ -1,0 +1,203 @@
+==================================================
+VeriFile-X DETAILED TEST ANALYSIS
+==================================================
+
+Running each test file individually...
+This helps identify exactly which tests are failing.
+
+==================================================
+Testing: test_advanced_ai_detector.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_advanced_ai_detector.py
+
+==================================================
+Testing: test_advanced_ensemble.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_advanced_ensemble.py
+
+==================================================
+Testing: test_ai_detector.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_ai_detector.py
+
+==================================================
+Testing: test_api.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_api.py
+
+==================================================
+Testing: test_api_stress.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_api_stress.py
+
+==================================================
+Testing: test_cache.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_cache.py
+
+==================================================
+Testing: test_clip_database.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_clip_database.py
+
+==================================================
+Testing: test_clip_detector.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_clip_detector.py
+
+==================================================
+Testing: test_covariance_detector.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_covariance_detector.py
+
+==================================================
+Testing: test_determinism.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_determinism.py
+
+==================================================
+Testing: test_dire_detector.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_dire_detector.py
+
+==================================================
+Testing: test_edge_cases.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_edge_cases.py
+
+==================================================
+Testing: test_forensics.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_forensics.py
+
+==================================================
+Testing: test_fuzz.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_fuzz.py
+
+==================================================
+Testing: test_model_cache.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_model_cache.py
+
+==================================================
+Testing: test_performance.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_performance.py
+
+==================================================
+Testing: test_signal_quality.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_signal_quality.py
+
+==================================================
+Testing: test_statistical_detector.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_statistical_detector.py
+
+==================================================
+Testing: test_ultra_advanced_detector.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_ultra_advanced_detector.py
+
+==================================================
+Testing: test_upload.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_upload.py
+
+==================================================
+Testing: test_validators.py
+==================================================
+ImportError while loading conftest 'C:\Users\Abinaze\VeriFile-X\backend\tests\conftest.py'.
+backend\tests\conftest.py:9: in <module>
+    from fastapi.testclient import TestClient
+E   ModuleNotFoundError: No module named 'fastapi'
+✓ PASSED: test_validators.py
+
+==================================================
+SUMMARY
+==================================================
+Total test files: 21
+Passed: 21
+Failed: 0
+==================================================

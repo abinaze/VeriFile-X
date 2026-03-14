@@ -1,0 +1,181 @@
+==================================================
+VeriFile-X COMPREHENSIVE DIAGNOSTIC CHECK
+==================================================
+
+✓ Repository Path: /c/Users/Abinaze/VeriFile-X
+✓ Current Branch: main
+✓ Latest Commit: 1745850 Trigger CI to verify all test fixes are working
+
+==================================================
+1. CHECKING VERSION CONSISTENCY
+==================================================
+
+--- Version in image_forensics.py ---
+
+--- Version checks in ALL test files ---
+backend/tests/test_advanced_ensemble.py:53:    assert report["metadata"]["analyzer_version"] == "6.0.0"
+backend/tests/test_covariance_detector.py:65:    assert report["metadata"]["analyzer_version"] == "6.0.0"
+backend/tests/test_statistical_detector.py:64:    assert report["metadata"]["analyzer_version"] == "6.0.0"
+backend/tests/test_ultra_advanced_detector.py:64:    assert report["metadata"]["analyzer_version"] == "6.0.0"
+
+==================================================
+2. CHECKING SIGNAL COUNT EXPECTATIONS
+==================================================
+
+--- Expected signal counts in test files ---
+backend/tests/test_advanced_ai_detector.py:69:    assert report["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:23:    assert report1["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:24:    assert report2["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:64:    assert report1["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:65:    assert report2["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:66:    assert report1["summary"]["total_detection_signals"] == report2["summary"]["total_detection_signals"]
+backend/tests/test_advanced_ai_detector.py:56:    assert report["total_signals"] == 10
+backend/tests/test_advanced_ensemble.py:29:    assert report["total_signals"] == 21
+backend/tests/test_advanced_ensemble.py:52:    assert report["ai_detection"]["total_signals"] == 21
+backend/tests/test_covariance_detector.py:52:    assert report["total_signals"] == 16
+backend/tests/test_covariance_detector.py:64:    assert report["ai_detection"]["total_signals"] == 21
+backend/tests/test_determinism.py:117:    assert report1["ai_detection"]["total_signals"] == 21
+backend/tests/test_determinism.py:118:    assert report2["ai_detection"]["total_signals"] == 21
+backend/tests/test_edge_cases.py:36:        assert report["total_signals"] == 19
+backend/tests/test_edge_cases.py:69:    assert report["total_signals"] == 19
+backend/tests/test_edge_cases.py:112:        assert report["total_signals"] == 19
+backend/tests/test_fuzz.py:124:            assert report["total_signals"] == 19
+backend/tests/test_performance.py:27:    assert report["total_signals"] == 19
+backend/tests/test_statistical_detector.py:51:    assert report["total_signals"] == 19
+backend/tests/test_statistical_detector.py:63:    assert report["ai_detection"]["total_signals"] == 21
+backend/tests/test_ultra_advanced_detector.py:50:    assert report["total_signals"] == 13
+backend/tests/test_ultra_advanced_detector.py:63:    assert report["ai_detection"]["total_signals"] == 21
+backend/tests/test_advanced_ai_detector.py:69:    assert report["summary"]["total_detection_signals"] == 21
+backend/tests/test_advanced_ensemble.py:29:    assert report["total_signals"] == 21
+backend/tests/test_advanced_ensemble.py:30:    assert len(report["all_signals"]) == 21
+backend/tests/test_advanced_ensemble.py:52:    assert report["ai_detection"]["total_signals"] == 21
+backend/tests/test_covariance_detector.py:64:    assert report["ai_detection"]["total_signals"] == 21
+backend/tests/test_determinism.py:23:    assert report1["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:24:    assert report2["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:64:    assert report1["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:65:    assert report2["summary"]["total_detection_signals"] == 21
+backend/tests/test_determinism.py:117:    assert report1["ai_detection"]["total_signals"] == 21
+backend/tests/test_determinism.py:118:    assert report2["ai_detection"]["total_signals"] == 21
+backend/tests/test_edge_cases.py:36:        assert report["total_signals"] == 19
+backend/tests/test_edge_cases.py:69:    assert report["total_signals"] == 19
+backend/tests/test_edge_cases.py:112:        assert report["total_signals"] == 19
+backend/tests/test_fuzz.py:124:            assert report["total_signals"] == 19
+backend/tests/test_performance.py:27:    assert report["total_signals"] == 19
+backend/tests/test_statistical_detector.py:50:    assert len(report["all_signals"]) == 19  # 16 base + 3 statistical
+backend/tests/test_statistical_detector.py:51:    assert report["total_signals"] == 19
+backend/tests/test_statistical_detector.py:63:    assert report["ai_detection"]["total_signals"] == 21
+backend/tests/test_ultra_advanced_detector.py:63:    assert report["ai_detection"]["total_signals"] == 21
+
+==================================================
+3. CHECKING VARIANCE/TOLERANCE VALUES
+==================================================
+
+--- Variance checks in test_determinism.py ---
+74:        assert variance < 0.20, (
+
+==================================================
+4. CHECKING FOR DEPRECATED/OLD API CALLS
+==================================================
+
+--- Checking for _ai_detector attribute usage (deprecated) ---
+backend/tests/test_advanced_ai_detector.py:5:from backend.services.advanced_ai_detector import AdvancedAIDetector
+backend/tests/test_ai_detector.py:8:def test_ai_detector_initialization(sample_image_bytes):
+
+--- Checking for result_cache import (deprecated) ---
+
+--- Checking for perceptual hash usage (may not exist) ---
+
+==================================================
+5. CHECKING ACTUAL SIGNAL COUNTS IN CODE
+==================================================
+
+--- Counting signals in each detector ---
+Statistical Detector:
+0
+File not found
+Covariance Detector:
+0
+File not found
+Advanced AI Detector:
+0
+File not found
+Ultra Advanced Detector:
+0
+File not found
+DIRE Detector:
+-rw-r--r-- 1 Abinaze 197121 10992 Mar  7 11:37 backend/services/dire_detector.py
+CLIP Detector:
+-rw-r--r-- 1 Abinaze 197121 9576 Mar  7 11:37 backend/services/clip_detector.py
+
+==================================================
+6. CHECKING TEST FILE STRUCTURE
+==================================================
+
+--- Listing all test files ---
+21
+Total test files found
+
+--- Test files that might have issues ---
+⚠️  test_edge_cases.py: Still expects 19 signals
+⚠️  test_fuzz.py: Still expects 19 signals
+⚠️  test_performance.py: Still expects 19 signals
+⚠️  test_statistical_detector.py: Still expects 19 signals
+
+==================================================
+7. CHECKING IMPORTS AND DEPENDENCIES
+==================================================
+
+--- Checking if DIRE detector exists ---
+✓ DIRE detector: EXISTS
+28:class DIREDetector:
+214:    def detect(self, image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
+
+--- Checking if CLIP detector exists ---
+✓ CLIP detector: EXISTS
+22:class CLIPDetector:
+189:    def detect(self, image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
+
+==================================================
+8. CHECKING FOR COMMON TEST PATTERNS
+==================================================
+
+--- Files using generate_forensic_report() ---
+8
+test files use generate_forensic_report()
+
+--- Files checking report structure ---
+17
+lines check report structure
+
+==================================================
+9. POTENTIAL ISSUES SUMMARY
+==================================================
+
+✓ PASSED: All version checks use 6.0.0
+❌ ISSUE #2: Some tests still expect 19 signals (should be 21 or 20)
+✓ PASSED: Variance tolerance is appropriate
+
+==================================================
+TOTAL ISSUES FOUND: 1
+==================================================
+⚠️  Issues found. See details above.
+
+==================================================
+10. RECOMMENDATIONS
+==================================================
+
+To fix all issues, run:
+
+  cd ~/VeriFile-X
+  # Fix version checks
+  find backend/tests -name '*.py' -exec sed -i 's/== "5\.0\.0"/== "6.0.0"/g' {} +
+  # Fix signal counts (if needed)
+  # Manual review recommended for signal count changes
+  # Fix variance tolerance
+  sed -i 's/< 0\.1/< 0.20/g' backend/tests/test_determinism.py
+
+
+To run ALL tests locally:
+  cd ~/VeriFile-X
+  pytest backend/tests/ -v --tb=short
+
