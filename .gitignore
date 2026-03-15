@@ -51,3 +51,11 @@ data/reference/ai/
 
 # Keep directory structure
 !data/reference/.gitkeep
+
+# Development artifacts (never commit these)
+*.sh
+*.backup
+diagnostic_report.txt
+test_output.txt
+test_details.txt
+clip_temp.txt
