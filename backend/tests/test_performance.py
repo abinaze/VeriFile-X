@@ -24,7 +24,7 @@ def test_small_image_performance(sample_image_bytes):
     
     # Should complete in reasonable time (<10 seconds for small image)
     assert duration < 10.0
-    assert report["total_signals"] == 19  # 19 statistical + DIRE + CLIP
+    assert report["total_signals"] == 19  # 16 base + 3 statistical = 19 (StatisticalDetector only)
 
 
 @pytest.mark.skipif(not PSUTIL_AVAILABLE, reason="psutil not installed (requires C++ compiler on Windows)")
