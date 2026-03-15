@@ -61,6 +61,9 @@ jobs:
         pip-audit || true
       continue-on-error: true
 
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
+
     - name: Run fast tests
       run: |
         pytest backend/tests/ -v -m "not slow" --tb=short
