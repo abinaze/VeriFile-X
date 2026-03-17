@@ -4,7 +4,7 @@ services:
     name: verifile-x-api
     runtime: python
     buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt"
-    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.14
@@ -24,7 +24,7 @@ services:
         value: 500
       - key: LOG_LEVEL
         value: INFO
-    healthCheckPath: /api/v1/health
+    healthCheckPath: /health
     disk:
       name: verifile-cache
       mountPath: /opt/render/project/.cache
