@@ -25,10 +25,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
     healthCheckPath: /health
-    disk:
-      name: verifile-cache
-      mountPath: /opt/render/project/.cache
-      sizeGB: 1
+
 
   # Frontend Static Site
   - type: web
