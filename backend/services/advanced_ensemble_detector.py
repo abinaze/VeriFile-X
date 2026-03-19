@@ -54,18 +54,22 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         
         # Recalculate final score with weighted ensemble
         # Weights based on validation performance
-        weights = {
-            'statistical': 0.40,  # 19 signals, proven methods
-            'dire': 0.35,          # Best for diffusion models
-            'clip': 0.25           # Best generalization
-        }
-        
-        weighted_score = (
-            weights['statistical'] * base_report["ai_probability"] +
-            weights['dire'] * dire_result["score"] +
-            weights['clip'] * clip_result["score"]
-        )
-        
+        dire_confidence = dire_result.get("confidence", 0.0)
+
+        if dire_confidence > 0.0:
+            weighted_score = (
+                0.40 * base_report["ai_probability"] +
+                0.35 * dire_result["score"] +
+                0.25 * clip_result["score"]
+            )
+        else:
+            # DIRE unavailable — redistribute weight to statistical+CLIP
+            logger.info("DIRE unavailable — using statistical+CLIP only")
+            weighted_score = (
+                0.65 * base_report["ai_probability"] +
+                0.35 * clip_result["score"]
+            )
+
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
         
         # Boost if multiple independent methods agree
