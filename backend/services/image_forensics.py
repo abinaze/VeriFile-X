@@ -1,4 +1,5 @@
 import uuid
+from typing import Dict, Any
 from backend.core.logger import setup_logger
 from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
 
