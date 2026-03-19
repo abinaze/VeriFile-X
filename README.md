@@ -107,32 +107,32 @@ Multiple independent methods combined with validated weights. Agreement between 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                     Frontend                             │
-│         GitHub Pages · Plain HTML/CSS/JS                 │
+│                     Frontend                            │
+│         GitHub Pages · Plain HTML/CSS/JS                │
 │   Upload → 21 Signals · Hashes · EXIF · Tampering       │
 └──────────────────────┬──────────────────────────────────┘
                        │ POST /api/v1/analyze/image
 ┌──────────────────────▼──────────────────────────────────┐
-│              Backend — FastAPI + Uvicorn                  │
-│           HuggingFace Spaces · Docker · Python 3.11      │
-│                                                           │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │              ImageForensics                      │    │
-│  │  ├── extract_exif()                              │    │
-│  │  ├── generate_hashes()    SHA256·MD5·pHash       │    │
-│  │  ├── detect_tampering()   Flags·Confidence       │    │
-│  │  └── detect_ai_generation()                      │    │
-│  │       └── AdvancedEnsembleDetector               │    │
-│  │            ├── StatisticalDetector  → 19 signals │    │
-│  │            ├── DIREDetector         →  1 signal  │    │
-│  │            └── CLIPDetector         →  1 signal  │    │
-│  │                                     ─────────    │    │
-│  │                                     21 total     │    │
-│  └─────────────────────────────────────────────────┘    │
-│                                                           │
-│  Security: Rate limiting · MIME validation · In-memory    │
-│  Caching:  SHA256-keyed LRU · 60min TTL · 500 entries    │
-└───────────────────────────────────────────────────────────┘
+│               Backend — FastAPI + Uvicorn               │
+│            HuggingFace Spaces · Docker · Python 3.11    │
+│                                                         │
+│   ┌─────────────────────────────────────────────────┐   │
+│   │              ImageForensics                     │   │
+│   │  ├── extract_exif()                             │   │
+│   │  ├── generate_hashes()    SHA256·MD5·pHash      │   │
+│   │  ├── detect_tampering()   Flags·Confidence      │   │
+│   │  └── detect_ai_generation()                     │   │
+│   │       └── AdvancedEnsembleDetector              │   │
+│   │            ├── StatisticalDetector  → 19 signals│   │
+│   │            ├── DIREDetector         →  1 signal │   │
+│   │            └── CLIPDetector         →  1 signal │   │
+│   │                                     ─────────   │   │
+│   │                                     21 total    │   │
+│   └─────────────────────────────────────────────────┘   │
+│                                                         │
+│  Security: Rate limiting · MIME validation · In-memory  │
+│  Caching:  SHA256-keyed LRU · 60min TTL · 500 entries   │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
