@@ -1,6 +1,7 @@
 """
 Image forensics service with advanced ensemble AI detection.
 """
+import uuid
 from typing import Dict, Any
 from datetime import datetime
 from PIL import Image
@@ -115,6 +116,7 @@ class ImageForensics:
             "file_size_bytes": len(self.image_bytes)
         }
         report = {
+            "evidence_id": str(uuid.uuid4()),
             "metadata": {
                 "analysis_timestamp": datetime.now().isoformat(),
                 "analyzer_version": "6.0.0"
