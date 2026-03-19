@@ -1,10 +1,19 @@
+"""
+Image forensics service with advanced ensemble AI detection.
+"""
 import uuid
 from typing import Dict, Any
+from datetime import datetime
+from PIL import Image
+from PIL.ExifTags import TAGS, GPSTAGS
+import hashlib
+import imagehash
+from io import BytesIO
+
 from backend.core.logger import setup_logger
 from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
 
 logger = setup_logger(__name__)
-
 
 class ImageForensics:
     """Complete image forensics analysis pipeline with advanced detection."""
