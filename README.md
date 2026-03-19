@@ -1,3 +1,11 @@
+---
+title: VeriFile-X API
+emoji: 🔍
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
 # VeriFile-X — AI-Generated Image Detection
 
 > Forensic-grade AI image detection using DIRE, CLIP, and 19 statistical signals.  
