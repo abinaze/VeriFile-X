@@ -116,6 +116,7 @@
         /* ANALYZE AGAIN */
         .analyze-again { text-align: center; margin-top: 2rem; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -209,6 +210,7 @@
 
         <div class="analyze-again">
             <button class="btn-primary" onclick="resetUI()">Analyze Another Image</button>
+        <button class="btn-primary" onclick="downloadPDF()" style="margin-left:1rem;background:linear-gradient(135deg,#10b981,#22d3ee)">⬇ Download Report PDF</button>
         </div>
     </div>
 
@@ -264,6 +266,7 @@
                 }
 
                 const data = await response.json();
+                window._lastReport = data;
                 renderResults(data);
 
                 loading.classList.remove('active');
@@ -351,6 +354,116 @@
                 </div>`;
             }).join('');
         }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const data = window._lastReport;
+            if (data/processed/*.csv) { alert('No report to download'); return; }
+
+            const ai = data.ai_detection;
+            const prob = Math.round(ai.ai_probability * 100);
+            const ts = data.metadata.analysis_timestamp;
+
+            // Header
+            doc.setFillColor(10, 22, 40);
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text('VeriFile-X Forensic Analysis Report', 105, 14, { align: 'center' });
+            doc.setFontSize(9);
+            doc.text('AI-Generated Image Detection Platform v6.0.0', 105, 22, { align: 'center' });
+
+            doc.setTextColor(0, 0, 0);
+            let y = 38;
+
+            // Evidence ID
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 100, 100);
+            doc.text('Evidence ID:', 14, y);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('courier', 'normal');
+            doc.text(data.evidence_id || 'N/A', 14, y + 5);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Analysis Timestamp: ' + ts, 14, y + 12);
+            doc.text('File: ' + data.file_info.filename + '  |  ' + data.file_info.width + 'x' + data.file_info.height + 'px  |  ' + (data.file_info.file_size_bytes/1024).toFixed(1) + ' KB', 14, y + 19);
+            y += 30;
+
+            // Verdict box
+            const verdictColor = prob >= 70 ? [220, 38, 38] : prob >= 40 ? [234, 88, 12] : [16, 185, 129];
+            doc.setFillColor(...verdictColor);
+            doc.roundedRect(14, y, 182, 22, 3, 3, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('VERDICT: ' + ai.classification.replace(/_/g, ' ').toUpperCase() + ' — ' + prob + '%', 105, y + 10, { align: 'center' });
+            doc.setFontSize(9);
+            doc.text('Confidence: ' + (ai.confidence || 'N/A') + '  |  Methods: ' + ai.methods_used.join(', ') + '  |  Signals: ' + ai.suspicious_signals_count + '/' + ai.total_signals, 105, y + 17, { align: 'center' });
+            y += 30;
+
+            // Hashes
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Cryptographic Hashes', 14, y);
+            y += 6;
+            doc.setFontSize(8);
+            doc.setFont('courier', 'normal');
+            const h = data.hashes;
+            doc.text('SHA-256:  ' + h.sha256, 14, y); y += 5;
+            doc.text('MD5:      ' + h.md5, 14, y); y += 5;
+            doc.text('pHash:    ' + h.perceptual_hash + '   aHash: ' + h.average_hash + '   dHash: ' + h.difference_hash, 14, y); y += 10;
+
+            // Tampering
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text('Tampering Analysis', 14, y); y += 6;
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const flags = data.tampering_analysis.suspicious_flags;
+            if (flags.length === 0) {
+                doc.setTextColor(16, 185, 129);
+                doc.text('No tampering indicators detected. Authenticity confidence: ' + data.tampering_analysis.confidence, 14, y);
+            } else {
+                doc.setTextColor(220, 38, 38);
+                flags.forEach(f => { doc.text('• ' + f, 14, y); y += 5; });
+            }
+            doc.setTextColor(0, 0, 0);
+            y += 8;
+
+            // Detection Signals
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text('Detection Signals (' + ai.total_signals + ' total)', 14, y); y += 6;
+            doc.setFontSize(8);
+            const signals = (ai.all_signals || []).sort((a, b) => b.score - a.score);
+            signals.forEach((s, i) => {
+                if (y > 270) { doc.addPage(); y = 20; }
+                const pct = Math.round(s.score * 100);
+                const col = pct >= 70 ? [220, 38, 38] : pct >= 40 ? [234, 88, 12] : [16, 185, 129];
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+                doc.text((s.signal_name || s.name || 'Signal'), 14, y);
+                doc.setTextColor(...col);
+                doc.text(pct + '%', 195, y, { align: 'right' });
+                doc.setTextColor(0, 0, 0);
+                y += 5;
+            });
+
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text('VeriFile-X | Evidence ID: ' + (data.evidence_id || 'N/A') + ' | Page ' + i + ' of ' + pageCount, 105, 290, { align: 'center' });
+            }
+
+            doc.save('VeriFileX-Report-' + (data.evidence_id || 'report').substring(0, 8) + '.pdf');
+        }
+
     </script>
 </body>
 </html>
