@@ -156,6 +156,7 @@
         <!-- VERDICT -->
         <div class="verdict-card">
             <h2>Verdict</h2>
+            <p id="evidenceId" style="font-family:monospace;font-size:0.75rem;color:#94a3b8;margin-bottom:0.5rem;word-break:break-all"></p>
             <div class="probability-number" id="aiProb">0%</div>
             <div><span class="classification-badge" id="classificationBadge"></span></div>
             <p class="methods-used" id="methods"></p>
@@ -280,6 +281,7 @@
 
             // Verdict
             const probEl = document.getElementById('aiProb');
+            document.getElementById('evidenceId').textContent = 'Evidence ID: ' + (data.evidence_id || 'N/A');
             probEl.textContent = prob + '%';
             probEl.className = 'probability-number ' + (prob >= 70 ? 'prob-ai' : prob >= 40 ? 'prob-maybe' : 'prob-human');
 
