@@ -359,7 +359,7 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const data = window._lastReport;
-            if (data/processed/*.csv) { alert('No report to download'); return; }
+            if (!data) { alert('No report to download'); return; }
 
             const ai = data.ai_detection;
             const prob = Math.round(ai.ai_probability * 100);
