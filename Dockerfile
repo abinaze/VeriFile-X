@@ -34,7 +34,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     transformers==4.53.0 \
     diffusers==0.25.0 \
     accelerate==0.25.0 \
-    huggingface_hub==0.20.0 \
+    huggingface_hub==0.30.0 \
     safetensors==0.4.1 \
     ftfy==6.1.1 \
     regex==2023.12.25 \
