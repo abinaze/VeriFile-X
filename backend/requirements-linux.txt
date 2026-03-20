@@ -13,7 +13,7 @@ python-dotenv==1.0.0
 
 # File Processing
 python-magic==0.4.27  # Linux-specific (cross-platform)
-python-multipart==0.0.6
+python-multipart==0.0.22
 
 # Testing
 pytest==7.4.3
@@ -23,13 +23,13 @@ pytest-cov==4.1.0
 psutil==5.9.8
 
 # Image Processing & Forensics
-Pillow==10.2.0
+Pillow==11.1.0
 imagehash==4.3.1
 
 # AI Detection & Analysis
 numpy==1.26.3
 scipy==1.11.4
-scikit-learn==1.4.0
+scikit-learn==1.5.0
 opencv-python==4.9.0.80
 slowapi==0.1.9
 
@@ -38,13 +38,13 @@ PyWavelets==1.4.1
 scikit-image==0.22.0
 
 # Cryptography
-cryptography==41.0.7
+cryptography==44.0.1
 
 # Deep Learning Detection
-torch==2.1.0
-torchvision==0.16.0
+torch==2.6.0
+torchvision==0.21.0
 diffusers==0.25.0
-transformers==4.36.0
+transformers==4.53.0
 accelerate==0.25.0
 huggingface_hub==0.20.0
 safetensors==0.4.1
