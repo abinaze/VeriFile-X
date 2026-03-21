@@ -8,6 +8,7 @@ from backend.services.statistical_detector import StatisticalDetector
 from backend.services.dire_detector import DIREDetector
 from backend.services.clip_detector import CLIPDetector
 from backend.services.prnu_detector import detect_prnu
+from backend.services.ela_detector import detect_ela
 
 logger = setup_logger(__name__)
 
@@ -37,7 +38,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         Run complete advanced detection with all methods.
         
         Returns:
-            Complete report with 22 detection signals
+            Complete report with 23 detection signals
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
         
@@ -53,8 +54,11 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Add PRNU signal
         prnu_result = detect_prnu(self.image_bytes, self.filename)
 
-        # Combine all signals (now 22 total)
-        all_signals = base_report["all_signals"] + [dire_result, clip_result, prnu_result]
+        # Add ELA signal
+        ela_result = detect_ela(self.image_bytes, self.filename)
+
+        # Combine all signals (now 23 total)
+        all_signals = base_report["all_signals"] + [dire_result, clip_result, prnu_result, ela_result]
         
         # Recalculate final score with weighted ensemble
         # Weights based on validation performance
@@ -62,33 +66,26 @@ class AdvancedEnsembleDetector(StatisticalDetector):
 
         prnu_confidence = prnu_result.get("confidence", 0.0)
 
-        if dire_confidence > 0.0 and prnu_confidence > 0.0:
+        ela_confidence = ela_result.get("confidence", 0.0)
+        prnu_confidence = prnu_result.get("confidence", 0.0)
+
+        if dire_confidence > 0.0:
             weighted_score = (
-                0.38 * base_report["ai_probability"] +
-                0.30 * dire_result["score"] +
-                0.22 * clip_result["score"] +
-                0.10 * prnu_result["score"]
-            )
-        elif dire_confidence > 0.0:
-            weighted_score = (
-                0.40 * base_report["ai_probability"] +
-                0.35 * dire_result["score"] +
-                0.25 * clip_result["score"]
+                0.35 * base_report["ai_probability"] +
+                0.28 * dire_result["score"] +
+                0.20 * clip_result["score"] +
+                0.10 * prnu_result["score"] +
+                0.07 * ela_result["score"]
             )
         else:
-            # DIRE unavailable — use statistical+CLIP+PRNU
-            logger.info("DIRE unavailable — using statistical+CLIP+PRNU")
-            if prnu_confidence > 0.0:
-                weighted_score = (
-                    0.58 * base_report["ai_probability"] +
-                    0.30 * clip_result["score"] +
-                    0.12 * prnu_result["score"]
-                )
-            else:
-                weighted_score = (
-                    0.65 * base_report["ai_probability"] +
-                    0.35 * clip_result["score"]
-                )
+            # DIRE unavailable
+            logger.info("DIRE unavailable — using statistical+CLIP+PRNU+ELA")
+            weighted_score = (
+                0.55 * base_report["ai_probability"] +
+                0.25 * clip_result["score"] +
+                0.12 * prnu_result["score"] +
+                0.08 * ela_result["score"]
+            )
 
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
         
@@ -130,8 +127,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             "summary": f"Analyzed using {len(all_signals)} independent signals including "
                       f"statistical analysis, diffusion reconstruction, and semantic embeddings. "
                       f"{suspicious_count} signals indicate AI generation.",
-            "detection_version": "advanced-ensemble-v1.1",
-            "methods_used": ["statistical", "dire", "clip", "prnu"]
+            "detection_version": "advanced-ensemble-v1.2",
+            "methods_used": ["statistical", "dire", "clip", "prnu", "ela"]
         }
         
         logger.info(
