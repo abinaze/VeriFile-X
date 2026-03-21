@@ -37,7 +37,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         Run complete advanced detection with all methods.
         
         Returns:
-            Complete report with 21 detection signals
+            Complete report with 22 detection signals
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
         
