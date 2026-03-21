@@ -9,6 +9,7 @@ from backend.services.dire_detector import DIREDetector
 from backend.services.clip_detector import CLIPDetector
 from backend.services.prnu_detector import detect_prnu
 from backend.services.ela_detector import detect_ela
+from backend.services.metadata_forensics import analyze_metadata
 
 logger = setup_logger(__name__)
 
@@ -38,7 +39,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         Run complete advanced detection with all methods.
         
         Returns:
-            Complete report with 23 detection signals
+            Complete report with 24 detection signals
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
         
@@ -57,8 +58,11 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Add ELA signal
         ela_result = detect_ela(self.image_bytes, self.filename)
 
-        # Combine all signals (now 23 total)
-        all_signals = base_report["all_signals"] + [dire_result, clip_result, prnu_result, ela_result]
+        # Add metadata forensics signal
+        metadata_result = analyze_metadata(self.image_bytes, self.filename)
+
+        # Combine all signals (now 24 total)
+        all_signals = base_report["all_signals"] + [dire_result, clip_result, prnu_result, ela_result, metadata_result]
         
         # Recalculate final score with weighted ensemble
         # Weights based on validation performance
@@ -71,20 +75,21 @@ class AdvancedEnsembleDetector(StatisticalDetector):
 
         if dire_confidence > 0.0:
             weighted_score = (
-                0.35 * base_report["ai_probability"] +
-                0.28 * dire_result["score"] +
-                0.20 * clip_result["score"] +
-                0.10 * prnu_result["score"] +
-                0.07 * ela_result["score"]
+                0.33 * base_report["ai_probability"] +
+                0.26 * dire_result["score"] +
+                0.19 * clip_result["score"] +
+                0.09 * prnu_result["score"] +
+                0.07 * ela_result["score"] +
+                0.06 * metadata_result["score"]
             )
         else:
-            # DIRE unavailable
-            logger.info("DIRE unavailable — using statistical+CLIP+PRNU+ELA")
+            logger.info("DIRE unavailable — using statistical+CLIP+PRNU+ELA+metadata")
             weighted_score = (
-                0.55 * base_report["ai_probability"] +
-                0.25 * clip_result["score"] +
-                0.12 * prnu_result["score"] +
-                0.08 * ela_result["score"]
+                0.52 * base_report["ai_probability"] +
+                0.23 * clip_result["score"] +
+                0.11 * prnu_result["score"] +
+                0.08 * ela_result["score"] +
+                0.06 * metadata_result["score"]
             )
 
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
@@ -127,8 +132,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             "summary": f"Analyzed using {len(all_signals)} independent signals including "
                       f"statistical analysis, diffusion reconstruction, and semantic embeddings. "
                       f"{suspicious_count} signals indicate AI generation.",
-            "detection_version": "advanced-ensemble-v1.2",
-            "methods_used": ["statistical", "dire", "clip", "prnu", "ela"]
+            "detection_version": "advanced-ensemble-v1.3",
+            "methods_used": ["statistical", "dire", "clip", "prnu", "ela", "metadata"]
         }
         
         logger.info(
