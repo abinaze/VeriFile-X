@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     python-dotenv==1.0.0 \
     python-magic==0.4.27 \
     python-multipart==0.0.22 \
-    Pillow==11.1.0 \
+    Pillow==11.2.1 \
     imagehash==4.3.1 \
     numpy==1.26.3 \
     scipy==1.11.4 \
