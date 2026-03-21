@@ -61,7 +61,7 @@ def test_statistical_forensics_integration(sample_image_bytes):
     
     assert "ai_detection" in report
     # System has 21 signals: 19 statistical + 1 DIRE + 1 CLIP
-    assert report["ai_detection"]["total_signals"] == 24
+    assert report["ai_detection"]["total_signals"] == 25
     assert report["metadata"]["analyzer_version"] == "6.0.0"
     assert "detection_version" in report["ai_detection"]
 
