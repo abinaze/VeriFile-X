@@ -115,7 +115,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
 
         weighted_score = calibrate(weighted_score)
 
-        suspicious_count = sum(1 for s in all_signals if s[score] > 0.5)
+        suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
         
         # Boost if multiple independent methods agree
         if suspicious_count >= 12:  # More than half
