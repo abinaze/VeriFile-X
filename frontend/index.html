@@ -72,7 +72,7 @@
 
         /* GRID */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .hero h1 { font-size: 2rem; } .probability-number { font-size: 3.5rem; } }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .hero h1 { font-size: 2rem; } .probability-number { font-size: 3.5rem; } .analyze-again { flex-direction: column; align-items: center; } .analyze-again .btn-primary { width: 100%; max-width: 300px; } .nav-badge { display: none; } .stats { gap: 1.5rem; } }
 
         /* CARDS */
         .card { background: rgba(26,41,66,0.8); border: 1px solid rgba(37,99,235,0.2); border-radius: 12px; padding: 1.5rem; }
@@ -114,7 +114,7 @@
         .exif-empty { color: var(--slate-400); font-size: 0.9rem; font-style: italic; }
 
         /* ANALYZE AGAIN */
-        .analyze-again { text-align: center; margin-top: 2rem; }
+        .analyze-again { text-align: center; margin-top: 2rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -142,7 +142,7 @@
             <div class="upload-icon">🔍</div>
             <h2>Drop image here or click to upload</h2>
             <p>Supports JPEG, PNG, WebP • Max 10MB</p>
-            <button class="btn-primary" onclick="event.stopPropagation()">Select Image</button>
+            <button class="btn-primary" onclick="event.stopPropagation(); document.getElementById("fileInput").click()">Select Image</button>
             <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
         </div>
     </div>
@@ -210,7 +210,7 @@
 
         <div class="analyze-again">
             <button class="btn-primary" onclick="resetUI()">Analyze Another Image</button>
-        <button class="btn-primary" onclick="downloadPDF()" style="margin-left:1rem;background:linear-gradient(135deg,#10b981,#22d3ee)">⬇ Download Report PDF</button>
+            <button class="btn-primary" onclick="downloadPDF()" style="background:linear-gradient(135deg,#10b981,#22d3ee)">⬇ Download Report PDF</button>
         </div>
     </div>
 
