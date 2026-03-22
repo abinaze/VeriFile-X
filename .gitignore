@@ -59,3 +59,16 @@ diagnostic_report.txt
 test_output.txt
 test_details.txt
 clip_temp.txt
+
+# Dataset images - never commit these, too large
+data/real/**/*.jpg
+data/real/**/*.jpeg
+data/real/**/*.png
+data/real/**/*.tif
+data/real/**/*.tiff
+data/ai/**/*.jpg
+data/ai/**/*.jpeg
+data/ai/**/*.png
+# Keep .gitkeep and manifest.csv
+!data/**/.gitkeep
+!data/manifest.csv
