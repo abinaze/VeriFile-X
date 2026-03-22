@@ -11,6 +11,7 @@ from backend.services.image_forensics import ImageForensics
 from backend.utils.validators import validate_file, FileValidationError
 from backend.core.logger import setup_logger
 from backend.core.cache import forensics_cache
+from backend.core.audit_log import log_analysis
 
 logger = setup_logger(__name__)
 
@@ -130,6 +131,18 @@ async def analyze_image(
         # Store in cache for future duplicate uploads
         forensics_cache.set(file_hash, report)
 
+        # Record in audit log
+        log_analysis(
+            evidence_id=report.get("evidence_id", "unknown"),
+            filename=file.filename,
+            file_sha256=file_hash,
+            ai_probability=report["summary"]["ai_probability"],
+            classification=report["summary"]["ai_classification"],
+            total_signals=report["summary"]["total_detection_signals"],
+            suspicious_signals=report["summary"]["suspicious_detection_signals"],
+            methods_used=report["ai_detection"].get("methods_used", [])
+        )
+
         logger.info(
             f"Analysis complete: file={file.filename}, "
             f"ai_probability={report['summary']['ai_probability']:.3f}, "
@@ -162,3 +175,17 @@ async def analyze_image(
 
     finally:
         await file.close()
+
+
+@router.get("/history", summary="Recent analysis history")
+async def get_history(limit: int = 20):
+    """Return recent analysis records from audit log."""
+    from backend.core.audit_log import get_recent_analyses
+    return {"analyses": get_recent_analyses(limit=min(limit, 100))}
+
+
+@router.get("/stats", summary="Analysis statistics")
+async def get_stats():
+    """Return aggregate detection statistics."""
+    from backend.core.audit_log import get_stats
+    return get_stats()
