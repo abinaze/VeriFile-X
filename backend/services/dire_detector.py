@@ -283,7 +283,7 @@ class DIREDetector:
             return {
                 "signal_name": "DIRE Reconstruction Error",
                 "score": 0.5,  # Neutral on failure
-                "confidence": 0.1,
+                "confidence": 0.0,
                 "explanation": f"Analysis failed: {str(e)}",
                 "raw_value": 0.0,
                 "expected_range": "N/A",

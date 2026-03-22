@@ -35,7 +35,8 @@ class Settings(BaseSettings):
     # CORS CONFIGURATION
     # =========================================================================
     
-    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://abinaze.github.io,https://abinazebinoy-verifile-x-api.hf.space")
+
     
     @property
     def cors_origins_list(self) -> list[str]:

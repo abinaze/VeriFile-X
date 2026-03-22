@@ -3,272 +3,467 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VeriFile-X | Advanced AI Detection</title>
+    <title>VeriFile-X | AI Image Detection</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --navy-900: #0a1628;
-            --navy-800: #0f1f3a;
-            --blue-500: #2563eb;
-            --cyan-400: #22d3ee;
-            --slate-100: #f1f5f9;
-            --slate-400: #94a3b8;
-            --red-500: #ef4444;
-            --orange-500: #f97316;
-            --green-500: #10b981;
+            --navy-900: #0a1628; --navy-800: #0f1f3a; --navy-700: #162236;
+            --blue-500: #2563eb; --blue-400: #3b82f6; --cyan-400: #22d3ee;
+            --slate-100: #f1f5f9; --slate-300: #cbd5e1; --slate-400: #94a3b8; --slate-600: #475569;
+            --red-500: #ef4444; --orange-500: #f97316; --green-500: #10b981; --yellow-400: #facc15;
         }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%); color: var(--slate-100); min-height: 100vh; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-800) 100%);
-            color: var(--slate-100);
-            min-height: 100vh;
-        }
+        /* NAV */
+        .navbar { background: rgba(10,22,40,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(37,99,235,0.2); padding: 1.25rem 0; position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--blue-500), var(--cyan-400)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-badge { background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3); color: var(--cyan-400); padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
 
-        .navbar {
-            background: rgba(10, 22, 40, 0.95);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(37, 99, 235, 0.2);
-            padding: 1.25rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
+        /* HERO */
+        .hero { padding: 4rem 2rem 2rem; text-align: center; }
+        .upgrade-badge { display: inline-block; background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3); color: var(--cyan-400); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem; }
+        .hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 1rem; background: linear-gradient(135deg, #fff 0%, var(--cyan-400) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-subtitle { font-size: 1.1rem; color: var(--slate-400); margin-bottom: 2rem; }
+        .stats { display: flex; justify-content: center; gap: 3rem; margin-bottom: 3rem; flex-wrap: wrap; }
+        .stat-number { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, var(--cyan-400), var(--blue-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-label { color: var(--slate-400); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
 
-        .nav-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        /* UPLOAD */
+        .upload-section { max-width: 700px; margin: 0 auto 3rem; padding: 0 2rem; }
+        .upload-zone { padding: 3rem 2rem; text-align: center; background: rgba(26,41,66,0.5); border: 2px dashed rgba(37,99,235,0.4); border-radius: 16px; cursor: pointer; transition: all 0.2s; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--cyan-400); background: rgba(34,211,238,0.05); }
+        .upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .upload-zone h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+        .upload-zone p { color: var(--slate-400); font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .btn-primary { background: linear-gradient(135deg, var(--blue-500), var(--cyan-400)); color: white; padding: 0.75rem 2rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 1rem; transition: opacity 0.2s; }
+        .btn-primary:hover { opacity: 0.9; }
+        #fileInput { display: none; }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--blue-500) 0%, var(--cyan-400) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        /* LOADING */
+        .loading { display: none; text-align: center; padding: 3rem; }
+        .loading.active { display: block; }
+        .spinner { width: 50px; height: 50px; border: 3px solid rgba(37,99,235,0.2); border-top-color: var(--cyan-400); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1.5rem; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+        .loading p { color: var(--slate-400); }
 
-        .hero {
-            padding: 5rem 2rem;
-            text-align: center;
-        }
+        /* RESULTS */
+        .results { display: none; max-width: 1200px; margin: 0 auto 4rem; padding: 0 2rem; }
+        .results.active { display: block; }
 
-        .upgrade-badge {
-            display: inline-block;
-            background: rgba(34, 211, 238, 0.1);
-            border: 1px solid rgba(34, 211, 238, 0.3);
-            color: var(--cyan-400);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
+        /* VERDICT CARD */
+        .verdict-card { background: rgba(26,41,66,0.9); border-radius: 16px; padding: 2.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(37,99,235,0.3); text-align: center; }
+        .verdict-card h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 2px; color: var(--slate-400); margin-bottom: 1rem; }
+        .probability-number { font-size: 5rem; font-weight: 800; line-height: 1; margin-bottom: 0.5rem; }
+        .prob-ai { background: linear-gradient(135deg, var(--red-500), var(--orange-500)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .prob-maybe { background: linear-gradient(135deg, var(--orange-500), var(--yellow-400)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .prob-human { background: linear-gradient(135deg, var(--green-500), var(--cyan-400)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .classification-badge { display: inline-block; padding: 0.5rem 1.5rem; border-radius: 20px; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.75rem; }
+        .badge-ai { background: rgba(239,68,68,0.2); color: var(--red-500); border: 1px solid rgba(239,68,68,0.4); }
+        .badge-maybe { background: rgba(249,115,22,0.2); color: var(--orange-500); border: 1px solid rgba(249,115,22,0.4); }
+        .badge-human { background: rgba(16,185,129,0.2); color: var(--green-500); border: 1px solid rgba(16,185,129,0.4); }
+        .methods-used { color: var(--slate-400); font-size: 0.9rem; }
+        .confidence-row { margin-top: 1rem; display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; }
+        .confidence-item { text-align: center; }
+        .confidence-value { font-size: 1.2rem; font-weight: 700; color: var(--cyan-400); }
+        .confidence-label { font-size: 0.75rem; color: var(--slate-400); text-transform: uppercase; letter-spacing: 1px; }
 
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #ffffff 0%, var(--cyan-400) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        /* GRID */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } .hero h1 { font-size: 2rem; } .probability-number { font-size: 3.5rem; } .analyze-again { flex-direction: column; align-items: center; } .analyze-again .btn-primary { width: 100%; max-width: 300px; } .nav-badge { display: none; } .stats { gap: 1.5rem; } }
 
-        .hero-subtitle {
-            font-size: 1.25rem;
-            color: var(--slate-400);
-            margin-bottom: 2.5rem;
-        }
+        /* CARDS */
+        .card { background: rgba(26,41,66,0.8); border: 1px solid rgba(37,99,235,0.2); border-radius: 12px; padding: 1.5rem; }
+        .card h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--cyan-400); margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; }
+        .card-full { margin-bottom: 1.5rem; }
 
-        .stats {
-            display: flex;
-            justify-content: center;
-            gap: 4rem;
-            margin-top: 4rem;
-        }
+        /* FILE INFO */
+        .info-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(37,99,235,0.1); }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: var(--slate-400); font-size: 0.85rem; }
+        .info-value { font-size: 0.9rem; font-weight: 500; font-family: monospace; }
 
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--cyan-400) 0%, var(--blue-500) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        /* HASHES */
+        .hash-item { margin-bottom: 0.8rem; }
+        .hash-label { font-size: 0.75rem; color: var(--cyan-400); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.2rem; }
+        .hash-value { font-family: monospace; font-size: 0.78rem; color: var(--slate-300); word-break: break-all; background: rgba(0,0,0,0.2); padding: 0.4rem 0.6rem; border-radius: 4px; }
 
-        .stat-label {
-            color: var(--slate-400);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-        }
+        /* TAMPERING */
+        .flag-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(37,99,235,0.1); font-size: 0.9rem; }
+        .flag-item:last-child { border-bottom: none; }
+        .flag-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange-500); flex-shrink: 0; }
+        .no-flags { color: var(--green-500); font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
 
-        .upload-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
-            text-align: center;
-            background: rgba(26, 41, 66, 0.5);
-            border: 2px dashed rgba(37, 99, 235, 0.3);
-            border-radius: 16px;
-            cursor: pointer;
-        }
+        /* SIGNALS */
+        .signal-item { margin-bottom: 0.75rem; }
+        .signal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; }
+        .signal-name { font-size: 0.82rem; color: var(--slate-300); }
+        .signal-score { font-size: 0.82rem; font-weight: 700; }
+        .score-high { color: var(--red-500); }
+        .score-mid { color: var(--orange-500); }
+        .score-low { color: var(--green-500); }
+        .signal-bar { height: 5px; background: rgba(37,99,235,0.15); border-radius: 3px; overflow: hidden; }
+        .signal-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+        .fill-high { background: linear-gradient(90deg, var(--orange-500), var(--red-500)); }
+        .fill-mid { background: linear-gradient(90deg, var(--yellow-400), var(--orange-500)); }
+        .fill-low { background: linear-gradient(90deg, var(--green-500), var(--cyan-400)); }
 
-        .upload-container:hover {
-            border-color: var(--cyan-400);
-        }
+        /* EXIF */
+        .exif-empty { color: var(--slate-400); font-size: 0.9rem; font-style: italic; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--blue-500) 0%, var(--cyan-400) 100%);
-            color: white;
-            padding: 0.75rem 2rem;
-            border-radius: 8px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 4rem;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .results {
-            display: none;
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-        }
-
-        .results.active {
-            display: block;
-        }
-
-        .ai-detection-card {
-            background: rgba(26, 41, 66, 0.8);
-            border: 1px solid rgba(37, 99, 235, 0.3);
-            border-radius: 16px;
-            padding: 3rem;
-        }
-
-        .probability-number {
-            font-size: 4rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--cyan-400) 0%, var(--blue-500) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        /* ANALYZE AGAIN */
+        .analyze-again { text-align: center; margin-top: 2rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">VeriFile-X</div>
+            <div class="nav-badge">25 Detection Signals • 96-98% Accuracy</div>
         </div>
     </nav>
 
     <section class="hero">
-        <div class="upgrade-badge">DIRE + CLIP + Statistical • 21 Detection Signals</div>
-        <h1>Advanced AI Detection</h1>
-        <p class="hero-subtitle">Diffusion reconstruction, semantic embeddings, and statistical analysis</p>
-        
+        <div class="upgrade-badge">DIRE + CLIP + Statistical Analysis</div>
+        <h1>Is This Image AI Generated?</h1>
+        <p class="hero-subtitle">Upload any image. Get forensic-grade analysis in seconds.</p>
         <div class="stats">
-            <div>
-                <div class="stat-number">96-98%</div>
-                <div class="stat-label">Detection Accuracy</div>
-            </div>
-            <div>
-                <div class="stat-number">21</div>
-                <div class="stat-label">Detection Signals</div>
-            </div>
+            <div><div class="stat-number">21</div><div class="stat-label">Detection Signals</div></div>
+            <div><div class="stat-number">96-98%</div><div class="stat-label">Accuracy</div></div>
+            <div><div class="stat-number">3</div><div class="stat-label">AI Methods</div></div>
         </div>
     </section>
 
-    <div class="upload-container" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-        <h2>Upload Image for Analysis</h2>
-        <input type="file" id="fileInput" accept="image/*">
-        <button class="btn-primary">Select File</button>
+    <div class="upload-section">
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">🔍</div>
+            <h2>Drop image here or click to upload</h2>
+            <p>Supports JPEG, PNG, WebP • Max 10MB</p>
+            <button class="btn-primary" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">Select Image</button>
+            <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+        </div>
     </div>
 
     <div class="loading" id="loading">
-        <h2>Analyzing with 21 signals...</h2>
-        <p>Running DIRE, CLIP, and statistical methods</p>
+        <div class="spinner"></div>
+        <h2>Analyzing with 22 signals...</h2>
+        <p>Running DIRE reconstruction, CLIP embeddings, and statistical analysis</p>
     </div>
 
     <div class="results" id="results">
-        <div class="ai-detection-card">
-            <h2>Detection Results</h2>
+        <!-- VERDICT -->
+        <div class="verdict-card">
+            <h2>Verdict</h2>
+            <p id="evidenceId" style="font-family:monospace;font-size:0.75rem;color:#94a3b8;margin-bottom:0.5rem;word-break:break-all"></p>
             <div class="probability-number" id="aiProb">0%</div>
-            <p id="classification"></p>
-            <p id="methods"></p>
+            <div><span class="classification-badge" id="classificationBadge"></span></div>
+            <p class="methods-used" id="methods"></p>
+            <div class="confidence-row">
+                <div class="confidence-item">
+                    <div class="confidence-value" id="suspiciousCount">-</div>
+                    <div class="confidence-label">Suspicious Signals</div>
+                </div>
+                <div class="confidence-item">
+                    <div class="confidence-value" id="totalSignals">-</div>
+                    <div class="confidence-label">Total Signals</div>
+                </div>
+                <div class="confidence-item">
+                    <div class="confidence-value" id="confidenceLevel">-</div>
+                    <div class="confidence-label">Confidence</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILE INFO + HASHES -->
+        <div class="grid-2">
+            <div class="card">
+                <h3>📁 File Information</h3>
+                <div id="fileInfo"></div>
+            </div>
+            <div class="card">
+                <h3>🔐 Cryptographic Hashes</h3>
+                <div id="hashInfo"></div>
+            </div>
+        </div>
+
+        <!-- TAMPERING + EXIF -->
+        <div class="grid-2">
+            <div class="card">
+                <h3>⚠️ Tampering Indicators</h3>
+                <div id="tamperingInfo"></div>
+            </div>
+            <div class="card">
+                <h3>📷 EXIF Metadata</h3>
+                <div id="exifInfo"></div>
+            </div>
+        </div>
+
+        <!-- ALL 21 SIGNALS -->
+        <div class="card card-full">
+            <h3>📊 All Detection Signals (21)</h3>
+            <div id="signalsGrid" style="columns: 2; column-gap: 2rem;">
+            </div>
+        </div>
+
+        <div class="analyze-again">
+            <button class="btn-primary" onclick="resetUI()">Analyze Another Image</button>
+            <button class="btn-primary" onclick="downloadPDF()" style="background:linear-gradient(135deg,#10b981,#22d3ee)">⬇ Download Report PDF</button>
         </div>
     </div>
 
     <script>
-        // Auto-detect API URL based on environment
-        const API_URL = window.location.hostname.includes('onrender.com')
-            ? 'https://verifile-x-api.onrender.com'
-            : window.location.hostname === 'localhost'
+        const API_URL = window.location.hostname.includes('github.io') || window.location.hostname.includes('abinaze')
+            ? 'https://abinazebinoy-verifile-x-api.hf.space'
+            : window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? 'http://localhost:8000'
-            : '';  // Use relative URL for other environments
-        
+            : 'https://abinazebinoy-verifile-x-api.hf.space';
+
         const fileInput = document.getElementById('fileInput');
+        const uploadZone = document.getElementById('uploadZone');
         const loading = document.getElementById('loading');
         const results = document.getElementById('results');
-        
-        fileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
+
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) analyzeFile(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) analyzeFile(e.target.files[0]);
+        });
+
+        function resetUI() {
+            results.classList.remove('active');
+            uploadZone.style.display = 'block';
+            fileInput.value = '';
+        }
+
+        async function analyzeFile(file) {
+            uploadZone.style.display = 'none';
             loading.classList.add('active');
             results.classList.remove('active');
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
-                const apiEndpoint = API_URL 
-                    ? `${API_URL}/api/v1/analyze/image`
-                    : '/api/v1/analyze/image';
-                
-                const response = await fetch(apiEndpoint, {
+                const response = await fetch(`${API_URL}/api/v1/analyze/image`, {
                     method: 'POST',
                     body: formData
                 });
-                
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || `Server error ${response.status}`);
+                }
+
                 const data = await response.json();
-                
-                document.getElementById('aiProb').textContent = 
-                    Math.round(data.ai_detection.ai_probability * 100) + '%';
-                document.getElementById('classification').textContent = 
-                    data.ai_detection.classification;
-                document.getElementById('methods').textContent = 
-                    'Methods: ' + data.ai_detection.methods_used.join(', ');
-                
+                window._lastReport = data;
+                renderResults(data);
+
                 loading.classList.remove('active');
                 results.classList.add('active');
             } catch (error) {
-                alert('Analysis failed: ' + error.message);
                 loading.classList.remove('active');
+                uploadZone.style.display = 'block';
+                alert('Analysis failed: ' + error.message);
             }
-        });
+        }
+
+        function renderResults(data) {
+            const ai = data.ai_detection;
+            const prob = Math.round(ai.ai_probability * 100);
+
+            // Verdict
+            const probEl = document.getElementById('aiProb');
+            document.getElementById('evidenceId').textContent = 'Evidence ID: ' + (data.evidence_id || 'N/A');
+            probEl.textContent = prob + '%';
+            probEl.className = 'probability-number ' + (prob >= 70 ? 'prob-ai' : prob >= 40 ? 'prob-maybe' : 'prob-human');
+
+            const badge = document.getElementById('classificationBadge');
+            const cls = ai.classification.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            badge.textContent = cls;
+            badge.className = 'classification-badge ' + (prob >= 70 ? 'badge-ai' : prob >= 40 ? 'badge-maybe' : 'badge-human');
+
+            document.getElementById('methods').textContent = 'Detection methods: ' + ai.methods_used.join(', ');
+            document.getElementById('suspiciousCount').textContent = ai.suspicious_signals_count + '/' + ai.total_signals;
+            document.getElementById('totalSignals').textContent = ai.total_signals;
+            document.getElementById('confidenceLevel').textContent = (ai.confidence || 'N/A').replace(/_/g, ' ');
+
+            // File info
+            const fi = data.file_info;
+            document.getElementById('fileInfo').innerHTML = `
+                <div class="info-row"><span class="info-label">Filename</span><span class="info-value">${fi.filename}</span></div>
+                <div class="info-row"><span class="info-label">Format</span><span class="info-value">${fi.format || 'Unknown'}</span></div>
+                <div class="info-row"><span class="info-label">Dimensions</span><span class="info-value">${fi.width} × ${fi.height}px</span></div>
+                <div class="info-row"><span class="info-label">Mode</span><span class="info-value">${fi.mode}</span></div>
+                <div class="info-row"><span class="info-label">File Size</span><span class="info-value">${(fi.file_size_bytes / 1024).toFixed(1)} KB</span></div>
+                <div class="info-row"><span class="info-label">Analyzer Version</span><span class="info-value">${data.metadata.analyzer_version}</span></div>
+            `;
+
+            // Hashes
+            const h = data.hashes;
+            document.getElementById('hashInfo').innerHTML = `
+                <div class="hash-item"><div class="hash-label">SHA-256</div><div class="hash-value">${h.sha256}</div></div>
+                <div class="hash-item"><div class="hash-label">MD5</div><div class="hash-value">${h.md5}</div></div>
+                <div class="hash-item"><div class="hash-label">Perceptual Hash</div><div class="hash-value">${h.perceptual_hash}</div></div>
+                <div class="hash-item"><div class="hash-label">Average Hash</div><div class="hash-value">${h.average_hash}</div></div>
+                <div class="hash-item"><div class="hash-label">Difference Hash</div><div class="hash-value">${h.difference_hash}</div></div>
+            `;
+
+            // Tampering
+            const t = data.tampering_analysis;
+            const flags = t.suspicious_flags || [];
+            document.getElementById('tamperingInfo').innerHTML = flags.length === 0
+                ? `<div class="no-flags">✅ No tampering indicators found</div>
+                   <div class="info-row" style="margin-top:1rem"><span class="info-label">Authenticity Confidence</span><span class="info-value" style="color:var(--green-500)">${t.confidence}</span></div>`
+                : flags.map(f => `<div class="flag-item"><div class="flag-dot"></div>${f}</div>`).join('')
+                  + `<div class="info-row" style="margin-top:0.5rem"><span class="info-label">Confidence</span><span class="info-value" style="color:var(--orange-500)">${t.confidence}</span></div>`;
+
+            // EXIF
+            const exif = data.exif_data || {};
+            if (!exif.has_exif || Object.keys(exif).length <= 1) {
+                document.getElementById('exifInfo').innerHTML = '<p class="exif-empty">No EXIF metadata found in this image.</p>';
+            } else {
+                const skip = ['has_exif', 'gps'];
+                const rows = Object.entries(exif).filter(([k]) => !skip.includes(k)).slice(0, 10)
+                    .map(([k, v]) => `<div class="info-row"><span class="info-label">${k}</span><span class="info-value" style="max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v}</span></div>`).join('');
+                document.getElementById('exifInfo').innerHTML = rows || '<p class="exif-empty">No readable EXIF fields.</p>';
+            }
+
+            // Signals
+            const signals = (ai.all_signals || []).sort((a, b) => b.score - a.score);
+            document.getElementById('signalsGrid').innerHTML = signals.map(s => {
+                const pct = Math.round(s.score * 100);
+                const cls = pct >= 70 ? 'score-high fill-high' : pct >= 40 ? 'score-mid fill-mid' : 'score-low fill-low';
+                const [scoreCls, fillCls] = cls.split(' ');
+                return `<div class="signal-item">
+                    <div class="signal-header">
+                        <span class="signal-name">${s.signal_name || s.name || 'Signal'}</span>
+                        <span class="signal-score ${scoreCls}">${pct}%</span>
+                    </div>
+                    <div class="signal-bar"><div class="signal-fill ${fillCls}" style="width:${pct}%"></div></div>
+                </div>`;
+            }).join('');
+        }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const data = window._lastReport;
+            if (!data) { alert('No report to download'); return; }
+
+            const ai = data.ai_detection;
+            const prob = Math.round(ai.ai_probability * 100);
+            const ts = data.metadata.analysis_timestamp;
+
+            // Header
+            doc.setFillColor(10, 22, 40);
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text('VeriFile-X Forensic Analysis Report', 105, 14, { align: 'center' });
+            doc.setFontSize(9);
+            doc.text('AI-Generated Image Detection Platform v6.0.0', 105, 22, { align: 'center' });
+
+            doc.setTextColor(0, 0, 0);
+            let y = 38;
+
+            // Evidence ID
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 100, 100);
+            doc.text('Evidence ID:', 14, y);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('courier', 'normal');
+            doc.text(data.evidence_id || 'N/A', 14, y + 5);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Analysis Timestamp: ' + ts, 14, y + 12);
+            doc.text('File: ' + data.file_info.filename + '  |  ' + data.file_info.width + 'x' + data.file_info.height + 'px  |  ' + (data.file_info.file_size_bytes/1024).toFixed(1) + ' KB', 14, y + 19);
+            y += 30;
+
+            // Verdict box
+            const verdictColor = prob >= 70 ? [220, 38, 38] : prob >= 40 ? [234, 88, 12] : [16, 185, 129];
+            doc.setFillColor(...verdictColor);
+            doc.roundedRect(14, y, 182, 22, 3, 3, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('VERDICT: ' + ai.classification.replace(/_/g, ' ').toUpperCase() + ' — ' + prob + '%', 105, y + 10, { align: 'center' });
+            doc.setFontSize(9);
+            doc.text('Confidence: ' + (ai.confidence || 'N/A') + '  |  Methods: ' + ai.methods_used.join(', ') + '  |  Signals: ' + ai.suspicious_signals_count + '/' + ai.total_signals, 105, y + 17, { align: 'center' });
+            y += 30;
+
+            // Hashes
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Cryptographic Hashes', 14, y);
+            y += 6;
+            doc.setFontSize(8);
+            doc.setFont('courier', 'normal');
+            const h = data.hashes;
+            doc.text('SHA-256:  ' + h.sha256, 14, y); y += 5;
+            doc.text('MD5:      ' + h.md5, 14, y); y += 5;
+            doc.text('pHash:    ' + h.perceptual_hash + '   aHash: ' + h.average_hash + '   dHash: ' + h.difference_hash, 14, y); y += 10;
+
+            // Tampering
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text('Tampering Analysis', 14, y); y += 6;
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const flags = data.tampering_analysis.suspicious_flags;
+            if (flags.length === 0) {
+                doc.setTextColor(16, 185, 129);
+                doc.text('No tampering indicators detected. Authenticity confidence: ' + data.tampering_analysis.confidence, 14, y);
+            } else {
+                doc.setTextColor(220, 38, 38);
+                flags.forEach(f => { doc.text('• ' + f, 14, y); y += 5; });
+            }
+            doc.setTextColor(0, 0, 0);
+            y += 8;
+
+            // Detection Signals
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text('Detection Signals (' + ai.total_signals + ' total)', 14, y); y += 6;
+            doc.setFontSize(8);
+            const signals = (ai.all_signals || []).sort((a, b) => b.score - a.score);
+            signals.forEach((s, i) => {
+                if (y > 270) { doc.addPage(); y = 20; }
+                const pct = Math.round(s.score * 100);
+                const col = pct >= 70 ? [220, 38, 38] : pct >= 40 ? [234, 88, 12] : [16, 185, 129];
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+                doc.text((s.signal_name || s.name || 'Signal'), 14, y);
+                doc.setTextColor(...col);
+                doc.text(pct + '%', 195, y, { align: 'right' });
+                doc.setTextColor(0, 0, 0);
+                y += 5;
+            });
+
+            // Footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text('VeriFile-X | Evidence ID: ' + (data.evidence_id || 'N/A') + ' | Page ' + i + ' of ' + pageCount, 105, 290, { align: 'center' });
+            }
+
+            doc.save('VeriFileX-Report-' + (data.evidence_id || 'report').substring(0, 8) + '.pdf');
+        }
+
     </script>
 </body>
 </html>

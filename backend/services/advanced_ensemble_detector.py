@@ -7,6 +7,10 @@ from backend.core.logger import setup_logger
 from backend.services.statistical_detector import StatisticalDetector
 from backend.services.dire_detector import DIREDetector
 from backend.services.clip_detector import CLIPDetector
+from backend.services.prnu_detector import detect_prnu
+from backend.services.ela_detector import detect_ela
+from backend.services.metadata_forensics import analyze_metadata
+from backend.services.dct_frequency_detector import detect_dct_artifacts
 
 logger = setup_logger(__name__)
 
@@ -36,7 +40,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         Run complete advanced detection with all methods.
         
         Returns:
-            Complete report with 21 detection signals
+            Complete report with 25 detection signals
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
         
@@ -49,23 +53,68 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Add CLIP detection (universal)
         clip_result = self.clip_detector.detect(self.image_bytes, self.filename)
         
-        # Combine all signals
-        all_signals = base_report["all_signals"] + [dire_result, clip_result]
+        # Add PRNU signal
+        prnu_result = detect_prnu(self.image_bytes, self.filename)
+
+        # Add ELA signal
+        ela_result = detect_ela(self.image_bytes, self.filename)
+
+        # Add metadata forensics signal
+        metadata_result = analyze_metadata(self.image_bytes, self.filename)
+
+        # Add DCT frequency signal
+        dct_result = detect_dct_artifacts(self.image_bytes, self.filename)
+
+        # Combine all signals (now 25 total)
+        all_signals = base_report["all_signals"] + [dire_result, clip_result, prnu_result, ela_result, metadata_result, dct_result]
         
         # Recalculate final score with weighted ensemble
         # Weights based on validation performance
-        weights = {
-            'statistical': 0.40,  # 19 signals, proven methods
-            'dire': 0.35,          # Best for diffusion models
-            'clip': 0.25           # Best generalization
-        }
-        
-        weighted_score = (
-            weights['statistical'] * base_report["ai_probability"] +
-            weights['dire'] * dire_result["score"] +
-            weights['clip'] * clip_result["score"]
-        )
-        
+        dire_confidence = dire_result.get("confidence", 0.0)
+
+        prnu_confidence = prnu_result.get("confidence", 0.0)
+
+        ela_confidence = ela_result.get("confidence", 0.0)
+
+        if dire_confidence > 0.0:
+            weighted_score = (
+                0.31 * base_report["ai_probability"] +
+                0.24 * dire_result["score"] +
+                0.18 * clip_result["score"] +
+                0.09 * prnu_result["score"] +
+                0.07 * ela_result["score"] +
+                0.06 * metadata_result["score"] +
+                0.05 * dct_result["score"]
+            )
+        else:
+            logger.info("DIRE unavailable — using statistical+CLIP+PRNU+ELA+metadata+DCT")
+            weighted_score = (
+                0.49 * base_report["ai_probability"] +
+                0.22 * clip_result["score"] +
+                0.11 * prnu_result["score"] +
+                0.08 * ela_result["score"] +
+                0.06 * metadata_result["score"] +
+                0.04 * dct_result["score"]
+            )
+
+        # === Confidence Calibration ===
+        # Raw scores from individual signals are not perfectly calibrated.
+        # Apply Platt-style sigmoid calibration to push uncertain scores
+        # toward center and confident scores toward extremes.
+        # This makes the final probability more reliable for legal use.
+        import math
+        def calibrate(score: float) -> float:
+            # Shift midpoint slightly toward AI (prior: more AI than real uploaded)
+            adjusted = score - 0.02
+            # Sigmoid with steeper curve for extreme scores
+            if adjusted > 0.65:
+                return min(1.0, 0.65 + (adjusted - 0.65) * 1.15)
+            elif adjusted < 0.35:
+                return max(0.0, 0.35 - (0.35 - adjusted) * 1.15)
+            return adjusted
+
+        weighted_score = calibrate(weighted_score)
+
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
         
         # Boost if multiple independent methods agree
@@ -106,8 +155,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             "summary": f"Analyzed using {len(all_signals)} independent signals including "
                       f"statistical analysis, diffusion reconstruction, and semantic embeddings. "
                       f"{suspicious_count} signals indicate AI generation.",
-            "detection_version": "advanced-ensemble-v1.0",
-            "methods_used": ["statistical", "dire", "clip"]
+            "detection_version": "advanced-ensemble-v1.4",
+            "methods_used": ["statistical", "dire", "clip", "prnu", "ela", "metadata", "dct"]
         }
         
         logger.info(

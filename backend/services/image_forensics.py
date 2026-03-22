@@ -1,6 +1,7 @@
 """
 Image forensics service with advanced ensemble AI detection.
 """
+import uuid
 from typing import Dict, Any
 from datetime import datetime
 from PIL import Image
@@ -13,7 +14,6 @@ from backend.core.logger import setup_logger
 from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
 
 logger = setup_logger(__name__)
-
 
 class ImageForensics:
     """Complete image forensics analysis pipeline with advanced detection."""
@@ -115,6 +115,7 @@ class ImageForensics:
             "file_size_bytes": len(self.image_bytes)
         }
         report = {
+            "evidence_id": str(uuid.uuid4()),
             "metadata": {
                 "analysis_timestamp": datetime.now().isoformat(),
                 "analyzer_version": "6.0.0"

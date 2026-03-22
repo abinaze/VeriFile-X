@@ -26,16 +26,17 @@ def test_advanced_ensemble_complete_detection(sample_image_bytes):
     assert "methods_used" in report
     
     # Should have 21 signals (19 statistical + DIRE + CLIP)
-    assert report["total_signals"] == 21
-    assert len(report["all_signals"]) == 21
+    assert report["total_signals"] == 25
+    assert len(report["all_signals"]) == 25
     
     # Check methods used
     assert "statistical" in report["methods_used"]
     assert "dire" in report["methods_used"]
     assert "clip" in report["methods_used"]
+    assert "prnu" in report["methods_used"]
     
     # Check version
-    assert report["detection_version"] == "advanced-ensemble-v1.0"
+    assert report["detection_version"] == "advanced-ensemble-v1.4"
     
     # Cleanup
     detector.cleanup()
@@ -49,7 +50,7 @@ def test_advanced_ensemble_forensics_integration(sample_image_bytes):
     report = forensics.generate_forensic_report()
     
     # Check advanced detection was used
-    assert report["ai_detection"]["total_signals"] == 21
+    assert report["ai_detection"]["total_signals"] == 25
     assert report["metadata"]["analyzer_version"] == "6.0.0"
     assert "methods_used" in report["ai_detection"]
-    assert len(report["ai_detection"]["methods_used"]) == 3
+    assert len(report["ai_detection"]["methods_used"]) == 7
