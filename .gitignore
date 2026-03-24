@@ -72,3 +72,9 @@ data/ai/**/*.png
 # Keep .gitkeep and manifest.csv
 !data/**/.gitkeep
 !data/manifest.csv
+
+# Dataset metadata files - not needed in git
+data/**/*.parquet
+data/**/*.tsv
+data/**/*.csv
+!data/manifest.csv
