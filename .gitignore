@@ -78,3 +78,7 @@ data/**/*.parquet
 data/**/*.tsv
 data/**/*.csv
 !data/manifest.csv
+
+# Large manifest files - tracked by git-lfs or kept local only
+data/manifest_real.csv
+data/manifest_ai.csv
