@@ -52,3 +52,6 @@ clip @ git+https://github.com/openai/CLIP.git
 
 # Dataset utilities
 tqdm==4.66.3
+
+# Own Embedding Detector
+tensorboard==2.16.2
