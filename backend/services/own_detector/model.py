@@ -48,9 +48,17 @@ class OwnEmbeddingModel(nn.Module):
         super().__init__()
 
         # Load pretrained EfficientNet-B0
-        backbone = models.efficientnet_b0(
-            weights=models.EfficientNet_B0_Weights.IMAGENET1K_V1
-        )
+        backbone = models.efficientnet_b0(weights=None)
+        try:
+            import torch.hub as hub
+            state = hub.load_state_dict_from_url(
+                "https://download.pytorch.org/models/efficientnet_b0_rwightman-3dd342df.pth",
+                check_hash=False,
+            )
+            backbone.load_state_dict(state)
+        except Exception as e:
+            logger.warning(f"Could not load pretrained weights: {e}. Using random init.")
+
 
         # Remove the final classifier (keeps feature extractor only)
         # EfficientNet-B0 outputs 1280-dim features before classifier
