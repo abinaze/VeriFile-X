@@ -15,7 +15,7 @@ pinned: false
 
 **Logo:** VeriFile-X — Unmask AI Content with Confidence
 
-![VeriFile-X Logo](frontend/logo2.png)
+<img src="logo2.png" width="140" height="140">
 
 ## Theme Options
 
