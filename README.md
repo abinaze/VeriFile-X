@@ -12,6 +12,19 @@ pinned: false
 # VeriFile-X
 ### Forensic-Grade AI Image Detection
 
+
+**Logo:** VeriFile-X — Unmask AI Content with Confidence
+
+![VeriFile-X Logo](frontend/logo2.png)
+
+## Theme Options
+
+| Theme | Description |
+|-------|-------------|
+| Animated | Three.js 3D background with floating objects and mouse parallax |
+| Dark | Clean dark forensics theme |
+| Light | Professional light theme |
+
 **21 Detection Signals · 96–98% Accuracy · Court-Ready Analysis**
 
 [![Live Demo](https://img.shields.io/badge/🌐%20Live%20Demo-Visit%20Site-22d3ee?style=for-the-badge)](https://abinaze.github.io/VeriFile-X)
