@@ -13,9 +13,9 @@ pinned: false
 ### Forensic-Grade AI Image Detection
 
 
-**Logo:** VeriFile-X — Unmask AI Content with Confidence
+ VeriFile-X — Unmask AI Content with Confidence
 
-<img src="logo2.png" width="140" height="140">
+<img src="frontend/logo2.png" width="440" height="340">
 
 ## Theme Options
 
