@@ -43,3 +43,6 @@
 - No camera EXIF
 - Minimum 256x256 pixels
 - Known source dataset (not random scrape)
+data/manifest.csv is generated locally by running:
+  python scripts/datasets/index_manual.py
+It is not tracked in git due to size (82MB).
