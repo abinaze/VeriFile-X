@@ -44,17 +44,20 @@ MANIFEST_PATH = ROOT / "data" / "manifest.csv"
 TRAIN_TRANSFORM = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.RandomHorizontalFlip(),
-    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.RandomApply([transforms.GaussianBlur(3)], p=0.15),
+    transforms.RandomApply([
+        transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.3, hue=0.1)
+    ], p=0.5),
+    transforms.RandomGrayscale(p=0.1),
+    transforms.RandomApply([transforms.RandomAffine(degrees=10, translate=(0.05, 0.05))], p=0.2),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 VAL_TRANSFORM = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 
@@ -90,52 +93,49 @@ class ImageManifestDataset(Dataset):
 # ── Load manifest ──────────────────────────────────────────────────────────
 
 def load_manifest(limit: int = 0) -> Tuple[List[dict], List[dict]]:
-    """Read manifest.csv, return (train_rows, val_rows)."""
     if not MANIFEST_PATH.exists():
         logger.error(f"manifest.csv not found at {MANIFEST_PATH}")
         sys.exit(1)
 
-    train_rows, val_rows = [], []
-
+    all_rows = []
     with open(MANIFEST_PATH, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            # Only use images that exist on disk
+        for row in csv.DictReader(f):
             img_path = ROOT / row["path"].replace("\\", "/")
             if not img_path.exists():
                 continue
-            if row["split"] == "train":
-                train_rows.append(row)
-            elif row["split"] in ("val", "test"):
-                val_rows.append(row)
+            w = int(row.get("width", 0))
+            h = int(row.get("height", 0))
+            if w < 64 or h < 64:
+                continue
+            all_rows.append(row)
 
-    # Balance real vs AI in training set
-    real_train = [r for r in train_rows if r["label"] == "real"]
-    ai_train   = [r for r in train_rows if r["label"] == "ai"]
+    real_all = [r for r in all_rows if r["label"] == "real"]
+    ai_all   = [r for r in all_rows if r["label"] == "ai"]
 
-    logger.info(f"Train — real: {len(real_train)}, AI: {len(ai_train)}")
-    logger.info(f"Val   — {len(val_rows)} images")
+    logger.info(f"All on disk — real: {len(real_all)}, AI: {len(ai_all)}")
 
-    # Balance by taking equal numbers of each
+    random.seed(42)
+    random.shuffle(real_all)
+    random.shuffle(ai_all)
+
+    val_size = min(5000, len(real_all) // 10, len(ai_all) // 10)
+    real_val, real_train = real_all[:val_size], real_all[val_size:]
+    ai_val,   ai_train   = ai_all[:val_size],   ai_all[val_size:]
+
+    val_rows = real_val + ai_val
+    random.shuffle(val_rows)
+
     min_count = min(len(real_train), len(ai_train))
     if limit > 0:
         min_count = min(min_count, limit // 2)
 
-    random.shuffle(real_train)
-    random.shuffle(ai_train)
+    balanced = real_train[:min_count] + ai_train[:min_count]
+    random.shuffle(balanced)
 
-    balanced_train = real_train[:min_count] + ai_train[:min_count]
-    random.shuffle(balanced_train)
+    logger.info(f"Train: {len(balanced)} ({min_count} real + {min_count} AI)")
+    logger.info(f"Val:   {len(val_rows)} ({val_size} real + {val_size} AI)")
 
-    logger.info(f"Balanced train set: {len(balanced_train)} images "
-                f"({min_count} real + {min_count} AI)")
-
-    # Cap val set too
-    if limit > 0:
-        val_rows = val_rows[:limit // 4]
-
-    return balanced_train, val_rows
-
+    return balanced, val_rows
 
 # ── Training loop ──────────────────────────────────────────────────────────
 
@@ -169,14 +169,14 @@ def train(args):
                 f"| Val batches: {len(val_loader)}")
 
     # Model
-    model = OwnEmbeddingModel(freeze_backbone=args.freeze_backbone)
+    model = OwnEmbeddingModel(freeze_backbone=False)
     model = model.to(device)
 
     # Loss and optimiser
     criterion = nn.BCELoss()
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=args.lr, weight_decay=1e-4
-    )
+    model.parameters(), lr=args.lr, weight_decay=1e-3
+)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=args.epochs
     )
@@ -261,7 +261,7 @@ if __name__ == "__main__":
                         help="Number of training epochs (default: 5)")
     parser.add_argument("--batch",           type=int,   default=32,
                         help="Batch size (default: 32)")
-    parser.add_argument("--lr",              type=float, default=1e-4,
+    parser.add_argument("--lr",              type=float, default=3e-4,
                         help="Learning rate (default: 0.0001)")
     parser.add_argument("--limit",           type=int,   default=0,
                         help="Limit images per class, 0=use all")

@@ -7,6 +7,7 @@ from backend.core.logger import setup_logger
 from backend.services.statistical_detector import StatisticalDetector
 from backend.services.dire_detector import DIREDetector
 from backend.services.clip_detector import CLIPDetector
+from backend.services.own_embedding_detector import OwnEmbeddingDetector
 from backend.services.prnu_detector import detect_prnu
 from backend.services.ela_detector import detect_ela
 from backend.services.metadata_forensics import analyze_metadata
@@ -32,6 +33,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Initialize deep learning detectors
         self.dire_detector = DIREDetector()
         self.clip_detector = CLIPDetector()
+        self.own_detector = OwnEmbeddingDetector()
         
         logger.info(f"Advanced ensemble detector initialized for {filename}")
     
@@ -52,7 +54,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         
         # Add CLIP detection (universal)
         clip_result = self.clip_detector.detect(self.image_bytes, self.filename)
-        
+        own_result = self.own_detector.detect(self.image_bytes, self.filename)
+
         # Add PRNU signal
         prnu_result = detect_prnu(self.image_bytes, self.filename)
 
@@ -66,8 +69,10 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         dct_result = detect_dct_artifacts(self.image_bytes, self.filename)
 
         # Combine all signals (now 25 total)
-        all_signals = base_report["all_signals"] + [dire_result, clip_result, prnu_result, ela_result, metadata_result, dct_result]
-        
+        all_signals = base_report["all_signals"] + [
+    dire_result, clip_result, own_result, prnu_result,
+    ela_result, metadata_result, dct_result,
+]
         # Recalculate final score with weighted ensemble
         # Weights based on validation performance
         dire_confidence = dire_result.get("confidence", 0.0)
