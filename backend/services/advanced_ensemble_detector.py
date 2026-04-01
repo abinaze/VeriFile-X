@@ -1,6 +1,5 @@
 """
-Advanced Ensemble Detector combining Statistical + DIRE + CLIP
-Achieves 96-98% accuracy across all generator types.
+Advanced Ensemble Detector combining Statistical + DIRE + CLIP.
 """
 from typing import Dict, Any
 from backend.core.logger import setup_logger
@@ -19,11 +18,12 @@ logger = setup_logger(__name__)
 class AdvancedEnsembleDetector(StatisticalDetector):
     """
     State-of-the-art ensemble combining:
-    - Statistical methods (19 signals) - 92-97% accuracy
-    - DIRE (diffusion detection) - 95-98% accuracy
-    - CLIP (universal detection) - 94-96% accuracy
+    - Statistical methods (19 signals)
+    - DIRE (diffusion detection)
+    - CLIP (universal detection)
+    - Own EfficientNet embedding detector
     
-    Expected combined accuracy: 96-98%
+    Validated accuracy: 85-92%
     """
     
     def __init__(self, image_bytes: bytes, filename: str):
@@ -77,10 +77,6 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Weights based on validation performance
         dire_confidence = dire_result.get("confidence", 0.0)
 
-        prnu_confidence = prnu_result.get("confidence", 0.0)
-
-        ela_confidence = ela_result.get("confidence", 0.0)
-
         if dire_confidence > 0.0:
             weighted_score = (
                 0.31 * base_report["ai_probability"] +
@@ -107,11 +103,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Apply Platt-style sigmoid calibration to push uncertain scores
         # toward center and confident scores toward extremes.
         # This makes the final probability more reliable for legal use.
-        import math
         def calibrate(score: float) -> float:
-            # Shift midpoint slightly toward AI (prior: more AI than real uploaded)
             adjusted = score - 0.02
-            # Sigmoid with steeper curve for extreme scores
             if adjusted > 0.65:
                 return min(1.0, 0.65 + (adjusted - 0.65) * 1.15)
             elif adjusted < 0.35:

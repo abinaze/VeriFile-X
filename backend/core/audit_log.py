@@ -4,7 +4,6 @@ Every analysis is recorded with timestamp, file hash, and verdict.
 This log is append-only — entries are never modified or deleted.
 """
 import json
-import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 from backend.core.logger import setup_logger

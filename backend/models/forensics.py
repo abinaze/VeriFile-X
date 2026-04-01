@@ -1,9 +1,8 @@
 """
 Pydantic models for forensic analysis responses.
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
-from datetime import datetime
 
 
 class FileInfo(BaseModel):
