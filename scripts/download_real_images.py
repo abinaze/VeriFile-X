@@ -8,9 +8,7 @@ Downloads images from publicly available datasets:
 
 Total: ~1000 images (manageable size, good diversity)
 """
-import os
 import urllib.request
-import json
 from pathlib import Path
 from tqdm import tqdm
 

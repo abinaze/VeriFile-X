@@ -3,8 +3,7 @@ VeriFile-X API - Privacy-preserving digital forensics platform.
 """
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from datetime import datetime
 from slowapi import Limiter, _rate_limit_exceeded_handler
