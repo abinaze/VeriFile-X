@@ -63,12 +63,12 @@ class DIREDetector:
         cached_model = self.cache.get(self.cache_key)
         
         if cached_model is not None:
-            logger.info("⚡ Loading Stable Diffusion from cache (fast!)")
+            logger.info("Loading Stable Diffusion from cache")
             self.pipe = cached_model['pipe']
             self.scheduler = cached_model['scheduler']
             self._model_loaded = True
             self._from_cache = True
-            logger.info("✅ Loaded from cache in <1s")
+            logger.info("Loaded from cache in <1s")
             return
 
         # Cache miss - load from disk
@@ -76,7 +76,7 @@ class DIREDetector:
             from diffusers import StableDiffusionPipeline, DDIMScheduler
 
             logger.info("Loading Stable Diffusion 2.1 model from disk...")
-            logger.info("⏳ First load will take time (~4GB download if not cached)")
+            logger.info("First load may take time if model not cached locally")
 
             # Use SD 2.1 (best balance of speed/accuracy)
             model_id = "stabilityai/stable-diffusion-2-1-base"
@@ -101,7 +101,7 @@ class DIREDetector:
 
             self._model_loaded = True
             self._from_cache = False
-            logger.info("✅ Stable Diffusion model loaded successfully")
+            logger.info("Stable Diffusion model loaded successfully")
 
             # Store in cache for future use
             self.cache.set(
@@ -268,7 +268,7 @@ class DIREDetector:
                 explanation = f"High reconstruction error ({error:.4f}) - likely authentic"
                 threshold_msg = "Likely real (poor fit to diffusion model)"
 
-            cache_status = "⚡ cached" if self._from_cache else "💾 fresh"
+            cache_status = "cached" if self._from_cache else "💾 fresh"
             logger.info(
                 f"DIRE detection complete: error={error:.4f}, "
                 f"score={ai_score:.3f} ({cache_status})"

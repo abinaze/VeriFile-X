@@ -40,6 +40,9 @@ def main():
     logger.info(f"Device: {device}")
     logger.info("Loading trained model")
     model = load_model(device)
+    if model is None:
+        logger.error("No trained model found. Run scripts/train_embedding.py first.")
+        sys.exit(1)
     model.eval()
 
     logger.info("Reading manifest")
