@@ -278,6 +278,7 @@ class StatisticalDetector(CovarianceDetector):
             alpha_original = -coeffs_original[0]
             
             # Add small noise perturbation
+            np.random.seed(42)
             noise = np.random.normal(0, 2, self.cv_gray.shape)
             perturbed_image = np.clip(self.cv_gray + noise, 0, 255).astype(np.uint8)
             
