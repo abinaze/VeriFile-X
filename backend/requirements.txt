@@ -56,4 +56,3 @@ tqdm==4.66.3
 # Own Embedding Detector
 tensorboard==2.16.2
 
-starlette>=0.40.0
