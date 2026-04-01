@@ -82,3 +82,4 @@ data/**/*.csv
 # Large manifest files - tracked by git-lfs or kept local only
 data/manifest_real.csv
 data/manifest_ai.csv
+data/manifest.csv
