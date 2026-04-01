@@ -10,7 +10,7 @@ Widely used in digital forensics, journalism verification, and court cases.
 """
 import numpy as np
 from typing import Dict, Any
-from PIL import Image, ImageChops, ImageEnhance
+from PIL import Image, ImageChops
 from io import BytesIO
 from backend.core.logger import setup_logger
 

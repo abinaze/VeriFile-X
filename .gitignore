@@ -83,3 +83,12 @@ data/**/*.csv
 data/manifest_real.csv
 data/manifest_ai.csv
 data/manifest.csv
+data/real/**/*.zip
+data/ai/**/*.zip
+data/real/**/*.tar
+data/ai/**/*.tar
+data/reference/own_embedding_model.pt
+data/reference/own_centroids.pkl
+data/reference/ensemble_xgb.pkl
+*.zip
+*.tar.gz

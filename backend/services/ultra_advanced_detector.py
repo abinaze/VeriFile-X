@@ -6,8 +6,6 @@ import numpy as np
 import cv2
 from scipy import fft
 from typing import Dict, Any
-from io import BytesIO
-from PIL import Image
 
 from backend.core.logger import setup_logger
 from backend.services.advanced_ai_detector import AdvancedAIDetector

@@ -12,11 +12,10 @@ Analyzes EXIF and image metadata for forensic inconsistencies:
 Real photos have rich, consistent metadata.
 AI-generated images typically have no EXIF, or inconsistent metadata.
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from io import BytesIO
-import re
 from backend.core.logger import setup_logger
 
 logger = setup_logger(__name__)
