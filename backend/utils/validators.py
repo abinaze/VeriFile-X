@@ -3,7 +3,7 @@ File validation utilities for secure file processing.
 Why: Prevent malicious files, enforce size limits, validate MIME types.
 """
 import magic
-from typing import Tuple, Optional
+from typing import Tuple
 from backend.core.config import settings
 from backend.core.logger import setup_logger
 

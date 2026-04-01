@@ -20,12 +20,11 @@ Target Accuracy: 85-90% on modern AI generators
 """
 import numpy as np
 import cv2
-from scipy import fft, stats
+from scipy import fft
 from scipy.stats import entropy, kurtosis, skew
-from sklearn.feature_extraction import image as sk_image
 from skimage.feature import graycomatrix, graycoprops, local_binary_pattern
 import pywt
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 from PIL import Image
 from io import BytesIO
 

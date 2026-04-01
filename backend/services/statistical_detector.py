@@ -3,10 +3,8 @@ Statistical Modeling & Probability Analysis for AI Detection
 Implements cutting-edge probability-based methods from research.
 """
 import numpy as np
-import cv2
 from typing import Dict, Any, Tuple
 from scipy import fft
-from scipy.spatial.distance import mahalanobis
 from scipy.stats import entropy
 
 from backend.core.logger import setup_logger

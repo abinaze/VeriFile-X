@@ -18,7 +18,7 @@ def load_clip_model():
     print("📦 Loading CLIP ViT-B/32 model...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = clip.load("ViT-B/32", device=device)
-    print(f"✅ Model loaded on {device}")
+    print(f"Model loaded on {device}")
     return model, preprocess, device
 
 
@@ -44,7 +44,7 @@ def compute_embeddings(image_dir, model, preprocess, device):
             embeddings.append(embedding.cpu().numpy())
         
         except Exception as e:
-            print(f"⚠️  Failed to process {img_path}: {e}")
+            print(f"Failed to process {img_path}: {e}")
     
     return np.vstack(embeddings) if embeddings else np.array([])
 
@@ -102,7 +102,7 @@ def main():
     
     # Print statistics
     print("\n" + "=" * 70)
-    print("✅ CLIP Database Built Successfully!")
+    print("CLIP Database Built Successfully!")
     print("=" * 70)
     print(f"📊 Statistics:")
     print(f"   Real images: {database['real_count']}")
