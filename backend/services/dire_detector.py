@@ -18,6 +18,14 @@ from typing import Dict, Any
 import warnings
 warnings.filterwarnings('ignore')
 
+try:
+    from huggingface_hub import hf_hub_download
+except ImportError:
+    try:
+        from huggingface_hub import cached_download as hf_hub_download
+    except ImportError:
+        hf_hub_download = None
+
 from backend.core.logger import setup_logger
 from backend.core.model_cache import get_model_cache
 from backend.config.cache_config import CacheConfig
