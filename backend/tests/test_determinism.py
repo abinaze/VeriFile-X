@@ -20,8 +20,8 @@ def test_detection_is_deterministic(sample_image_bytes):
     assert report1["summary"]["ai_classification"] == report2["summary"]["ai_classification"]
     
     # Signal counts should be identical
-    assert report1["summary"]["total_detection_signals"] == 25
-    assert report2["summary"]["total_detection_signals"] == 25
+    assert report1["summary"]["total_detection_signals"] == 26
+    assert report2["summary"]["total_detection_signals"] == 26
 
 
 def test_hash_generation_is_consistent(sample_image_bytes):
@@ -61,8 +61,8 @@ def test_forensic_report_stability(sample_image_bytes):
     assert report1["hashes"]["sha256"] == report2["hashes"]["sha256"]
     
     # Signal counts should be identical
-    assert report1["summary"]["total_detection_signals"] == 25
-    assert report2["summary"]["total_detection_signals"] == 25
+    assert report1["summary"]["total_detection_signals"] == 26
+    assert report2["summary"]["total_detection_signals"] == 26
     assert report1["summary"]["total_detection_signals"] == report2["summary"]["total_detection_signals"]
     
     # AI probability: allow 20% variance for CLIP randomness
@@ -114,8 +114,8 @@ def test_signal_ordering_is_stable(sample_image_bytes):
     assert "ai_detection" in report2
     
     # Both should have 21 signals total
-    assert report1["ai_detection"]["total_signals"] == 25
-    assert report2["ai_detection"]["total_signals"] == 25
+    assert report1["ai_detection"]["total_signals"] == 26
+    assert report2["ai_detection"]["total_signals"] == 26
     
     # Classification keys should be consistent
     assert report1["ai_detection"]["classification"] == report2["ai_detection"]["classification"]
