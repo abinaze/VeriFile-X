@@ -1,3 +1,21 @@
+import pickle
+import numpy as np
+from pathlib import Path as _Path
+
+_XGB_MODEL_PATH = _Path("data/reference/ensemble_xgb.pkl")
+_xgb_cache: dict = {}
+
+
+def _load_xgb():
+    if "model" not in _xgb_cache and _XGB_MODEL_PATH.exists():
+        with open(_XGB_MODEL_PATH, "rb") as _f:
+            _xgb_cache.update(pickle.load(_f))
+    return (
+        _xgb_cache.get("model"),
+        _xgb_cache.get("feature_names"),
+        _xgb_cache.get("explainer"),
+    )
+
 """
 Advanced Ensemble Detector combining Statistical + DIRE + CLIP.
 """
@@ -113,8 +131,20 @@ class AdvancedEnsembleDetector(StatisticalDetector):
 
         weighted_score = calibrate(weighted_score)
 
+        xgb_model, feature_names, xgb_explainer = _load_xgb()
+        if xgb_model is not None:
+            signal_map = {
+                s["signal_name"].lower().replace(" ", "_"): s["score"]
+                for s in all_signals
+            }
+            feat_vec       = np.array([[signal_map.get(k, 0.5) for k in feature_names]])
+            weighted_score = float(xgb_model.predict_proba(feat_vec)[0][1])
+            logger.info(f"XGBoost ensemble score: {weighted_score:.4f}")
+        else:
+            logger.info("XGBoost model not found, using weighted sum fallback")
+
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
-        
+
         # Boost if multiple independent methods agree
         if suspicious_count >= 12:  # More than half
             weighted_score = min(1.0, weighted_score * 1.3)
