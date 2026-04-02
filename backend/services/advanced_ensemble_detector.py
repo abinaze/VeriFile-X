@@ -60,7 +60,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         Run complete advanced detection with all methods.
         
         Returns:
-            Complete report with 25 detection signals
+            Complete report with 26 detection signals
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
         
@@ -86,7 +86,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Add DCT frequency signal
         dct_result = detect_dct_artifacts(self.image_bytes, self.filename)
 
-        # Combine all signals (now 25 total)
+        # Combine all signals (now 26 total)
         all_signals = base_report["all_signals"] + [
     dire_result, clip_result, own_result, prnu_result,
     ela_result, metadata_result, dct_result,
@@ -145,12 +145,12 @@ class AdvancedEnsembleDetector(StatisticalDetector):
 
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
 
-        # Boost if multiple independent methods agree
-        if suspicious_count >= 12:  # More than half
-            weighted_score = min(1.0, weighted_score * 1.3)
-        elif suspicious_count >= 10:
-            weighted_score = min(1.0, weighted_score * 1.2)
-        
+        if xgb_model is None:
+            if suspicious_count >= 12:
+                weighted_score = min(1.0, weighted_score * 1.3)
+            elif suspicious_count >= 10:
+                weighted_score = min(1.0, weighted_score * 1.2)
+
         # Classification
         if weighted_score > 0.80:
             classification = "likely_ai_generated"
