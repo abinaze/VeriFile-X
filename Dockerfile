@@ -7,7 +7,6 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY . .
 
-# Install lightweight packages first, then heavy ones
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     fastapi==0.115.0 \
@@ -17,17 +16,20 @@ RUN pip install --no-cache-dir --upgrade pip && \
     python-dotenv==1.0.0 \
     python-magic==0.4.27 \
     python-multipart==0.0.22 \
-    Pillow==11.2.1 \
+    "starlette>=0.40.0" \
+    Pillow==12.1.1 \
     imagehash==4.3.1 \
-    numpy==1.26.3 \
+    "numpy>=1.24.0,<2.0.0" \
     scipy==1.11.4 \
-    scikit-learn==1.4.0 \
+    scikit-learn==1.5.0 \
     opencv-python==4.9.0.80 \
     slowapi==0.1.9 \
     PyWavelets==1.4.1 \
     scikit-image==0.22.0 \
-    cryptography==41.0.7 \
-    psutil==5.9.8 && \
+    cryptography==46.0.6 \
+    psutil==5.9.8 \
+    xgboost>=2.0.0 \
+    shap>=0.45.0 && \
     pip install --no-cache-dir \
     torch==2.6.0 \
     torchvision==0.21.0 \
@@ -38,7 +40,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     safetensors==0.4.5 \
     ftfy==6.1.1 \
     regex==2023.12.25 \
-    tqdm==4.66.1 \
+    tqdm==4.66.3 \
     "clip @ git+https://github.com/openai/CLIP.git"
 
 ENV PYTHONPATH=/app
