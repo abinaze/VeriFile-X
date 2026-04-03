@@ -50,12 +50,12 @@ class CLIPDetector:
         cached_model = self.cache.get(self.cache_key)
         
         if cached_model is not None:
-            logger.info("⚡ Loading CLIP from cache (fast!)")
+            logger.info("Loading CLIP from cache")
             self.model = cached_model['model']
             self.preprocess = cached_model['preprocess']
             self._model_loaded = True
             self._from_cache = True
-            logger.info("✅ Loaded from cache in <0.1s")
+            logger.info("Loaded from cache in <0.1s")
             
             # Still need to load reference database
             self._load_reference_database()
@@ -75,7 +75,7 @@ class CLIPDetector:
             
             self._model_loaded = True
             self._from_cache = False
-            logger.info("✅ CLIP model loaded successfully")
+            logger.info("CLIP model loaded successfully")
             
             # Store in cache for future use
             self.cache.set(
@@ -86,7 +86,7 @@ class CLIPDetector:
                 },
                 self.model_size_mb
             )
-            logger.info(f"💾 Cached model ({self.model_size_mb}MB) for future use")
+            logger.info(f"Cached model ({self.model_size_mb}MB) for future use")
             
             # Load reference database
             self._load_reference_database()
@@ -210,7 +210,7 @@ class CLIPDetector:
             else:
                 explanation = f"CLIP embedding ({ai_score:.3f}) strongly matches real photographs"
             
-            cache_status = "⚡ cached" if self._from_cache else "💾 fresh"
+            cache_status = "cached" if self._from_cache else "fresh"
             logger.info(f"CLIP detection complete: score={ai_score:.3f} ({cache_status})")
             
             return {

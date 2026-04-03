@@ -112,7 +112,7 @@ class DIREDetector:
                 },
                 self.model_size_mb
             )
-            logger.info(f"💾 Cached model ({self.model_size_mb}MB) for future use")
+            logger.info(f"Cached model ({self.model_size_mb}MB) for future use")
 
         except Exception as e:
             logger.error(f"Failed to load Stable Diffusion model: {e}")
@@ -268,7 +268,7 @@ class DIREDetector:
                 explanation = f"High reconstruction error ({error:.4f}) - likely authentic"
                 threshold_msg = "Likely real (poor fit to diffusion model)"
 
-            cache_status = "cached" if self._from_cache else "💾 fresh"
+            cache_status = "cached" if self._from_cache else "fresh"
             logger.info(
                 f"DIRE detection complete: error={error:.4f}, "
                 f"score={ai_score:.3f} ({cache_status})"
