@@ -56,7 +56,6 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
         # AI images: very uniform low error (synthesized at consistent quality)
         # Real photos: moderate variation in error levels
         mean_error = float(np.mean(diff_array))
-        std_error = float(np.std(diff_array))
 
         # === Signal 2: Regional inconsistency ===
         # Divide image into blocks and measure error variance between blocks
@@ -69,7 +68,6 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
                 block_means.append(float(np.mean(block)))
 
         if len(block_means) > 4:
-            block_variance = float(np.var(block_means))
             block_mean = float(np.mean(block_means))
             # Coefficient of variation: how inconsistent are regions?
             cv = float(np.std(block_means) / (block_mean + 1e-10))

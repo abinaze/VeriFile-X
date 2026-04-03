@@ -58,3 +58,4 @@ tensorboard==2.16.2
 
 xgboost>=2.0.0
 shap>=0.45.0
+starlette>=0.40.0
