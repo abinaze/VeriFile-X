@@ -87,7 +87,6 @@ def detect_dct_artifacts(image_bytes: bytes, filename: str = "unknown") -> Dict[
             }
 
         mean_hf = float(np.mean(hf_ratios))
-        std_hf = float(np.std(hf_ratios))
 
         # === Signal 2: Global FFT spectrum analysis ===
         # AI images often have unnaturally smooth spectra
