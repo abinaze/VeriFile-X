@@ -12,28 +12,28 @@ from io import BytesIO
 
 from backend.core.logger import setup_logger
 from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
+from backend.services.generator_attribution import attribute_generator
+from backend.core.config import settings
 
 logger = setup_logger(__name__)
 
+
 class ImageForensics:
     """Complete image forensics analysis pipeline with advanced detection."""
-    
+
     def __init__(self, image_bytes: bytes, filename: str):
-        """Initialize forensics analyzer."""
         self.image_bytes = image_bytes
         self.filename = filename
         self.pil_image = Image.open(BytesIO(image_bytes))
         logger.info(f"Initialized forensics for {filename}")
-    
+
     def extract_exif(self) -> Dict[str, Any]:
-        """Extract EXIF metadata."""
         exif_data = {}
         try:
             exif = self.pil_image._getexif()
             if not exif:
                 logger.warning(f"No EXIF data found in {self.filename}")
                 return {"has_exif": False}
-            
             exif_data["has_exif"] = True
             for tag_id, value in exif.items():
                 tag = TAGS.get(tag_id, tag_id)
@@ -50,25 +50,23 @@ class ImageForensics:
             logger.warning(f"Error extracting EXIF: {e}")
             exif_data["has_exif"] = False
         return exif_data
-    
+
     def generate_hashes(self) -> Dict[str, str]:
-        """Generate cryptographic and perceptual hashes."""
         sha256 = hashlib.sha256(self.image_bytes).hexdigest()
-        md5 = hashlib.md5(self.image_bytes).hexdigest()
-        phash = str(imagehash.phash(self.pil_image))
-        ahash = str(imagehash.average_hash(self.pil_image))
-        dhash = str(imagehash.dhash(self.pil_image))
+        md5    = hashlib.md5(self.image_bytes).hexdigest()
+        phash  = str(imagehash.phash(self.pil_image))
+        ahash  = str(imagehash.average_hash(self.pil_image))
+        dhash  = str(imagehash.dhash(self.pil_image))
         logger.info(f"Generated 5 hashes for {self.filename}")
         return {
             "sha256": sha256,
             "md5": md5,
             "perceptual_hash": phash,
             "average_hash": ahash,
-            "difference_hash": dhash
+            "difference_hash": dhash,
         }
-    
+
     def detect_tampering_indicators(self, exif_data: Dict) -> Dict[str, Any]:
-        """Detect tampering indicators."""
         suspicious_flags = []
         if not exif_data.get("has_exif", False):
             suspicious_flags.append("Missing EXIF metadata")
@@ -84,56 +82,58 @@ class ImageForensics:
         confidence = "high" if len(suspicious_flags) == 0 else "medium" if len(suspicious_flags) <= 2 else "low"
         logger.info(f"Tampering analysis complete: {len(suspicious_flags)} flags")
         return {"suspicious_flags": suspicious_flags, "confidence": confidence}
-    
+
     def detect_ai_generation(self) -> Dict[str, Any]:
-        """Run advanced ensemble AI detection."""
         logger.info(f"Running advanced ensemble AI detection for {self.filename}")
         detector = AdvancedEnsembleDetector(self.image_bytes, self.filename)
-        result = detector.detect()
-        
-        # Clean up GPU resources
+        result   = detector.detect()
         detector.cleanup()
-        
         return result
-    
+
     def generate_forensic_report(self) -> Dict[str, Any]:
-        """Generate complete forensic report."""
         logger.info(f"Generating forensic report for {self.filename}")
-        exif_data = self.extract_exif()
-        hashes = self.generate_hashes()
-        tampering = self.detect_tampering_indicators(exif_data)
+        exif_data    = self.extract_exif()
+        hashes       = self.generate_hashes()
+        tampering    = self.detect_tampering_indicators(exif_data)
         ai_detection = self.detect_ai_generation()
-        width, height = self.pil_image.size
-        image_format = self.pil_image.format or "Unknown"
-        mode = self.pil_image.mode
+        attribution  = attribute_generator(self.image_bytes, self.filename)
+
+        width, height  = self.pil_image.size
+        image_format   = self.pil_image.format or "Unknown"
+        mode           = self.pil_image.mode
+
         image_info = {
-            "filename": self.filename,
-            "format": image_format,
-            "mode": mode,
-            "width": width,
-            "height": height,
-            "file_size_bytes": len(self.image_bytes)
+            "filename":        self.filename,
+            "format":          image_format,
+            "mode":            mode,
+            "width":           width,
+            "height":          height,
+            "file_size_bytes": len(self.image_bytes),
         }
+
         report = {
             "evidence_id": str(uuid.uuid4()),
             "metadata": {
                 "analysis_timestamp": datetime.now().isoformat(),
-                "analyzer_version": "6.0.0"
+                "analyzer_version":   settings.VERSION,
             },
-            "file_info": image_info,
-            "exif_data": exif_data,
-            "hashes": hashes,
-            "tampering_analysis": tampering,
-            "ai_detection": ai_detection,
+            "file_info":              image_info,
+            "exif_data":              exif_data,
+            "hashes":                 hashes,
+            "tampering_analysis":     tampering,
+            "ai_detection":           ai_detection,
+            "generator_attribution":  attribution,
             "summary": {
-                "has_metadata": exif_data.get("has_exif", False),
-                "suspicious_flags_count": len(tampering["suspicious_flags"]),
-                "authenticity_confidence": tampering["confidence"],
-                "ai_probability": ai_detection["ai_probability"],
-                "ai_classification": ai_detection["classification"],
-                "total_detection_signals": ai_detection["total_signals"],
-                "suspicious_detection_signals": ai_detection["suspicious_signals_count"]
-            }
+                "has_metadata":               exif_data.get("has_exif", False),
+                "suspicious_flags_count":     len(tampering["suspicious_flags"]),
+                "authenticity_confidence":    tampering["confidence"],
+                "ai_probability":             ai_detection["ai_probability"],
+                "ai_classification":          ai_detection["classification"],
+                "total_detection_signals":    ai_detection["total_signals"],
+                "suspicious_detection_signals": ai_detection["suspicious_signals_count"],
+                "predicted_generator":        attribution["predicted_generator"],
+            },
         }
+
         logger.info(f"Forensic report generated: {report['summary']}")
         return report
