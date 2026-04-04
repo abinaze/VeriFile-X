@@ -13,6 +13,7 @@ from io import BytesIO
 from backend.core.logger import setup_logger
 from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
 from backend.services.generator_attribution import attribute_generator
+from backend.core.config import settings
 
 logger = setup_logger(__name__)
 
@@ -114,7 +115,7 @@ class ImageForensics:
             "evidence_id": str(uuid.uuid4()),
             "metadata": {
                 "analysis_timestamp": datetime.now().isoformat(),
-                "analyzer_version":   "6.2.0",
+                "analyzer_version":   settings.VERSION,
             },
             "file_info":              image_info,
             "exif_data":              exif_data,
