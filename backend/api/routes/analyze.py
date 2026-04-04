@@ -239,3 +239,44 @@ async def analyze_image_heatmap(
         raise HTTPException(status_code=500, detail="Heatmap generation failed")
     finally:
         await file.close()
+
+
+@router.post(
+    "/attribution",
+    summary="Attribute image to AI generator",
+    description="Classifies the image into: stylegan, dalle3, sd14, sdxl, midjourney, real, or unknown."
+)
+@limiter.limit("10/minute")
+async def analyze_attribution(
+    request: Request,
+    file: UploadFile = File(..., description="Image file to attribute")
+):
+    """Attribute uploaded image to its most likely AI generator."""
+    from backend.services.generator_attribution import attribute_generator
+
+    try:
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+
+        file_bytes = await file.read()
+
+        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+
+        result = attribute_generator(file_bytes, file.filename)
+
+        logger.info(
+            f"Attribution complete: file={file.filename}, "
+            f"generator={result['predicted_generator']}, "
+            f"confidence={result['confidence']:.3f}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Attribution error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Attribution analysis failed")
+    finally:
+        await file.close()
