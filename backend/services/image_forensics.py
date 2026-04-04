@@ -12,6 +12,7 @@ from io import BytesIO
 
 from backend.core.logger import setup_logger
 from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
+from backend.services.generator_attribution import attribute_generator
 
 logger = setup_logger(__name__)
 
