@@ -11,6 +11,9 @@ from backend.services.image_forensics import ImageForensics
 from backend.utils.validators import validate_file, FileValidationError
 from backend.core.logger import setup_logger
 from backend.core.cache import forensics_cache
+
+# In-memory heatmap store keyed by evidence_id
+_heatmap_store: dict = {}
 from backend.core.audit_log import log_analysis
 
 logger = setup_logger(__name__)
@@ -189,3 +192,50 @@ async def get_stats():
     """Return aggregate detection statistics."""
     from backend.core.audit_log import get_stats
     return get_stats()
+
+
+@router.post(
+    "/image/heatmap",
+    summary="Generate manipulation localization heatmap",
+    description="Returns a Grad-CAM heatmap PNG (base64) highlighting suspicious regions. "
+                "Submit the same image previously analyzed. Requires EfficientNet model."
+)
+@limiter.limit("5/minute")
+async def analyze_image_heatmap(
+    request: Request,
+    file: UploadFile = File(..., description="Image file to generate heatmap for")
+):
+    """Generate Grad-CAM localization heatmap for uploaded image."""
+    from backend.services.heatmap_generator import generate_heatmap
+
+    try:
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+
+        file_bytes = await file.read()
+
+        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+
+        result = generate_heatmap(file_bytes, file.filename)
+
+        logger.info(
+            f"Heatmap generated: file={file.filename}, "
+            f"method={result['method']}, size={result['width']}x{result['height']}"
+        )
+
+        return {
+            "filename": file.filename,
+            "heatmap_b64": result["heatmap_b64"],
+            "width": result["width"],
+            "height": result["height"],
+            "method": result["method"],
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Heatmap generation error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Heatmap generation failed")
+    finally:
+        await file.close()
