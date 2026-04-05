@@ -88,10 +88,19 @@ def test_platform_api_rejects_invalid_type(client):
     assert response.status_code == 415
 
 
-def test_platform_in_forensic_report(client, sample_image_bytes):
+def test_platform_in_forensic_report(client):
+    # Use unique image to avoid cache hit from previous tests
+    import numpy as np
+    from PIL import Image
+    from io import BytesIO
+    rng = np.random.default_rng(seed=9999)
+    arr = rng.integers(0, 255, (80, 80, 3), dtype=np.uint8)
+    buf = BytesIO()
+    Image.fromarray(arr, "RGB").save(buf, format="PNG")
+    fresh_bytes = buf.getvalue()
     response = client.post(
         "/api/v1/analyze/image",
-        files={"file": ("test.png", sample_image_bytes, "image/png")}
+        files={"file": ("platform_test_unique.png", fresh_bytes, "image/png")}
     )
     assert response.status_code == 200
     data = response.json()
