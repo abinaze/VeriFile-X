@@ -200,12 +200,12 @@ def detect_platform(
         is_jpeg           = estimated_quality > 0
 
         features = {
-            "estimated_quality": estimated_quality,
-            "has_exif":          has_exif,
-            "max_dimension":     max_dim,
-            "hf_ratio":          round(hf_ratio, 6),
-            "chroma_420":        chroma_420,
-            "is_jpeg":           is_jpeg,
+            "estimated_quality": int(estimated_quality),
+            "has_exif":          bool(has_exif),
+            "max_dimension":     int(max_dim),
+            "hf_ratio":          round(float(hf_ratio), 6),
+            "chroma_420":        bool(chroma_420),
+            "is_jpeg":           bool(is_jpeg),
         }
 
         logger.info(
@@ -214,15 +214,30 @@ def detect_platform(
             f"dim={max_dim}, hf={hf_ratio:.3f}, 420={chroma_420}"
         )
 
-        # Not JPEG — likely original PNG or lossless
+        # Not JPEG — check if file is a valid readable image
         if not is_jpeg:
-            return {
-                "predicted_platform": "original",
-                "confidence":         0.75,
-                "all_scores":         {p: 0.0 for p in _PLATFORMS},
-                "features":           features,
-                "accuracy_note":      "Non-JPEG format: likely original or lossless upload.",
-            }
+            try:
+                from PIL import Image as _PILImg
+                _PILImg.open(BytesIO(image_bytes)).verify()
+                # Valid non-JPEG image — likely original upload
+                all_scores = {p: 0.0 for p in _PLATFORMS}
+                all_scores["original"] = 1.0
+                return {
+                    "predicted_platform": "original",
+                    "confidence":         0.75,
+                    "all_scores":         all_scores,
+                    "features":           features,
+                    "accuracy_note":      "Non-JPEG format: likely original or lossless upload.",
+                }
+            except Exception:
+                # Corrupt or unreadable
+                return {
+                    "predicted_platform": "unknown",
+                    "confidence":         0.0,
+                    "all_scores":         {p: 0.0 for p in _PLATFORMS},
+                    "features":           features,
+                    "accuracy_note":      "File is not a readable image.",
+                }
 
         # Score each platform
         scores = {p: 0.0 for p in _PLATFORMS}

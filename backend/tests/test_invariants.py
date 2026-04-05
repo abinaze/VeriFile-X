@@ -210,10 +210,17 @@ def test_all_signals_have_required_schema(sample_image_bytes):
         assert isinstance(sig["confidence"], float)
 
 
-def test_forensic_report_complete_schema(sample_image_bytes):
+def test_forensic_report_complete_schema():
     """Full forensic report must always contain all top-level keys."""
+    import numpy as np
+    from PIL import Image
+    from io import BytesIO
     from backend.services.image_forensics import ImageForensics
-    report = ImageForensics(sample_image_bytes, "test.png").generate_forensic_report()
+    rng = np.random.default_rng(seed=8888)
+    arr = rng.integers(0, 255, (80, 80, 3), dtype=np.uint8)
+    buf = BytesIO()
+    Image.fromarray(arr, "RGB").save(buf, format="PNG")
+    report = ImageForensics(buf.getvalue(), "schema_test_unique.png").generate_forensic_report()
     required = {
         "evidence_id", "metadata", "file_info", "exif_data",
         "hashes", "tampering_analysis", "ai_detection",
