@@ -5,7 +5,6 @@ Run from repo root: python scripts/datasets/download_real.py --dataset coco
 import os
 import sys
 import csv
-import hashlib
 import argparse
 import zipfile
 import tarfile
