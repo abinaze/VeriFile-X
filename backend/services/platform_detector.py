@@ -290,11 +290,11 @@ def detect_platform(
         }
 
     except Exception as e:
-        logger.error(f"Platform detection failed for {filename}: {e}")
+        logger.error(f"Platform detection failed for {filename}: {e}", exc_info=True)
         return {
             "predicted_platform": "unknown",
             "confidence":         0.0,
             "all_scores":         {p: 0.0 for p in _PLATFORMS},
             "features":           {},
-            "accuracy_note":      f"Detection failed: {str(e)}",
+            "accuracy_note":      "Detection failed due to an internal error. Confidence set to 0.0.",
         }
