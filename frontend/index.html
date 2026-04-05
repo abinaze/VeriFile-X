@@ -4,75 +4,107 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VeriFile-X | Unmask AI Content with Confidence</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
 
-:root {
-    --blue:    #2563eb;
-    --cyan:    #06b6d4;
-    --cyan2:   #22d3ee;
-    --red:     #ef4444;
-    --orange:  #f97316;
-    --yellow:  #eab308;
-    --green:   #10b981;
-    --radius:  14px;
-    --transition: 0.28s ease;
+/* ─── RESET ───────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ─── THEME VARIABLES ─────────────────────────────── */
+
+[data-theme="light"] {
+    --bg:          #f4f6f8;
+    --bg2:         #ffffff;
+    --bg3:         #eaecf0;
+    --card:        #ffffff;
+    --text:        #2b2f33;
+    --subtext:     #6b7280;
+    --primary:     #2f4f63;
+    --primary2:    #3a6f8f;
+    --border:      #e6eaee;
+    --border2:     rgba(47,79,99,0.18);
+    --shadow:      0 8px 28px rgba(0,0,0,0.08);
+    --shadow-lg:   0 16px 50px rgba(0,0,0,0.12);
+    --nav-bg:      rgba(255,255,255,0.97);
+    --accent:      #2f4f63;
+    --red:         #dc2626;
+    --orange:      #ea580c;
+    --yellow:      #ca8a04;
+    --green:       #16a34a;
+    --gradient:    linear-gradient(135deg, #2f4f63, #3a6f8f);
 }
 
 [data-theme="dark"] {
-    --bg:        #0b0f1a;
-    --bg2:       #111827;
-    --bg3:       #1a2236;
-    --surface:   rgba(17,24,39,0.92);
-    --border:    rgba(37,99,235,0.18);
-    --border2:   rgba(37,99,235,0.28);
-    --text:      #e6edf7;
-    --muted:     #6b7a99;
-    --accent:    #22d3ee;
-    --card-bg:   rgba(17,24,39,0.88);
-    --nav-bg:    rgba(11,15,26,0.96);
-}
-
-[data-theme="light"] {
-    --bg:        #f2f5fa;
-    --bg2:       #ffffff;
-    --bg3:       #e8edf7;
-    --surface:   rgba(255,255,255,0.95);
-    --border:    rgba(47,79,99,0.14);
-    --border2:   rgba(37,99,235,0.22);
-    --text:      #1a2236;
-    --muted:     #6b7a99;
-    --accent:    #2563eb;
-    --card-bg:   rgba(255,255,255,0.95);
-    --nav-bg:    rgba(242,245,250,0.97);
+    --bg:          #0f1720;
+    --bg2:         #18222c;
+    --bg3:         #1e2d3a;
+    --card:        #18222c;
+    --text:        #e6edf3;
+    --subtext:     #9aa6b2;
+    --primary:     #6fa3c8;
+    --primary2:    #5fa4c9;
+    --border:      #263341;
+    --border2:     rgba(111,163,200,0.22);
+    --shadow:      0 8px 28px rgba(0,0,0,0.35);
+    --shadow-lg:   0 16px 50px rgba(0,0,0,0.55);
+    --nav-bg:      rgba(15,23,32,0.97);
+    --accent:      #6fa3c8;
+    --red:         #ef4444;
+    --orange:      #f97316;
+    --yellow:      #eab308;
+    --green:       #10b981;
+    --gradient:    linear-gradient(135deg, #5fa4c9, #6fa3c8);
 }
 
 [data-theme="animated"] {
-    --bg:        #0b0f1a;
-    --bg2:       #111827;
-    --bg3:       #1a2236;
-    --surface:   rgba(17,24,39,0.85);
-    --border:    rgba(0,255,238,0.15);
-    --border2:   rgba(0,255,238,0.28);
-    --text:      #e6edf7;
-    --muted:     #6b7a99;
-    --accent:    #00ffe7;
-    --card-bg:   rgba(17,24,39,0.82);
-    --nav-bg:    rgba(11,15,26,0.88);
+    --bg:          #0b0f1a;
+    --bg2:         #111827;
+    --bg3:         #1a2236;
+    --card:        rgba(17,24,39,0.85);
+    --text:        #e6edf7;
+    --subtext:     #6b7a99;
+    --primary:     #00ffe7;
+    --primary2:    #7a7aff;
+    --border:      rgba(0,255,238,0.12);
+    --border2:     rgba(0,255,238,0.22);
+    --shadow:      0 8px 28px rgba(0,0,0,0.5);
+    --shadow-lg:   0 16px 50px rgba(0,0,0,0.7);
+    --nav-bg:      rgba(11,15,26,0.88);
+    --accent:      #00ffe7;
+    --red:         #ef4444;
+    --orange:      #f97316;
+    --yellow:      #eab308;
+    --green:       #10b981;
+    --gradient:    linear-gradient(135deg, #00ffe7, #7a7aff);
 }
 
+/* ─── BASE ────────────────────────────────────────── */
 html { scroll-behavior: smooth; }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Space Grotesk', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
-    transition: background var(--transition), color var(--transition);
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
+/* ─── GRID TEXTURE (light & dark only) ────────────── */
+[data-theme="light"] body::before,
+[data-theme="dark"] body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+        linear-gradient(rgba(120,160,190,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120,160,190,0.06) 1px, transparent 1px);
+    background-size: 42px 42px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ─── THREE.JS CANVAS ─────────────────────────────── */
 #bg-canvas {
     position: fixed;
     inset: 0;
@@ -84,8 +116,10 @@ body {
 
 [data-theme="animated"] #bg-canvas { opacity: 1; }
 
+/* ─── PAGE WRAPPER ────────────────────────────────── */
 .page { position: relative; z-index: 2; }
 
+/* ─── NAVBAR ──────────────────────────────────────── */
 nav {
     position: sticky;
     top: 0;
@@ -93,97 +127,68 @@ nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2.5rem;
+    padding: 18px 60px;
     background: var(--nav-bg);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border2);
-    transition: background var(--transition), border-color var(--transition);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(18px);
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.logo-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+.nav-logo-text {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--primary);
     text-decoration: none;
-}
-
-.logo-img {
-    height: 44px;
-    width: auto;
-    object-fit: contain;
-}
-
-.logo-text-block {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.1;
-}
-
-.logo-name {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.25rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--text);
-}
-
-.logo-tagline {
-    font-size: 0.58rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
 }
 
 .nav-right {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .theme-switcher {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 3px;
     background: var(--bg3);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 0.25rem;
+    padding: 3px;
 }
 
 .theme-btn {
-    padding: 0.35rem 0.7rem;
+    padding: 6px 14px;
     border: none;
-    border-radius: 7px;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.68rem;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.04em;
     cursor: pointer;
     background: transparent;
-    color: var(--muted);
+    color: var(--subtext);
     transition: all 0.2s;
+    letter-spacing: 0.03em;
 }
 
 .theme-btn:hover { color: var(--text); }
 
 .theme-btn.active {
-    background: var(--accent);
+    background: var(--primary);
     color: #fff;
 }
 
 [data-theme="light"] .theme-btn.active { color: #fff; }
 
-.nav-badge {
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 0.3rem 0.85rem;
-    border-radius: 20px;
-    border: 1px solid var(--border2);
-    color: var(--accent);
-    background: transparent;
+.live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: 0.05em;
 }
 
 .live-dot {
@@ -191,117 +196,366 @@ nav {
     height: 7px;
     border-radius: 50%;
     background: var(--green);
-    animation: pulse-dot 2.2s infinite;
+    animation: blink 2.2s infinite;
 }
 
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
 
+/* ─── HERO ────────────────────────────────────────── */
 .hero {
-    text-align: center;
-    padding: 5rem 2rem 3rem;
-}
-
-.hero-eyebrow {
-    display: inline-block;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid var(--border2);
-    padding: 0.35rem 1rem;
-    border-radius: 20px;
-    margin-bottom: 1.5rem;
-}
-
-.hero h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: clamp(2rem, 5vw, 3.6rem);
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 1.08;
-    margin-bottom: 1rem;
-    color: var(--text);
-}
-
-[data-theme="dark"] .hero h1,
-[data-theme="animated"] .hero h1 {
-    background: linear-gradient(135deg, #ffffff 30%, var(--accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-[data-theme="light"] .hero h1 {
-    background: linear-gradient(135deg, #1a2236 30%, var(--blue));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.hero-sub {
-    font-size: 1rem;
-    color: var(--muted);
-    max-width: 480px;
-    margin: 0 auto 2.5rem;
-    line-height: 1.7;
-}
-
-.stats {
     display: flex;
     justify-content: center;
-    gap: 3rem;
-    flex-wrap: wrap;
-    margin-bottom: 3rem;
+    align-items: center;
+    min-height: 88vh;
+    padding: 60px 40px;
 }
 
-.stat-number {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.9rem;
-    font-weight: 800;
-    color: var(--accent);
+.hero-inner {
+    background: var(--card);
+    border-radius: 22px;
+    padding: 70px 80px;
+    max-width: 1020px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 70px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.stat-label {
-    font-size: 0.65rem;
+.hero-logo-col {
+    flex-shrink: 0;
+}
+
+.hero-logo-img {
+    width: 320px;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.2));
+}
+
+.hero-text-col { flex: 1; }
+
+.hero-badge {
+    display: inline-block;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--muted);
-    margin-top: 0.2rem;
+    color: var(--primary);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 18px;
 }
 
+.hero-text-col h1 {
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.15;
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+}
+
+.hero-text-col p {
+    font-size: 17px;
+    color: var(--subtext);
+    line-height: 1.7;
+    margin-bottom: 32px;
+}
+
+.hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--gradient);
+    color: #fff;
+    padding: 15px 32px;
+    border-radius: 12px;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.25s;
+    text-decoration: none;
+}
+
+.hero-cta:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+
+.hero-cta-arrow {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.2s;
+}
+
+.hero-cta:hover .hero-cta-arrow { transform: translateX(3px); }
+
+/* Animated hero (no logo, text centered) */
+[data-theme="animated"] .hero { min-height: 80vh; }
+[data-theme="animated"] .hero-inner {
+    flex-direction: column;
+    text-align: center;
+    padding: 80px 60px;
+    gap: 0;
+    background: rgba(17,24,39,0.7);
+    backdrop-filter: blur(20px);
+}
+[data-theme="animated"] .hero-logo-col { display: none; }
+[data-theme="animated"] .hero-text-col { width: 100%; max-width: 680px; margin: 0 auto; }
+[data-theme="animated"] .hero-text-col h1 { font-size: 52px; color: var(--primary); }
+[data-theme="animated"] .hero-badge { display: none; }
+[data-theme="animated"] .hero-text-col p { font-size: 18px; }
+
+/* ─── STATS BAR ───────────────────────────────────── */
+.stats-bar {
+    padding: 0 60px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.stats-inner {
+    max-width: 1020px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+
+.stat-item {
+    padding: 28px 24px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    transition: background 0.2s;
+}
+
+.stat-item:last-child { border-right: none; }
+.stat-item:hover { background: var(--bg3); }
+
+.stat-number {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: var(--subtext);
+    font-weight: 500;
+}
+
+/* ─── SECTION LAYOUT ──────────────────────────────── */
+.section {
+    padding: 80px 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 52px;
+}
+
+.section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--primary);
+    margin-bottom: 12px;
+}
+
+.section-title {
+    font-size: 34px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    margin-bottom: 14px;
+}
+
+.section-sub {
+    font-size: 16px;
+    color: var(--subtext);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.7;
+}
+
+/* ─── FEATURE CARDS ───────────────────────────────── */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+}
+
+.feature-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 36px 30px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top left, rgba(95,164,201,0.12), transparent 65%);
+    opacity: 0;
+    transition: opacity 0.4s;
+}
+
+[data-theme="animated"] .feature-card::after {
+    background: radial-gradient(circle at top left, rgba(0,255,238,0.1), transparent 65%);
+}
+
+.feature-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+.feature-card:hover::after { opacity: 1; }
+
+.feature-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.feature-icon svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--primary);
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.feature-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+
+.feature-card p {
+    font-size: 14px;
+    color: var(--subtext);
+    line-height: 1.7;
+}
+
+/* ─── HOW IT WORKS ────────────────────────────────── */
+.how-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    position: relative;
+}
+
+.how-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    position: relative;
+}
+
+.how-step {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--gradient);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 36px;
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.how-card h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.how-card p {
+    font-size: 13px;
+    color: var(--subtext);
+    line-height: 1.6;
+}
+
+/* ─── DIVIDER ─────────────────────────────────────── */
+.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 60px;
+}
+
+/* ─── UPLOAD AREA ─────────────────────────────────── */
 .upload-section {
-    max-width: 660px;
-    margin: 0 auto 4rem;
-    padding: 0 1.5rem;
+    padding: 80px 60px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.upload-section-header {
+    text-align: center;
+    margin-bottom: 40px;
 }
 
 .upload-zone {
-    padding: 3.5rem 2rem;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 56px 40px;
     text-align: center;
     cursor: pointer;
-    background: var(--card-bg);
+    background: var(--card);
     border: 2px dashed var(--border2);
-    border-radius: var(--radius);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
     transition: all 0.25s;
 }
 
 .upload-zone:hover,
 .upload-zone.dragover {
-    border-color: var(--accent);
+    border-color: var(--primary);
     background: var(--bg3);
+    transform: translateY(-2px);
 }
 
-.upload-icon-wrap {
-    margin-bottom: 1rem;
-}
-
-.upload-svg {
-    width: 48px;
-    height: 48px;
-    stroke: var(--accent);
+.upload-zone-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 16px;
+    display: block;
+    stroke: var(--primary);
     stroke-width: 1.5;
     fill: none;
     stroke-linecap: round;
@@ -309,409 +563,531 @@ nav {
 }
 
 .upload-zone h2 {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.15rem;
+    font-size: 20px;
     font-weight: 700;
-    margin-bottom: 0.4rem;
     color: var(--text);
+    margin-bottom: 8px;
 }
 
 .upload-zone p {
-    font-size: 0.84rem;
-    color: var(--muted);
-    margin-bottom: 1.5rem;
+    font-size: 14px;
+    color: var(--subtext);
+    margin-bottom: 24px;
 }
 
-.btn {
+.btn-upload {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 0.85rem;
-    padding: 0.7rem 1.8rem;
+    gap: 8px;
+    background: var(--gradient);
+    color: #fff;
+    padding: 13px 28px;
     border-radius: 10px;
     border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
+    box-shadow: var(--shadow);
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, var(--blue), var(--cyan));
-    color: #ffffff;
-}
-
-.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-
-.btn-success {
-    background: linear-gradient(135deg, #059669, var(--green));
-    color: #ffffff;
-}
-
-.btn-success:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-upload:hover { opacity: 0.9; transform: translateY(-1px); }
 
 #fileInput { display: none; }
 
+/* ─── LOADING ─────────────────────────────────────── */
 .loading {
     display: none;
     text-align: center;
-    padding: 4rem 2rem;
-    position: relative;
-    z-index: 2;
+    padding: 60px 20px;
 }
 
 .loading.active { display: block; }
 
 .spinner {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border: 3px solid var(--border);
-    border-top-color: var(--accent);
+    border-top-color: var(--primary);
     border-radius: 50%;
     animation: spin 0.9s linear infinite;
-    margin: 0 auto 1.5rem;
+    margin: 0 auto 20px;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.loading h2 {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 0.4rem;
-    color: var(--text);
-}
+.loading h3 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.loading p { font-size: 14px; color: var(--subtext); }
 
-.loading p {
-    font-size: 0.82rem;
-    color: var(--muted);
-}
-
+/* ─── RESULTS ─────────────────────────────────────── */
 .results {
     display: none;
-    max-width: 1180px;
-    margin: 0 auto 5rem;
-    padding: 0 1.5rem;
-    position: relative;
-    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto 80px;
+    padding: 0 60px;
 }
 
 .results.active { display: block; }
 
 .verdict-card {
-    background: var(--card-bg);
+    background: var(--card);
     border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    padding: 2.5rem;
-    margin-bottom: 1.25rem;
+    border-radius: 18px;
+    padding: 40px;
+    margin-bottom: 20px;
     text-align: center;
+    box-shadow: var(--shadow);
 }
 
-.verdict-label {
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
+.verdict-card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.5rem;
+    color: var(--subtext);
+    margin-bottom: 8px;
 }
 
 .evidence-tag {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--muted);
-    margin-bottom: 1rem;
+    font-size: 11px;
+    color: var(--subtext);
+    margin-bottom: 16px;
     word-break: break-all;
 }
 
 .probability-number {
-    font-family: 'Syne', sans-serif;
-    font-size: 5.5rem;
-    font-weight: 800;
-    letter-spacing: -0.05em;
+    font-size: 80px;
+    font-weight: 700;
     line-height: 1;
-    margin-bottom: 0.4rem;
+    margin-bottom: 10px;
+    letter-spacing: -0.04em;
 }
 
-.prob-ai    { background: linear-gradient(135deg, var(--red), var(--orange)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.prob-maybe { background: linear-gradient(135deg, var(--orange), var(--yellow)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.prob-human { background: linear-gradient(135deg, var(--green), var(--cyan2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.prob-ai    { color: var(--red); }
+.prob-maybe { color: var(--orange); }
+.prob-human { color: var(--green); }
 
 .classification-badge {
     display: inline-block;
-    padding: 0.4rem 1.4rem;
+    padding: 6px 20px;
     border-radius: 20px;
-    font-size: 0.78rem;
+    font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    margin-bottom: 0.6rem;
+    margin-bottom: 10px;
 }
 
-.badge-ai    { background: rgba(239,68,68,0.12);  color: var(--red);    border: 1px solid rgba(239,68,68,0.25); }
-.badge-maybe { background: rgba(249,115,22,0.12); color: var(--orange); border: 1px solid rgba(249,115,22,0.25); }
-.badge-human { background: rgba(16,185,129,0.12); color: var(--green);  border: 1px solid rgba(16,185,129,0.25); }
+.badge-ai    { background: rgba(220,38,38,0.1);  color: var(--red);    border: 1px solid rgba(220,38,38,0.2); }
+.badge-maybe { background: rgba(234,88,12,0.1);  color: var(--orange); border: 1px solid rgba(234,88,12,0.2); }
+.badge-human { background: rgba(22,163,74,0.1);  color: var(--green);  border: 1px solid rgba(22,163,74,0.2); }
 
-.methods-used {
-    font-size: 0.72rem;
-    color: var(--muted);
-    margin-bottom: 1rem;
-}
+.methods-used { font-size: 13px; color: var(--subtext); margin-bottom: 16px; }
 
 .confidence-row {
-    margin-top: 1rem;
     display: flex;
     justify-content: center;
-    gap: 2.5rem;
+    gap: 40px;
     flex-wrap: wrap;
+    margin-top: 12px;
 }
 
 .confidence-item { text-align: center; }
-
-.confidence-value {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--accent);
-}
-
-.confidence-label {
-    font-size: 0.6rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-top: 0.2rem;
-}
+.confidence-value { font-size: 22px; font-weight: 700; color: var(--primary); }
+.confidence-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--subtext); margin-top: 4px; }
 
 .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.2rem;
-    margin-bottom: 1.2rem;
+    gap: 18px;
+    margin-bottom: 18px;
 }
 
-.card {
-    background: var(--card-bg);
+.result-card {
+    background: var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    transition: background var(--transition), border-color var(--transition);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: var(--shadow);
 }
 
-.card h3 {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.65rem;
+.result-card h3 {
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 1rem;
+    color: var(--primary);
+    margin-bottom: 16px;
 }
-
-.card-full { margin-bottom: 1.2rem; }
 
 .info-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.55rem 0;
+    padding: 8px 0;
     border-bottom: 1px solid var(--border);
-    font-size: 0.82rem;
+    font-size: 13px;
 }
 
 .info-row:last-child { border-bottom: none; }
+.info-label { color: var(--subtext); }
+.info-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
 
-.info-label { color: var(--muted); }
+.hash-item { margin-bottom: 12px; }
+.hash-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary); margin-bottom: 4px; }
+.hash-value { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text); word-break: break-all; background: var(--bg3); padding: 6px 10px; border-radius: 6px; }
 
-.info-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--text);
-}
-
-.hash-item { margin-bottom: 0.75rem; }
-
-.hash-label {
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 0.2rem;
-}
-
-.hash-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--text);
-    word-break: break-all;
-    background: var(--bg3);
-    padding: 0.35rem 0.6rem;
-    border-radius: 6px;
-}
-
-.flag-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.82rem;
-    color: var(--text);
-}
-
+.flag-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
 .flag-item:last-child { border-bottom: none; }
+.flag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); flex-shrink: 0; }
+.no-flags { font-size: 13px; color: var(--green); }
+.exif-empty { font-size: 13px; color: var(--subtext); font-style: italic; }
 
-.flag-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--orange);
-    flex-shrink: 0;
-}
+.card-full { margin-bottom: 18px; }
 
-.no-flags {
-    font-size: 0.82rem;
-    color: var(--green);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.exif-empty {
-    font-size: 0.82rem;
-    color: var(--muted);
-    font-style: italic;
-}
-
-.signal-item { margin-bottom: 0.75rem; break-inside: avoid; }
-
-.signal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.3rem;
-}
-
-.signal-name { font-size: 0.76rem; font-weight: 500; color: var(--text); }
-
-.signal-score { font-size: 0.78rem; font-weight: 700; }
-
+.signal-item { margin-bottom: 12px; break-inside: avoid; }
+.signal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.signal-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.signal-score { font-size: 13px; font-weight: 700; }
 .score-high { color: var(--red); }
 .score-mid  { color: var(--orange); }
 .score-low  { color: var(--green); }
-
-.signal-bar {
-    height: 4px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.signal-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.5s ease;
-}
-
+.signal-bar { height: 5px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.signal-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
 .fill-high { background: linear-gradient(90deg, var(--orange), var(--red)); }
 .fill-mid  { background: linear-gradient(90deg, var(--yellow), var(--orange)); }
-.fill-low  { background: linear-gradient(90deg, var(--green), var(--cyan2)); }
+.fill-low  { background: linear-gradient(90deg, var(--green), #34d399); }
 
 .analyze-again {
     text-align: center;
-    margin-top: 2rem;
+    margin-top: 28px;
     display: flex;
     justify-content: center;
-    gap: 1rem;
+    gap: 14px;
     flex-wrap: wrap;
 }
 
-.disclaimer {
-    font-size: 0.65rem;
-    color: var(--muted);
-    text-align: center;
-    margin-top: 1rem;
-    line-height: 1.5;
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    background: var(--gradient);
+    color: #fff;
+    padding: 13px 28px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
 }
 
-@media (max-width: 768px) {
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    background: var(--card);
+    color: var(--text);
+    padding: 13px 28px;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
+}
+
+.btn-secondary:hover { background: var(--bg3); transform: translateY(-1px); }
+
+/* ─── FOOTER ──────────────────────────────────────── */
+footer {
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+}
+
+.footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 52px 60px 36px;
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr;
+    gap: 48px;
+}
+
+.footer-brand h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+
+.footer-brand p {
+    font-size: 14px;
+    color: var(--subtext);
+    line-height: 1.7;
+    max-width: 280px;
+}
+
+.footer-col h4 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 16px;
+}
+
+.footer-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.footer-col ul li a {
+    font-size: 14px;
+    color: var(--subtext);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-col ul li a:hover { color: var(--primary); }
+
+.footer-bottom {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 18px 60px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--subtext);
+}
+
+.footer-badges {
+    display: flex;
+    gap: 10px;
+}
+
+.footer-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--bg3);
+    letter-spacing: 0.05em;
+}
+
+/* ─── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 900px) {
+    nav { padding: 16px 20px; }
+    .hero { padding: 40px 20px; }
+    .hero-inner { flex-direction: column; padding: 40px 30px; gap: 32px; text-align: center; }
+    .hero-logo-img { width: 220px; }
+    .hero-text-col h1 { font-size: 32px; }
+    .stats-bar { padding: 0 20px; }
+    .stats-inner { grid-template-columns: 1fr; }
+    .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .stat-item:last-child { border-bottom: none; }
+    .section { padding: 60px 20px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .how-grid { grid-template-columns: 1fr 1fr; }
+    .divider { margin: 0 20px; }
+    .upload-section { padding: 60px 20px; }
+    .results { padding: 0 20px; }
     .grid-2 { grid-template-columns: 1fr; }
-    .hero h1 { font-size: 2rem; }
-    .probability-number { font-size: 3.5rem; }
-    .analyze-again { flex-direction: column; align-items: center; }
-    .nav-badge { display: none; }
-    .stats { gap: 1.5rem; }
-    nav { padding: 1rem; }
-    .logo-tagline { display: none; }
-    .theme-btn { padding: 0.3rem 0.5rem; }
+    .footer-inner { grid-template-columns: 1fr; gap: 32px; padding: 40px 20px; }
+    .footer-bottom { flex-direction: column; gap: 12px; padding: 18px 20px; }
+    [data-theme="animated"] .hero-text-col h1 { font-size: 38px; }
+}
+
+@media (max-width: 600px) {
+    .how-grid { grid-template-columns: 1fr; }
+    .theme-btn { font-size: 11px; padding: 5px 10px; }
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-
 <canvas id="bg-canvas"></canvas>
 
 <div class="page">
 
+<!-- NAV -->
 <nav>
-    <a class="logo-wrap" href="#">
-        <img class="logo-img" src="logo2.png" alt="VeriFile-X Logo">
-        <div class="logo-text-block">
-            <span class="logo-name">VeriFile-X</span>
-            <span class="logo-tagline">Unmask AI Content with Confidence</span>
-        </div>
-    </a>
+    <a href="#" class="nav-logo-text">VeriFile-X</a>
     <div class="nav-right">
-        <div class="live-dot"></div>
+        <div class="live-indicator">
+            <div class="live-dot"></div>
+            System Active
+        </div>
         <div class="theme-switcher">
             <button class="theme-btn" id="btn-animated" onclick="setTheme('animated')">Animated</button>
             <button class="theme-btn" id="btn-dark"     onclick="setTheme('dark')">Dark</button>
             <button class="theme-btn" id="btn-light"    onclick="setTheme('light')">Light</button>
         </div>
-        <div class="nav-badge">25 Signals</div>
     </div>
 </nav>
 
+<!-- HERO (light/dark: logo + text side by side | animated: text only centered) -->
 <section class="hero">
-    <div class="hero-eyebrow">DIRE + CLIP + Statistical Analysis</div>
-    <h1>Unmask AI Content with Confidence</h1>
-    <p class="hero-sub">Upload any image and receive a forensic-grade analysis across 25 independent detection signals.</p>
-    <div class="stats">
-        <div><div class="stat-number">25</div><div class="stat-label">Detection Signals</div></div>
-        <div><div class="stat-number">7</div><div class="stat-label">AI Methods</div></div>
-        <div><div class="stat-number">85–92%</div><div class="stat-label">Validated Accuracy</div></div>
+    <div class="hero-inner">
+        <div class="hero-logo-col">
+            <img class="hero-logo-img" src="logo2.png" alt="VeriFile-X">
+        </div>
+        <div class="hero-text-col">
+            <div class="hero-badge">DIRE + CLIP + Statistical Analysis</div>
+            <h1>Unmask AI Content with Confidence</h1>
+            <p>VeriFile-X is an advanced AI image verification platform that analyses any photograph using 25 independent forensic signals. Instantly determine whether an image is AI-generated or authentic — with cryptographic hashes, EXIF forensics, and a downloadable evidence report.</p>
+            <a class="hero-cta" href="#upload-section">
+                Start Analysis
+                <svg class="hero-cta-arrow" viewBox="0 0 20 20">
+                    <path d="M4 10h12M10 4l6 6-6 6"/>
+                </svg>
+            </a>
+        </div>
     </div>
 </section>
 
-<div class="upload-section">
-    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-        <div class="upload-icon-wrap">
-            <svg class="upload-svg" viewBox="0 0 48 48">
-                <path d="M24 32V16M16 24l8-8 8 8"/>
-                <rect x="6" y="6" width="36" height="36" rx="8"/>
-                <path d="M14 36h20"/>
-            </svg>
+<!-- STATS BAR -->
+<div class="stats-bar">
+    <div class="stats-inner">
+        <div class="stat-item">
+            <div class="stat-number">25</div>
+            <div class="stat-label">Detection Signals</div>
         </div>
+        <div class="stat-item">
+            <div class="stat-number">7</div>
+            <div class="stat-label">AI Methods</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">85–92%</div>
+            <div class="stat-label">Validated Accuracy</div>
+        </div>
+    </div>
+</div>
+
+<!-- WHY VERIFILE-X -->
+<section class="section">
+    <div class="section-header">
+        <div class="section-label">Capabilities</div>
+        <h2 class="section-title">Why VeriFile-X</h2>
+        <p class="section-sub">Built for journalists, legal professionals, researchers, and anyone who needs to verify the authenticity of digital images.</p>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="7"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                    <path d="M11 8v6M8 11h6"/>
+                </svg>
+            </div>
+            <h3>AI Detection</h3>
+            <p>Detect AI-generated content using 25 independent signals spanning deep learning, frequency analysis, EXIF forensics, and statistical modelling. Each signal explains its reasoning.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+            </div>
+            <h3>Secure Verification</h3>
+            <p>Every image is analysed with SHA-256 and MD5 cryptographic hashing, perceptual fingerprinting, and tamper-indicator detection — producing a full forensic evidence report.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+            </div>
+            <h3>Fast Processing</h3>
+            <p>Results in seconds. All processing is done in-memory — your image is never stored to disk. Download a full PDF forensic report with a single click after analysis.</p>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
+<!-- HOW IT WORKS -->
+<section class="section">
+    <div class="section-header">
+        <div class="section-label">Process</div>
+        <h2 class="section-title">How It Works</h2>
+        <p class="section-sub">Four steps from upload to forensic-grade evidence report.</p>
+    </div>
+    <div class="how-grid">
+        <div class="how-card">
+            <div class="how-step">01</div>
+            <h4>Upload Image</h4>
+            <p>Drag and drop or select a JPEG, PNG, or WebP file up to 10 MB.</p>
+        </div>
+        <div class="how-card">
+            <div class="how-step">02</div>
+            <h4>Forensic Analysis</h4>
+            <p>25 detection signals run in parallel across 7 independent methods.</p>
+        </div>
+        <div class="how-card">
+            <div class="how-step">03</div>
+            <h4>Verdict Delivered</h4>
+            <p>An AI generation probability score and classification are returned with full signal breakdown.</p>
+        </div>
+        <div class="how-card">
+            <div class="how-step">04</div>
+            <h4>Download Report</h4>
+            <p>Export a complete PDF forensic report including hashes, EXIF data, and all signal results.</p>
+        </div>
+    </div>
+</section>
+
+<hr class="divider">
+
+<!-- UPLOAD -->
+<div id="upload-section" class="upload-section">
+    <div class="upload-section-header">
+        <div class="section-label">Analysis Engine</div>
+        <h2 class="section-title">Analyse an Image</h2>
+        <p class="section-sub" style="margin-top:12px;">Drop any image below. Results appear within seconds.</p>
+    </div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <svg class="upload-zone-icon" viewBox="0 0 52 52">
+            <path d="M26 36V16M16 26l10-10 10 10"/>
+            <rect x="6" y="6" width="40" height="40" rx="10"/>
+            <path d="M14 40h24"/>
+        </svg>
         <h2>Drop image here or click to upload</h2>
         <p>JPEG, PNG, WebP &bull; Max 10 MB</p>
-        <button class="btn btn-primary" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">Select Image</button>
+        <button class="btn-upload" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+            Select Image
+        </button>
         <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
     </div>
 </div>
 
+<!-- LOADING -->
 <div class="loading" id="loading">
     <div class="spinner"></div>
-    <h2>Analysing with 25 signals</h2>
+    <h3>Analysing with 25 signals</h3>
     <p>Running DIRE reconstruction, CLIP embeddings, and statistical analysis</p>
 </div>
 
+<!-- RESULTS -->
 <div class="results" id="results">
 
     <div class="verdict-card">
-        <div class="verdict-label">AI Generation Probability</div>
+        <div class="verdict-card-label">AI Generation Probability</div>
         <p class="evidence-tag" id="evidenceId">Evidence ID: —</p>
         <div class="probability-number" id="aiProb">0%</div>
         <div><span class="classification-badge" id="classificationBadge"></span></div>
@@ -733,178 +1109,210 @@ nav {
     </div>
 
     <div class="grid-2">
-        <div class="card">
+        <div class="result-card">
             <h3>File Information</h3>
             <div id="fileInfo"></div>
         </div>
-        <div class="card">
+        <div class="result-card">
             <h3>Cryptographic Hashes</h3>
             <div id="hashInfo"></div>
         </div>
     </div>
 
     <div class="grid-2">
-        <div class="card">
+        <div class="result-card">
             <h3>Tampering Indicators</h3>
             <div id="tamperingInfo"></div>
         </div>
-        <div class="card">
+        <div class="result-card">
             <h3>EXIF Metadata</h3>
             <div id="exifInfo"></div>
         </div>
     </div>
 
-    <div class="card card-full">
-        <h3>Detection Signals</h3>
-        <div id="signalsGrid" style="columns: 2; column-gap: 2rem;"></div>
+    <div class="result-card card-full">
+        <h3>Detection Signals (sorted by AI likelihood)</h3>
+        <div id="signalsGrid" style="columns: 2; column-gap: 2rem; margin-top: 8px;"></div>
     </div>
 
     <div class="analyze-again">
-        <button class="btn btn-primary" onclick="resetUI()">Analyse Another Image</button>
-        <button class="btn btn-success" onclick="downloadPDF()">Download PDF Report</button>
+        <button class="btn-primary"   onclick="resetUI()">Analyse Another Image</button>
+        <button class="btn-secondary" onclick="downloadPDF()">Download PDF Report</button>
     </div>
 
-    <p class="disclaimer">
-        Accuracy ~85–92% with validated CLIP database. Results are for informational purposes only and should not be used as sole evidence in legal proceedings.
+    <p style="text-align:center;font-size:12px;color:var(--subtext);margin-top:12px;">
+        Accuracy ~85-92% with validated CLIP database. Not intended as sole evidence in legal proceedings.
     </p>
 
 </div>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <h3>VeriFile-X</h3>
+            <p>Advanced AI image verification platform. 25 forensic signals. Cryptographic evidence reports. Built for accuracy, transparency, and trust.</p>
+        </div>
+        <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+                <li><a href="#">Image Analysis</a></li>
+                <li><a href="#">PDF Reports</a></li>
+                <li><a href="#">Detection Signals</a></li>
+                <li><a href="#">API Access</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Technology</h4>
+            <ul>
+                <li><a href="#">DIRE Detection</a></li>
+                <li><a href="#">CLIP Embeddings</a></li>
+                <li><a href="#">Statistical Analysis</a></li>
+                <li><a href="#">EXIF Forensics</a></li>
+            </ul>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <ul>
+                <li><a href="#">Documentation</a></li>
+                <li><a href="#">GitHub</a></li>
+                <li><a href="#">Security Policy</a></li>
+                <li><a href="#">Contributing</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 VeriFile-X — Built for Trust &amp; Transparency</span>
+        <div class="footer-badges">
+            <span class="footer-badge">25 Signals</span>
+            <span class="footer-badge">Privacy First</span>
+            <span class="footer-badge">Open Source</span>
+        </div>
+    </div>
+</footer>
+
 </div>
 
+<!-- THREE.JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 
-var _threeInitialized = false;
-var _threeScene, _threeCamera, _threeRenderer, _cubes, _nodes, _particlesMesh;
-var _mouseX = 0, _mouseY = 0;
-var _animFrameId = null;
+var _threeReady = false;
+var _tScene, _tCamera, _tRenderer, _tCubes, _tNodes, _tParticles;
+var _tMouseX = 0, _tMouseY = 0;
 
 function initThree() {
-    if (_threeInitialized) return;
-    _threeInitialized = true;
-
+    if (_threeReady) return;
+    _threeReady = true;
     var canvas = document.getElementById('bg-canvas');
-    _threeScene = new THREE.Scene();
-    _threeCamera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
-    _threeCamera.position.z = 18;
-
-    _threeRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-    _threeRenderer.setSize(innerWidth, innerHeight);
-    _threeRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-
-    _threeScene.add(new THREE.AmbientLight(0x00ffff, 0.6));
+    _tScene  = new THREE.Scene();
+    _tCamera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+    _tCamera.position.z = 18;
+    _tRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    _tRenderer.setSize(innerWidth, innerHeight);
+    _tRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    _tScene.add(new THREE.AmbientLight(0x00ffff, 0.6));
     var pl = new THREE.PointLight(0x7a7aff, 2);
     pl.position.set(10, 10, 10);
-    _threeScene.add(pl);
-
+    _tScene.add(pl);
     var grid = new THREE.GridHelper(200, 60, 0x00ffee, 0x003344);
     grid.position.y = -8;
-    _threeScene.add(grid);
-
-    _cubes = [];
+    _tScene.add(grid);
+    _tCubes = [];
     for (var i = 0; i < 40; i++) {
-        var geo = new THREE.BoxGeometry(1.4, 1.4, 0.2);
-        var mat = new THREE.MeshStandardMaterial({ color: 0x00ffee, emissive: 0x002222, metalness: 0.7, roughness: 0.2 });
-        var cube = new THREE.Mesh(geo, mat);
-        cube.position.x = (Math.random() - 0.5) * 40;
-        cube.position.y = (Math.random() - 0.5) * 20;
-        cube.position.z = (Math.random() - 0.5) * 30;
-        cube.rotationSpeed = Math.random() * 0.02;
-        _threeScene.add(cube);
-        _cubes.push(cube);
+        var c = new THREE.Mesh(
+            new THREE.BoxGeometry(1.4, 1.4, 0.2),
+            new THREE.MeshStandardMaterial({ color: 0x00ffee, emissive: 0x002222, metalness: 0.7, roughness: 0.2 })
+        );
+        c.position.x = (Math.random() - 0.5) * 40;
+        c.position.y = (Math.random() - 0.5) * 20;
+        c.position.z = (Math.random() - 0.5) * 30;
+        c.rs = Math.random() * 0.02;
+        _tScene.add(c);
+        _tCubes.push(c);
     }
-
-    _nodes = [];
+    _tNodes = [];
     for (var j = 0; j < 25; j++) {
-        var sgeo = new THREE.SphereGeometry(0.35, 32, 32);
-        var smat = new THREE.MeshStandardMaterial({ color: 0x7a7aff, emissive: 0x2222ff });
-        var node = new THREE.Mesh(sgeo, smat);
-        node.position.x = (Math.random() - 0.5) * 30;
-        node.position.y = (Math.random() - 0.5) * 15;
-        node.position.z = (Math.random() - 0.5) * 30;
-        node.velocity = Math.random() * 0.01;
-        _threeScene.add(node);
-        _nodes.push(node);
+        var n = new THREE.Mesh(
+            new THREE.SphereGeometry(0.35, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0x7a7aff, emissive: 0x2222ff })
+        );
+        n.position.x = (Math.random() - 0.5) * 30;
+        n.position.y = (Math.random() - 0.5) * 15;
+        n.position.z = (Math.random() - 0.5) * 30;
+        n.vel = Math.random() * 0.01;
+        _tScene.add(n);
+        _tNodes.push(n);
     }
-
-    var pgeo = new THREE.BufferGeometry();
-    var pCount = 1200;
-    var pPos = new Float32Array(pCount * 3);
-    for (var k = 0; k < pCount * 3; k++) { pPos[k] = (Math.random() - 0.5) * 80; }
-    pgeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-    _particlesMesh = new THREE.Points(pgeo, new THREE.PointsMaterial({ size: 0.05, color: 0x00ffff }));
-    _threeScene.add(_particlesMesh);
-
+    var pg = new THREE.BufferGeometry();
+    var pa = new Float32Array(1200 * 3);
+    for (var k = 0; k < 3600; k++) pa[k] = (Math.random() - 0.5) * 80;
+    pg.setAttribute('position', new THREE.BufferAttribute(pa, 3));
+    _tParticles = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.05, color: 0x00ffff }));
+    _tScene.add(_tParticles);
     document.addEventListener('mousemove', function(e) {
-        _mouseX = (e.clientX / innerWidth - 0.5) * 2;
-        _mouseY = (e.clientY / innerHeight - 0.5) * 2;
+        _tMouseX = (e.clientX / innerWidth - 0.5) * 2;
+        _tMouseY = (e.clientY / innerHeight - 0.5) * 2;
     });
-
     window.addEventListener('resize', function() {
-        _threeCamera.aspect = innerWidth / innerHeight;
-        _threeCamera.updateProjectionMatrix();
-        _threeRenderer.setSize(innerWidth, innerHeight);
+        _tCamera.aspect = innerWidth / innerHeight;
+        _tCamera.updateProjectionMatrix();
+        _tRenderer.setSize(innerWidth, innerHeight);
     });
-
-    animateThree();
-}
-
-function animateThree() {
-    _animFrameId = requestAnimationFrame(animateThree);
-    var now = Date.now();
-    _cubes.forEach(function(c) {
-        c.rotation.x += c.rotationSpeed;
-        c.rotation.y += c.rotationSpeed;
-        c.position.y += Math.sin(now * 0.001 + c.position.x) * 0.002;
-    });
-    _nodes.forEach(function(n) {
-        n.position.y += Math.sin(now * 0.002) * n.velocity;
-    });
-    _particlesMesh.rotation.y += 0.0008;
-    _threeCamera.position.x += (_mouseX * 3 - _threeCamera.position.x) * 0.05;
-    _threeCamera.position.y += (-_mouseY * 2 - _threeCamera.position.y) * 0.05;
-    _threeCamera.lookAt(_threeScene.position);
-    _threeRenderer.render(_threeScene, _threeCamera);
+    (function loop() {
+        requestAnimationFrame(loop);
+        var t = Date.now();
+        _tCubes.forEach(function(c) {
+            c.rotation.x += c.rs;
+            c.rotation.y += c.rs;
+            c.position.y += Math.sin(t * 0.001 + c.position.x) * 0.002;
+        });
+        _tNodes.forEach(function(n) { n.position.y += Math.sin(t * 0.002) * n.vel; });
+        _tParticles.rotation.y += 0.0008;
+        _tCamera.position.x += (_tMouseX * 3 - _tCamera.position.x) * 0.05;
+        _tCamera.position.y += (-_tMouseY * 2 - _tCamera.position.y) * 0.05;
+        _tCamera.lookAt(_tScene.position);
+        _tRenderer.render(_tScene, _tCamera);
+    })();
 }
 
 function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
-    document.getElementById('btn-animated').classList.toggle('active', theme === 'animated');
-    document.getElementById('btn-dark').classList.toggle('active', theme === 'dark');
-    document.getElementById('btn-light').classList.toggle('active', theme === 'light');
+    ['animated','dark','light'].forEach(function(t) {
+        document.getElementById('btn-' + t).classList.toggle('active', t === theme);
+    });
     localStorage.setItem('vfx-theme', theme);
-    if (theme === 'animated') {
-        initThree();
-    }
+    if (theme === 'animated') initThree();
 }
 
 (function() {
     var saved = localStorage.getItem('vfx-theme') || 'animated';
     setTheme(saved);
-    if (saved === 'animated') { initThree(); }
 })();
 
-var API_URL = window.location.hostname.includes('github.io') || window.location.hostname.includes('abinaze')
+/* ── DETECTION LOGIC ─────────────────────────────── */
+
+const API_URL = window.location.hostname.includes('github.io') || window.location.hostname.includes('abinaze')
     ? 'https://abinazebinoy-verifile-x-api.hf.space'
     : window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
     : 'https://abinazebinoy-verifile-x-api.hf.space';
 
-var fileInput  = document.getElementById('fileInput');
-var uploadZone = document.getElementById('uploadZone');
-var loading    = document.getElementById('loading');
-var results    = document.getElementById('results');
+const fileInput  = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+const loading    = document.getElementById('loading');
+const results    = document.getElementById('results');
 
-uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
-uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('dragover'); });
-uploadZone.addEventListener('drop', function(e) {
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadZone.classList.remove('dragover');
-    var file = e.dataTransfer.files[0];
+    const file = e.dataTransfer.files[0];
     if (file) analyzeFile(file);
 });
 
-fileInput.addEventListener('change', function(e) {
+fileInput.addEventListener('change', (e) => {
     if (e.target.files[0]) analyzeFile(e.target.files[0]);
 });
 
@@ -912,23 +1320,22 @@ function resetUI() {
     results.classList.remove('active');
     uploadZone.style.display = 'block';
     fileInput.value = '';
+    document.getElementById('upload-section').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function analyzeFile(file) {
     uploadZone.style.display = 'none';
     loading.classList.add('active');
     results.classList.remove('active');
-
-    var formData = new FormData();
+    const formData = new FormData();
     formData.append('file', file);
-
     try {
-        var response = await fetch(API_URL + '/api/v1/analyze/image', { method: 'POST', body: formData });
+        const response = await fetch(`${API_URL}/api/v1/analyze/image`, { method: 'POST', body: formData });
         if (!response.ok) {
-            var err = await response.json().catch(function() { return {}; });
-            throw new Error(err.detail || 'Server error ' + response.status);
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Server error ${response.status}`);
         }
-        var data = await response.json();
+        const data = await response.json();
         window._lastReport = data;
         renderResults(data);
         loading.classList.remove('active');
@@ -941,84 +1348,85 @@ async function analyzeFile(file) {
 }
 
 function renderResults(data) {
-    var ai   = data.ai_detection;
-    var prob = Math.round(ai.ai_probability * 100);
+    const ai   = data.ai_detection;
+    const prob = Math.round(ai.ai_probability * 100);
 
-    var probEl = document.getElementById('aiProb');
+    const probEl = document.getElementById('aiProb');
     document.getElementById('evidenceId').textContent = 'Evidence ID: ' + (data.evidence_id || 'N/A');
-    probEl.textContent = prob + '%';
-    probEl.className = 'probability-number ' + (prob >= 70 ? 'prob-ai' : prob >= 40 ? 'prob-maybe' : 'prob-human');
+    probEl.textContent  = prob + '%';
+    probEl.className    = 'probability-number ' + (prob >= 70 ? 'prob-ai' : prob >= 40 ? 'prob-maybe' : 'prob-human');
 
-    var badge = document.getElementById('classificationBadge');
-    var cls = ai.classification.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+    const badge = document.getElementById('classificationBadge');
+    const cls   = ai.classification.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     badge.textContent = cls;
-    badge.className = 'classification-badge ' + (prob >= 70 ? 'badge-ai' : prob >= 40 ? 'badge-maybe' : 'badge-human');
+    badge.className   = 'classification-badge ' + (prob >= 70 ? 'badge-ai' : prob >= 40 ? 'badge-maybe' : 'badge-human');
 
-    document.getElementById('methods').textContent = 'Detection methods: ' + ai.methods_used.join(', ');
+    document.getElementById('methods').textContent       = 'Detection methods: ' + ai.methods_used.join(', ');
     document.getElementById('suspiciousCount').textContent = ai.suspicious_signals_count + '/' + ai.total_signals;
-    document.getElementById('totalSignals').textContent = ai.total_signals;
+    document.getElementById('totalSignals').textContent  = ai.total_signals;
     document.getElementById('confidenceLevel').textContent = (ai.confidence || 'N/A').replace(/_/g, ' ');
 
-    var fi = data.file_info;
-    document.getElementById('fileInfo').innerHTML =
-        '<div class="info-row"><span class="info-label">Filename</span><span class="info-value">' + fi.filename + '</span></div>' +
-        '<div class="info-row"><span class="info-label">Format</span><span class="info-value">' + (fi.format || 'Unknown') + '</span></div>' +
-        '<div class="info-row"><span class="info-label">Dimensions</span><span class="info-value">' + fi.width + ' x ' + fi.height + ' px</span></div>' +
-        '<div class="info-row"><span class="info-label">Mode</span><span class="info-value">' + fi.mode + '</span></div>' +
-        '<div class="info-row"><span class="info-label">File Size</span><span class="info-value">' + (fi.file_size_bytes / 1024).toFixed(1) + ' KB</span></div>' +
-        '<div class="info-row"><span class="info-label">Analyzer Version</span><span class="info-value">' + data.metadata.analyzer_version + '</span></div>';
+    const fi = data.file_info;
+    document.getElementById('fileInfo').innerHTML = `
+        <div class="info-row"><span class="info-label">Filename</span><span class="info-value">${fi.filename}</span></div>
+        <div class="info-row"><span class="info-label">Format</span><span class="info-value">${fi.format || 'Unknown'}</span></div>
+        <div class="info-row"><span class="info-label">Dimensions</span><span class="info-value">${fi.width} x ${fi.height}px</span></div>
+        <div class="info-row"><span class="info-label">Mode</span><span class="info-value">${fi.mode}</span></div>
+        <div class="info-row"><span class="info-label">File Size</span><span class="info-value">${(fi.file_size_bytes / 1024).toFixed(1)} KB</span></div>
+        <div class="info-row"><span class="info-label">Analyzer Version</span><span class="info-value">${data.metadata.analyzer_version}</span></div>
+    `;
 
-    var h = data.hashes;
-    document.getElementById('hashInfo').innerHTML =
-        '<div class="hash-item"><div class="hash-label">SHA-256</div><div class="hash-value">' + h.sha256 + '</div></div>' +
-        '<div class="hash-item"><div class="hash-label">MD5</div><div class="hash-value">' + h.md5 + '</div></div>' +
-        '<div class="hash-item"><div class="hash-label">Perceptual Hash</div><div class="hash-value">' + h.perceptual_hash + '</div></div>' +
-        '<div class="hash-item"><div class="hash-label">Average Hash</div><div class="hash-value">' + h.average_hash + '</div></div>' +
-        '<div class="hash-item"><div class="hash-label">Difference Hash</div><div class="hash-value">' + h.difference_hash + '</div></div>';
+    const h = data.hashes;
+    document.getElementById('hashInfo').innerHTML = `
+        <div class="hash-item"><div class="hash-label">SHA-256</div><div class="hash-value">${h.sha256}</div></div>
+        <div class="hash-item"><div class="hash-label">MD5</div><div class="hash-value">${h.md5}</div></div>
+        <div class="hash-item"><div class="hash-label">Perceptual Hash</div><div class="hash-value">${h.perceptual_hash}</div></div>
+        <div class="hash-item"><div class="hash-label">Average Hash</div><div class="hash-value">${h.average_hash}</div></div>
+        <div class="hash-item"><div class="hash-label">Difference Hash</div><div class="hash-value">${h.difference_hash}</div></div>
+    `;
 
-    var t     = data.tampering_analysis;
-    var flags = t.suspicious_flags || [];
+    const t     = data.tampering_analysis;
+    const flags = t.suspicious_flags || [];
     document.getElementById('tamperingInfo').innerHTML = flags.length === 0
-        ? '<div class="no-flags">No tampering indicators found</div><div class="info-row" style="margin-top:1rem"><span class="info-label">Authenticity Confidence</span><span class="info-value" style="color:var(--green)">' + t.confidence + '</span></div>'
-        : flags.map(function(f) { return '<div class="flag-item"><div class="flag-dot"></div>' + f + '</div>'; }).join('') +
-          '<div class="info-row" style="margin-top:0.5rem"><span class="info-label">Confidence</span><span class="info-value" style="color:var(--orange)">' + t.confidence + '</span></div>';
+        ? `<div class="no-flags">No tampering indicators found</div>
+           <div class="info-row" style="margin-top:12px"><span class="info-label">Authenticity Confidence</span><span class="info-value" style="color:var(--green)">${t.confidence}</span></div>`
+        : flags.map(f => `<div class="flag-item"><div class="flag-dot"></div>${f}</div>`).join('')
+          + `<div class="info-row" style="margin-top:8px"><span class="info-label">Confidence</span><span class="info-value" style="color:var(--orange)">${t.confidence}</span></div>`;
 
-    var exif = data.exif_data || {};
+    const exif = data.exif_data || {};
     if (!exif.has_exif || Object.keys(exif).length <= 1) {
         document.getElementById('exifInfo').innerHTML = '<p class="exif-empty">No EXIF metadata found in this image.</p>';
     } else {
-        var skip = ['has_exif', 'gps'];
-        var rows = Object.entries(exif).filter(function(e) { return !skip.includes(e[0]); }).slice(0, 10)
-            .map(function(e) {
-                return '<div class="info-row"><span class="info-label">' + e[0] + '</span><span class="info-value" style="max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + e[1] + '</span></div>';
-            }).join('');
+        const skip = ['has_exif', 'gps'];
+        const rows = Object.entries(exif).filter(([k]) => !skip.includes(k)).slice(0, 10)
+            .map(([k, v]) => `<div class="info-row"><span class="info-label">${k}</span><span class="info-value" style="max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v}</span></div>`).join('');
         document.getElementById('exifInfo').innerHTML = rows || '<p class="exif-empty">No readable EXIF fields.</p>';
     }
 
-    var signals = (ai.all_signals || []).sort(function(a, b) { return b.score - a.score; });
-    document.getElementById('signalsGrid').innerHTML = signals.map(function(s) {
-        var pct = Math.round(s.score * 100);
-        var cls = pct >= 70 ? 'score-high fill-high' : pct >= 40 ? 'score-mid fill-mid' : 'score-low fill-low';
-        var parts = cls.split(' ');
-        return '<div class="signal-item">' +
-            '<div class="signal-header">' +
-                '<span class="signal-name">' + (s.signal_name || s.name || 'Signal') + '</span>' +
-                '<span class="signal-score ' + parts[0] + '">' + pct + '%</span>' +
-            '</div>' +
-            '<div class="signal-bar"><div class="signal-fill ' + parts[1] + '" style="width:' + pct + '%"></div></div>' +
-        '</div>';
+    const signals = (ai.all_signals || []).sort((a, b) => b.score - a.score);
+    document.getElementById('signalsGrid').innerHTML = signals.map(s => {
+        const pct = Math.round(s.score * 100);
+        const cls = pct >= 70 ? 'score-high fill-high' : pct >= 40 ? 'score-mid fill-mid' : 'score-low fill-low';
+        const [scoreCls, fillCls] = cls.split(' ');
+        return `<div class="signal-item">
+            <div class="signal-header">
+                <span class="signal-name">${s.signal_name || s.name || 'Signal'}</span>
+                <span class="signal-score ${scoreCls}">${pct}%</span>
+            </div>
+            <div class="signal-bar"><div class="signal-fill ${fillCls}" style="width:${pct}%"></div></div>
+        </div>`;
     }).join('');
 }
 
 function downloadPDF() {
-    var jsPDFObj = window.jspdf;
-    var doc  = new jsPDFObj.jsPDF();
-    var data = window._lastReport;
+    const { jsPDF } = window.jspdf;
+    const doc  = new jsPDF();
+    const data = window._lastReport;
     if (!data) { alert('No report to download'); return; }
 
-    var ai   = data.ai_detection;
-    var prob = Math.round(ai.ai_probability * 100);
-    var ts   = data.metadata.analysis_timestamp;
+    const ai   = data.ai_detection;
+    const prob = Math.round(ai.ai_probability * 100);
+    const ts   = data.metadata.analysis_timestamp;
 
     doc.setFillColor(10, 22, 40);
     doc.rect(0, 0, 210, 30, 'F');
@@ -1030,7 +1438,7 @@ function downloadPDF() {
     doc.text('AI-Generated Image Detection Platform v6.0.0', 105, 22, { align: 'center' });
 
     doc.setTextColor(0, 0, 0);
-    var y = 38;
+    let y = 38;
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
@@ -1044,8 +1452,8 @@ function downloadPDF() {
     doc.text('File: ' + data.file_info.filename + '  |  ' + data.file_info.width + 'x' + data.file_info.height + 'px  |  ' + (data.file_info.file_size_bytes / 1024).toFixed(1) + ' KB', 14, y + 19);
     y += 30;
 
-    var verdictColor = prob >= 70 ? [220, 38, 38] : prob >= 40 ? [234, 88, 12] : [16, 185, 129];
-    doc.setFillColor(verdictColor[0], verdictColor[1], verdictColor[2]);
+    const verdictColor = prob >= 70 ? [220, 38, 38] : prob >= 40 ? [234, 88, 12] : [16, 185, 129];
+    doc.setFillColor(...verdictColor);
     doc.roundedRect(14, y, 182, 22, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(14);
@@ -1062,7 +1470,7 @@ function downloadPDF() {
     y += 6;
     doc.setFontSize(8);
     doc.setFont('courier', 'normal');
-    var h = data.hashes;
+    const h = data.hashes;
     doc.text('SHA-256:  ' + h.sha256, 14, y); y += 5;
     doc.text('MD5:      ' + h.md5, 14, y); y += 5;
     doc.text('pHash:    ' + h.perceptual_hash + '   aHash: ' + h.average_hash + '   dHash: ' + h.difference_hash, 14, y); y += 10;
@@ -1072,13 +1480,13 @@ function downloadPDF() {
     doc.text('Tampering Analysis', 14, y); y += 6;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    var flags = data.tampering_analysis.suspicious_flags;
+    const flags = data.tampering_analysis.suspicious_flags;
     if (flags.length === 0) {
         doc.setTextColor(16, 185, 129);
         doc.text('No tampering indicators detected. Authenticity confidence: ' + data.tampering_analysis.confidence, 14, y);
     } else {
         doc.setTextColor(220, 38, 38);
-        flags.forEach(function(f) { doc.text('- ' + f, 14, y); y += 5; });
+        flags.forEach(f => { doc.text('- ' + f, 14, y); y += 5; });
     }
     doc.setTextColor(0, 0, 0);
     y += 8;
@@ -1087,22 +1495,22 @@ function downloadPDF() {
     doc.setFontSize(11);
     doc.text('Detection Signals (' + ai.total_signals + ' total)', 14, y); y += 6;
     doc.setFontSize(8);
-    var signals = (ai.all_signals || []).sort(function(a, b) { return b.score - a.score; });
-    signals.forEach(function(s) {
+    const signals = (ai.all_signals || []).sort((a, b) => b.score - a.score);
+    signals.forEach((s) => {
         if (y > 270) { doc.addPage(); y = 20; }
-        var pct = Math.round(s.score * 100);
-        var col = pct >= 70 ? [220, 38, 38] : pct >= 40 ? [234, 88, 12] : [16, 185, 129];
+        const pct = Math.round(s.score * 100);
+        const col = pct >= 70 ? [220, 38, 38] : pct >= 40 ? [234, 88, 12] : [16, 185, 129];
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
-        doc.text(s.signal_name || s.name || 'Signal', 14, y);
-        doc.setTextColor(col[0], col[1], col[2]);
+        doc.text((s.signal_name || s.name || 'Signal'), 14, y);
+        doc.setTextColor(...col);
         doc.text(pct + '%', 195, y, { align: 'right' });
         doc.setTextColor(0, 0, 0);
         y += 5;
     });
 
-    var pageCount = doc.internal.getNumberOfPages();
-    for (var i = 1; i <= pageCount; i++) {
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);

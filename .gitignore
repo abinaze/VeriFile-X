@@ -77,9 +77,17 @@ data/ai/**/*.png
 data/**/*.parquet
 data/**/*.tsv
 data/**/*.csv
-!data/manifest.csv
 
 # Large manifest files - tracked by git-lfs or kept local only
 data/manifest_real.csv
 data/manifest_ai.csv
 data/manifest.csv
+data/real/**/*.zip
+data/ai/**/*.zip
+data/real/**/*.tar
+data/ai/**/*.tar
+data/reference/own_embedding_model.pt
+data/reference/own_centroids.pkl
+data/reference/ensemble_xgb.pkl
+*.zip
+*.tar.gz
