@@ -186,7 +186,6 @@ def analyze_metadata(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
                 score_components.append(0.70)
 
         # === Check 6: Image format vs content consistency ===
-        fmt = img.format or ""
         mode = img.mode
         width, height = img.size
 

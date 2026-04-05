@@ -3,7 +3,6 @@ Download real photo datasets.
 Run from repo root: python scripts/datasets/download_real.py --dataset coco
 """
 import csv
-import hashlib
 import argparse
 import zipfile
 import tarfile
