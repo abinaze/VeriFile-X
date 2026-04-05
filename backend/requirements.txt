@@ -23,7 +23,7 @@ Pillow==12.1.1
 imagehash==4.3.1
 
 # AI Detection & Analysis
-numpy==1.26.3
+numpy>=1.24.0,<2.0.0
 scipy==1.11.4
 scikit-learn==1.5.0
 opencv-python==4.9.0.80
@@ -56,3 +56,5 @@ tqdm==4.66.3
 # Own Embedding Detector
 tensorboard==2.16.2
 
+xgboost>=2.0.0
+shap>=0.45.0

@@ -11,7 +11,7 @@ services:
       - key: DEBUG
         value: false
       - key: CORS_ORIGINS
-        value: "*"
+        value: "https://abinaze.github.io,https://abinazebinoy-verifile-x-api.hf.space"
       - key: MAX_FILE_SIZE_MB
         value: 50
       - key: MAX_ANALYSIS_SIZE_MB
