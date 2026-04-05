@@ -189,3 +189,38 @@ async def get_stats():
     """Return aggregate detection statistics."""
     from backend.core.audit_log import get_stats
     return get_stats()
+
+
+@router.post(
+    "/platform",
+    summary="Detect social media platform re-encoding",
+    description="Identifies WhatsApp, Instagram, Discord, Telegram, Twitter/X, or Facebook compression signatures."
+)
+@limiter.limit("10/minute")
+async def analyze_platform(
+    request: Request,
+    file: UploadFile = File(..., description="Image file to check platform signature")
+):
+    """Detect social media platform from JPEG quantization fingerprint."""
+    from backend.services.platform_detector import detect_platform
+
+    try:
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+        file_bytes = await file.read()
+        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        result = detect_platform(file_bytes, file.filename)
+        logger.info(
+            f"Platform detection: file={file.filename}, "
+            f"platform={result['predicted_platform']}, "
+            f"confidence={result['confidence']:.3f}"
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Platform detection error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Platform detection failed")
+    finally:
+        await file.close()
