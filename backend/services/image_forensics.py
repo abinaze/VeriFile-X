@@ -13,6 +13,7 @@ from io import BytesIO
 from backend.core.logger import setup_logger
 from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
 from backend.services.generator_attribution import attribute_generator
+from backend.services.platform_detector import detect_platform
 from backend.core.config import settings
 
 logger = setup_logger(__name__)
@@ -97,6 +98,7 @@ class ImageForensics:
         tampering    = self.detect_tampering_indicators(exif_data)
         ai_detection = self.detect_ai_generation()
         attribution  = attribute_generator(self.image_bytes, self.filename)
+        platform     = detect_platform(self.image_bytes, self.filename)
 
         width, height  = self.pil_image.size
         image_format   = self.pil_image.format or "Unknown"
@@ -123,6 +125,7 @@ class ImageForensics:
             "tampering_analysis":     tampering,
             "ai_detection":           ai_detection,
             "generator_attribution":  attribution,
+            "platform_forensics":     platform,
             "summary": {
                 "has_metadata":               exif_data.get("has_exif", False),
                 "suspicious_flags_count":     len(tampering["suspicious_flags"]),
@@ -132,6 +135,7 @@ class ImageForensics:
                 "total_detection_signals":    ai_detection["total_signals"],
                 "suspicious_detection_signals": ai_detection["suspicious_signals_count"],
                 "predicted_generator":        attribution["predicted_generator"],
+                "platform_origin":            platform["predicted_platform"],
             },
         }
 
