@@ -11,10 +11,10 @@ from backend.services.image_forensics import ImageForensics
 from backend.utils.validators import validate_file, FileValidationError
 from backend.core.logger import setup_logger
 from backend.core.cache import forensics_cache
+from backend.core.audit_log import log_analysis
 
 # In-memory heatmap store keyed by evidence_id
 _heatmap_store: dict = {}
-from backend.core.audit_log import log_analysis
 
 logger = setup_logger(__name__)
 
@@ -51,7 +51,7 @@ MAX_ANALYSIS_SIZE_BYTES = 10 * 1024 * 1024
     **Rate limit:** 10 requests per minute per IP.
 
     **Supported formats:** JPEG, PNG, WebP
-    
+
     **Caching:** Duplicate uploads return cached results instantly.
     """
 )
@@ -72,34 +72,30 @@ async def analyze_image(
     6. SHA-256 hash caching (deduplication)
     """
     try:
-        # Layer 1: Content-type header check (fast fail)
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             logger.warning(
                 f"Rejected upload: content_type={file.content_type} "
                 f"from {get_remote_address(request)}"
             )
             raise HTTPException(
-                status_code=415,  # FIXED: Changed from 400 to 415 (Unsupported Media Type)
+                status_code=415,
                 detail=f"Unsupported media type: {file.content_type}. "
                        f"Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}"
             )
 
-        # Read file into memory
         file_bytes = await file.read()
 
-        # Layer 2: Actual size check (after read)
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             logger.warning(
                 f"Rejected upload: size={len(file_bytes)} bytes "
                 f"exceeds {MAX_ANALYSIS_SIZE_BYTES} bytes"
             )
             raise HTTPException(
-                status_code=413,  # FIXED: Changed from 400 to 413 (Payload Too Large)
+                status_code=413,
                 detail=f"Payload too large. "
                        f"Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
             )
 
-        # OPTIMIZATION: Compute SHA-256 once for caching
         file_hash = hashlib.sha256(file_bytes).hexdigest()
 
         logger.info(
@@ -109,7 +105,6 @@ async def analyze_image(
             f"content_type={file.content_type}"
         )
 
-        # Layer 3: MIME type validation via python-magic
         validation = validate_file(file_bytes, file.filename)
 
         if not validation["mime_type"].startswith("image/"):
@@ -117,7 +112,6 @@ async def analyze_image(
                 f"File content is not an image: {validation['mime_type']}"
             )
 
-        # Layer 4: Check cache (skip expensive analysis if duplicate)
         cached_result = forensics_cache.get(file_hash)
         if cached_result:
             logger.info(
@@ -126,15 +120,12 @@ async def analyze_image(
             )
             return cached_result
 
-        # Cache miss - run full forensic analysis
         logger.info(f"Cache MISS: Running full analysis for {file.filename}")
         forensics = ImageForensics(file_bytes, file.filename)
         report = forensics.generate_forensic_report()
 
-        # Store in cache for future duplicate uploads
         forensics_cache.set(file_hash, report)
 
-        # Record in audit log
         log_analysis(
             evidence_id=report.get("evidence_id", "unknown"),
             filename=file.filename,
@@ -156,7 +147,7 @@ async def analyze_image(
 
     except FileValidationError as e:
         logger.warning(f"Validation failed: {str(e)}")
-        raise HTTPException(status_code=422, detail=str(e))  # IMPROVED: 422 for validation
+        raise HTTPException(status_code=422, detail=str(e))
 
     except ValueError as e:
         logger.error(f"Value error during analysis: {str(e)}")
@@ -225,11 +216,11 @@ async def analyze_image_heatmap(
         )
 
         return {
-            "filename": file.filename,
+            "filename":    file.filename,
             "heatmap_b64": result["heatmap_b64"],
-            "width": result["width"],
-            "height": result["height"],
-            "method": result["method"],
+            "width":       result["width"],
+            "height":      result["height"],
+            "method":      result["method"],
         }
 
     except HTTPException:
@@ -278,5 +269,46 @@ async def analyze_attribution(
     except Exception as e:
         logger.error(f"Attribution error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Attribution analysis failed")
+    finally:
+        await file.close()
+
+
+@router.post(
+    "/platform",
+    summary="Detect social media platform re-encoding",
+    description="Identifies WhatsApp, Instagram, Discord, Telegram, Twitter/X, or Facebook compression signatures."
+)
+@limiter.limit("10/minute")
+async def analyze_platform(
+    request: Request,
+    file: UploadFile = File(..., description="Image file to check platform signature")
+):
+    """Detect social media platform from JPEG quantization fingerprint."""
+    from backend.services.platform_detector import detect_platform
+
+    try:
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+
+        file_bytes = await file.read()
+
+        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+
+        result = detect_platform(file_bytes, file.filename)
+
+        logger.info(
+            f"Platform detection: file={file.filename}, "
+            f"platform={result['predicted_platform']}, "
+            f"confidence={result['confidence']:.3f}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Platform detection error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Platform detection failed")
     finally:
         await file.close()
