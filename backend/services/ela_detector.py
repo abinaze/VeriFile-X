@@ -74,7 +74,6 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
             # Coefficient of variation: how inconsistent are regions?
             cv = float(np.std(block_means) / (block_mean + 1e-10))
         else:
-            block_variance = 0.0
             cv = 0.0
 
         # === Signal 3: High error region concentration ===

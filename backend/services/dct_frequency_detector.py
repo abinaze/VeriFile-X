@@ -118,12 +118,8 @@ def detect_dct_artifacts(image_bytes: bytes, filename: str = "unknown") -> Dict[
             spectral_smoothness = float(np.std(rp_diff))
 
             # Check for spectral peaks (GAN artifact)
-            rp_norm = rp / (rp.max() + 1e-10)
-            above_trend = np.sum(rp_norm[10:] > 0.3)
-            spectral_peaks = int(above_trend)
         else:
             spectral_smoothness = 0.5
-            spectral_peaks = 0
 
         # === Signal 3: Checkerboard artifact detection ===
         # Up-convolution in GANs creates checkerboard patterns at 2x, 4x, 8x freq

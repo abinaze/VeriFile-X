@@ -21,7 +21,7 @@ Target Accuracy: 85-90% on modern AI generators
 import numpy as np
 import cv2
 from scipy import fft, stats
-from scipy.stats import entropy, kurtosis, skew
+from scipy.stats import entropy, kurtosis
 from sklearn.feature_extraction import image as sk_image
 from skimage.feature import graycomatrix, graycoprops, local_binary_pattern
 import pywt
@@ -144,7 +144,6 @@ class AdvancedAIDetector:
         
         # Analyze distribution
         coeff_kurtosis = kurtosis(dct_coeffs)
-        coeff_std = dct_coeffs.std()
         
         # Natural images: kurtosis typically 3-10
         # AI images: often have lower kurtosis (smoother)
@@ -222,9 +221,7 @@ class AdvancedAIDetector:
         glcm = graycomatrix(small, distances, angles, levels=256, symmetric=True, normed=True)
         
         # Extract properties
-        contrast = graycoprops(glcm, 'contrast').mean()
         homogeneity = graycoprops(glcm, 'homogeneity').mean()
-        energy = graycoprops(glcm, 'energy').mean()
         
         # AI images tend to have higher homogeneity (smoother)
         if homogeneity > 0.85:
@@ -256,8 +253,6 @@ class AdvancedAIDetector:
         
         # Compute higher-order statistics
         residual_kurtosis = kurtosis(lap.flatten())
-        residual_skew = skew(lap.flatten())
-        residual_std = lap.std()
         
         # Natural images: kurtosis typically 5-20 (heavy tails from edges)
         # AI images: often lower kurtosis
@@ -361,8 +356,6 @@ class AdvancedAIDetector:
         Analyzes edge density, continuity, and orientation.
         """
         # Detect edges
-        edges = cv2.Canny(self.cv_gray, 50, 150)
-        edge_density = edges.sum() / edges.size
         
         # Compute edge orientation histogram
         gx = cv2.Sobel(self.cv_gray, cv2.CV_64F, 1, 0, ksize=3)
