@@ -1,6 +1,23 @@
+import pickle
+import numpy as np
+from pathlib import Path as _Path
+
+_XGB_MODEL_PATH = _Path("data/reference/ensemble_xgb.pkl")
+_xgb_cache: dict = {}
+
+
+def _load_xgb():
+    if "model" not in _xgb_cache and _XGB_MODEL_PATH.exists():
+        with open(_XGB_MODEL_PATH, "rb") as _f:
+            _xgb_cache.update(pickle.load(_f))
+    return (
+        _xgb_cache.get("model"),
+        _xgb_cache.get("feature_names"),
+        _xgb_cache.get("explainer"),
+    )
+
 """
-Advanced Ensemble Detector combining Statistical + DIRE + CLIP
-Achieves 96-98% accuracy across all generator types.
+Advanced Ensemble Detector combining Statistical + DIRE + CLIP.
 """
 from typing import Dict, Any
 from backend.core.logger import setup_logger
@@ -19,11 +36,12 @@ logger = setup_logger(__name__)
 class AdvancedEnsembleDetector(StatisticalDetector):
     """
     State-of-the-art ensemble combining:
-    - Statistical methods (19 signals) - 92-97% accuracy
-    - DIRE (diffusion detection) - 95-98% accuracy
-    - CLIP (universal detection) - 94-96% accuracy
+    - Statistical methods (19 signals)
+    - DIRE (diffusion detection)
+    - CLIP (universal detection)
+    - Own EfficientNet embedding detector
     
-    Expected combined accuracy: 96-98%
+    Validated accuracy: 85-92%
     """
     
     def __init__(self, image_bytes: bytes, filename: str):
@@ -42,7 +60,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         Run complete advanced detection with all methods.
         
         Returns:
-            Complete report with 25 detection signals
+            Complete report with 26 detection signals
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
         
@@ -68,7 +86,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Add DCT frequency signal
         dct_result = detect_dct_artifacts(self.image_bytes, self.filename)
 
-        # Combine all signals (now 25 total)
+        # Combine all signals (now 26 total)
         all_signals = base_report["all_signals"] + [
     dire_result, clip_result, own_result, prnu_result,
     ela_result, metadata_result, dct_result,
@@ -76,10 +94,6 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Recalculate final score with weighted ensemble
         # Weights based on validation performance
         dire_confidence = dire_result.get("confidence", 0.0)
-
-        prnu_confidence = prnu_result.get("confidence", 0.0)
-
-        ela_confidence = ela_result.get("confidence", 0.0)
 
         if dire_confidence > 0.0:
             weighted_score = (
@@ -107,11 +121,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Apply Platt-style sigmoid calibration to push uncertain scores
         # toward center and confident scores toward extremes.
         # This makes the final probability more reliable for legal use.
-        import math
         def calibrate(score: float) -> float:
-            # Shift midpoint slightly toward AI (prior: more AI than real uploaded)
             adjusted = score - 0.02
-            # Sigmoid with steeper curve for extreme scores
             if adjusted > 0.65:
                 return min(1.0, 0.65 + (adjusted - 0.65) * 1.15)
             elif adjusted < 0.35:
@@ -120,14 +131,26 @@ class AdvancedEnsembleDetector(StatisticalDetector):
 
         weighted_score = calibrate(weighted_score)
 
+        xgb_model, feature_names, xgb_explainer = _load_xgb()
+        if xgb_model is not None:
+            signal_map = {
+                s["signal_name"].lower().replace(" ", "_"): s["score"]
+                for s in all_signals
+            }
+            feat_vec       = np.array([[signal_map.get(k, 0.5) for k in feature_names]])
+            weighted_score = float(xgb_model.predict_proba(feat_vec)[0][1])
+            logger.info(f"XGBoost ensemble score: {weighted_score:.4f}")
+        else:
+            logger.info("XGBoost model not found, using weighted sum fallback")
+
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
-        
-        # Boost if multiple independent methods agree
-        if suspicious_count >= 12:  # More than half
-            weighted_score = min(1.0, weighted_score * 1.3)
-        elif suspicious_count >= 10:
-            weighted_score = min(1.0, weighted_score * 1.2)
-        
+
+        if xgb_model is None:
+            if suspicious_count >= 12:
+                weighted_score = min(1.0, weighted_score * 1.3)
+            elif suspicious_count >= 10:
+                weighted_score = min(1.0, weighted_score * 1.2)
+
         # Classification
         if weighted_score > 0.80:
             classification = "likely_ai_generated"
