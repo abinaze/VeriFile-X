@@ -217,7 +217,7 @@ def test_forensic_report_complete_schema():
     from io import BytesIO
     from backend.services.image_forensics import ImageForensics
     rng = np.random.default_rng(seed=8888)
-    arr = rng.integers(0, 255, (80, 80, 3), dtype=np.uint8)
+    arr = rng.integers(0, 255, (128, 128, 3), dtype=np.uint8)
     buf = BytesIO()
     Image.fromarray(arr, "RGB").save(buf, format="PNG")
     report = ImageForensics(buf.getvalue(), "schema_test_unique.png").generate_forensic_report()

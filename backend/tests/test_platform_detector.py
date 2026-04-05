@@ -94,7 +94,7 @@ def test_platform_in_forensic_report(client):
     from PIL import Image
     from io import BytesIO
     rng = np.random.default_rng(seed=9999)
-    arr = rng.integers(0, 255, (80, 80, 3), dtype=np.uint8)
+    arr = rng.integers(0, 255, (128, 128, 3), dtype=np.uint8)
     buf = BytesIO()
     Image.fromarray(arr, "RGB").save(buf, format="PNG")
     fresh_bytes = buf.getvalue()
