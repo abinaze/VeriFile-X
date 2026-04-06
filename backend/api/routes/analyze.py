@@ -312,3 +312,37 @@ async def analyze_platform(
         raise HTTPException(status_code=500, detail="Platform detection failed")
     finally:
         await file.close()
+
+@router.post(
+    "/c2pa",
+    summary="Verify C2PA content credentials",
+    description="Checks for C2PA provenance manifest. Returns: verified | partial | none | tampered."
+)
+@limiter.limit("10/minute")
+async def analyze_c2pa(
+    request: Request,
+    file: UploadFile = File(..., description="Image file to check for C2PA credentials")
+):
+    """Verify C2PA content credentials in uploaded image."""
+    from backend.services.c2pa_verifier import verify_c2pa
+
+    try:
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+        file_bytes = await file.read()
+        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        result = verify_c2pa(file_bytes, file.filename)
+        logger.info(
+            f"C2PA verification: file={file.filename}, "
+            f"status={result['provenance_status']}, "
+            f"has_c2pa={result['has_c2pa']}"
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"C2PA verification error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="C2PA verification failed")
+    finally:
+        await file.close()
