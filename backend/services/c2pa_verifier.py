@@ -23,8 +23,6 @@ import logging
 import hashlib
 import struct
 from typing import Dict, Any
-from io import BytesIO
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
