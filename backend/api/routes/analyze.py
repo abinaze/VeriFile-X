@@ -346,3 +346,38 @@ async def analyze_c2pa(
         raise HTTPException(status_code=500, detail="C2PA verification failed")
     finally:
         await file.close()
+
+
+@router.post(
+    "/robustness",
+    summary="Test adversarial robustness of detection",
+    description="Runs 8 adversarial attack types at 3 intensities each. Returns per-attack robustness scores."
+)
+@limiter.limit("2/minute")
+async def analyze_robustness(
+    request: Request,
+    file: UploadFile = File(..., description="Image to test robustness against")
+):
+    """Run adversarial robustness test suite on uploaded image."""
+    from backend.services.adversarial_tester import run_robustness_test
+
+    try:
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+        file_bytes = await file.read()
+        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        result = run_robustness_test(file_bytes, file.filename)
+        logger.info(
+            f"Robustness test: file={file.filename}, "
+            f"overall={result.get('overall_robustness', 0):.3f}, "
+            f"level={result.get('robustness_level', 'unknown')}"
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Robustness test error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Robustness test failed")
+    finally:
+        await file.close()
