@@ -224,10 +224,13 @@ def test_forensic_report_complete_schema():
     required = {
         "evidence_id", "metadata", "file_info", "exif_data",
         "hashes", "tampering_analysis", "ai_detection",
-        "generator_attribution", "platform_forensics", "summary",
+        "generator_attribution", "platform_forensics",
+        "c2pa_provenance", "summary",
     }
     missing = required - set(report.keys())
     assert not missing, f"Report missing keys: {missing}"
     assert 0.0 <= report["summary"]["ai_probability"] <= 1.0
     assert report["summary"]["total_detection_signals"] == 26
     assert "platform_origin" in report["summary"]
+    assert "c2pa_status" in report["summary"]
+    assert "c2pa_status" in report["summary"]
