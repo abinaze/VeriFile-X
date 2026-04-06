@@ -26,7 +26,6 @@ import logging
 import numpy as np
 from typing import Dict, Any
 from io import BytesIO
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +131,6 @@ def _dct_energy_ratio(image_bytes: bytes) -> float:
     Lower ratio indicates aggressive compression (social media platform).
     """
     try:
-        import cv2
         from PIL import Image
         from scipy.fft import dctn
 
