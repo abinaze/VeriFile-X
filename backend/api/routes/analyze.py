@@ -2,7 +2,7 @@
 Forensic analysis endpoints.
 Security: Rate limited, validated, privacy-first.
 """
-from fastapi import APIRouter, UploadFile, File, HTTPException, Request
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Response
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 import hashlib
@@ -434,3 +434,64 @@ async def analyze_batch(
     finally:
         for file in files:
             await file.close()
+
+
+@router.post(
+    "/export/{fmt}",
+    summary="Export forensic report in PDF, JSON, or CSV format",
+    description="Re-analyze image and return report as downloadable file. fmt: pdf | json | csv"
+)
+@limiter.limit("5/minute")
+async def export_report(
+    request: Request,
+    fmt: str,
+    file: UploadFile = File(..., description="Image to analyze and export")
+):
+    """Analyze image and export forensic report in requested format."""
+    from backend.services.report_exporter import export_pdf, export_json, export_csv
+
+    fmt = fmt.lower().strip()
+    if fmt not in ("pdf", "json", "csv"):
+        raise HTTPException(status_code=400, detail="Format must be: pdf, json, or csv")
+
+    try:
+        if file.content_type not in ALLOWED_IMAGE_TYPES:
+            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+        file_bytes = await file.read()
+        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+
+        from backend.services.image_forensics import ImageForensics
+        forensics = ImageForensics(file_bytes, file.filename)
+        report    = forensics.generate_forensic_report()
+
+        stem = file.filename.rsplit(".", 1)[0] if "." in file.filename else file.filename
+
+        if fmt == "pdf":
+            content      = export_pdf(report)
+            media_type   = "application/pdf"
+            disposition  = f'attachment; filename="{stem}_forensic_report.pdf"'
+        elif fmt == "json":
+            content      = export_json(report)
+            media_type   = "application/json"
+            disposition  = f'attachment; filename="{stem}_forensic_report.json"'
+        else:  # csv
+            content      = export_csv(report)
+            media_type   = "text/csv"
+            disposition  = f'attachment; filename="{stem}_forensic_signals.csv"'
+
+        logger.info(f"Export: file={file.filename}, format={fmt}, size={len(content)} bytes")
+
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": disposition}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Export error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+    finally:
+        await file.close()
