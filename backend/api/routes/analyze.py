@@ -6,6 +6,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 import hashlib
+from typing import List
 
 from backend.services.image_forensics import ImageForensics
 from backend.utils.validators import validate_file, FileValidationError
@@ -381,3 +382,55 @@ async def analyze_robustness(
         raise HTTPException(status_code=500, detail="Robustness test failed")
     finally:
         await file.close()
+
+
+@router.post(
+    "/batch",
+    summary="Batch forensic analysis — up to 10 images",
+    description="Processes multiple images in one request. Returns per-image reports plus aggregate statistics, duplicate detection, risk ranking, and provenance consistency check."
+)
+@limiter.limit("2/minute")
+async def analyze_batch(
+    request: Request,
+    files: List[UploadFile] = File(..., description="Images to analyze (max 10)")
+):
+    """Process multiple images through the full forensic pipeline."""
+    from backend.services.batch_processor import process_batch, MAX_BATCH_SIZE
+
+    try:
+        if len(files) > MAX_BATCH_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Too many files. Max {MAX_BATCH_SIZE} per batch request."
+            )
+
+        images = []
+        for file in files:
+            if file.content_type not in ALLOWED_IMAGE_TYPES:
+                logger.warning(f"Batch: skipping {file.filename} — unsupported type {file.content_type}")
+                continue
+            data = await file.read()
+            images.append({"filename": file.filename, "data": data})
+
+        if not images:
+            raise HTTPException(status_code=415, detail="No valid image files in batch.")
+
+        logger.info(f"Batch analysis: {len(images)} images submitted")
+        result = process_batch(images)
+
+        logger.info(
+            f"Batch complete: processed={result.get('processed', 0)}, "
+            f"failed={result.get('failed', 0)}, "
+            f"verdict={result.get('statistics', {}).get('batch_verdict', 'unknown')}"
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Batch analysis error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Batch analysis failed")
+    finally:
+        for file in files:
+            await file.close()
