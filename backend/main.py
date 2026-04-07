@@ -15,7 +15,7 @@ import os
 
 from backend.core.config import settings
 from backend.core.logger import setup_logger
-from backend.api.routes import upload, analyze
+from backend.api.routes import upload, analyze, cases
 
 logger = setup_logger(__name__)
 
@@ -55,6 +55,7 @@ app.add_middleware(
 # Register API routers
 app.include_router(upload.router)
 app.include_router(analyze.router)
+app.include_router(cases.router)
 
 
 @app.get("/")
