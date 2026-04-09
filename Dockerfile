@@ -33,14 +33,14 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     torch==2.6.0 \
     torchvision==0.21.0 \
-    transformers==4.53.0 \
+    transformers==4.53.1 \
     diffusers==0.25.0 \
     accelerate==1.7.0 \
     huggingface_hub==0.30.0 \
     safetensors==0.4.5 \
     ftfy==6.1.1 \
     regex==2023.12.25 \
-    tqdm==4.66.3 \
+    tqdm==4.67.0 \
     "clip @ git+https://github.com/openai/CLIP.git"
 
 ENV PYTHONPATH=/app
