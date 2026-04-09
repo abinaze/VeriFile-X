@@ -492,6 +492,6 @@ async def export_report(
         raise
     except Exception as e:
         logger.error(f"Export error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Export generation failed. Please try again.")
     finally:
         await file.close()
