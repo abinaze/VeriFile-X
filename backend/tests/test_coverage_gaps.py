@@ -41,17 +41,20 @@ def _make_png(seed: int = 2, width: int = 100, height: int = 100) -> bytes:
 def test_cache_ttl_expiry():
     """Cache entries must expire after TTL."""
     from backend.core.cache import ForensicsCache
-    from datetime import timedelta
+    from datetime import datetime, timedelta
     cache = ForensicsCache()
-    cache.set("test_key", {"result": "data"})
+    # Use file bytes to trigger the normal set path
+    import hashlib
+    img_bytes = b"fake_image_data_for_ttl_test"
+    cache.set(img_bytes, {"result": "data"})
+    key = hashlib.sha256(img_bytes).hexdigest()
 
-    # Manually expire the entry
-    import datetime
-    entry = cache._cache.get("test_key")
-    if entry:
-        entry["timestamp"] = datetime.datetime.now() - timedelta(hours=2)
-    result = cache.get("test_key")
-    assert result is None
+    # Manually backdate the timestamp to simulate TTL expiry
+    if key in cache._cache:
+        cache._cache[key]["timestamp"] = datetime.now() - timedelta(hours=2)
+
+    result = cache.get(img_bytes)
+    assert result is None, f"Expected None after TTL expiry, got {result}"
 
 
 def test_cache_max_size_eviction():
