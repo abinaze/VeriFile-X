@@ -16,6 +16,7 @@ def _load_xgb():
         _xgb_cache.get("explainer"),
     )
 
+
 """
 Advanced Ensemble Detector combining Statistical + DIRE + CLIP.
 """
@@ -40,59 +41,48 @@ class AdvancedEnsembleDetector(StatisticalDetector):
     - DIRE (diffusion detection)
     - CLIP (universal detection)
     - Own EfficientNet embedding detector
-    
+
     Validated accuracy: 85-92%
     """
-    
+
     def __init__(self, image_bytes: bytes, filename: str):
         """Initialize ensemble detector."""
         super().__init__(image_bytes, filename)
-        
-        # Initialize deep learning detectors
+
         self.dire_detector = DIREDetector()
         self.clip_detector = CLIPDetector()
-        self.own_detector = OwnEmbeddingDetector()
-        
+        self.own_detector  = OwnEmbeddingDetector()
+
         logger.info(f"Advanced ensemble detector initialized for {filename}")
-    
+
     def detect(self) -> Dict[str, Any]:
         """
         Run complete advanced detection with all methods.
-        
+
         Returns:
             Complete report with 26 detection signals
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
-        
+
         # Run parent class methods (19 statistical signals)
         base_report = super().detect()
-        
-        # Add DIRE detection (diffusion models)
-        dire_result = self.dire_detector.detect(self.image_bytes, self.filename)
-        
-        # Add CLIP detection (universal)
-        clip_result = self.clip_detector.detect(self.image_bytes, self.filename)
-        own_result = self.own_detector.detect(self.image_bytes, self.filename)
 
-        # Add PRNU signal
-        prnu_result = detect_prnu(self.image_bytes, self.filename)
-
-        # Add ELA signal
-        ela_result = detect_ela(self.image_bytes, self.filename)
-
-        # Add metadata forensics signal
+        # Deep-learning and forensic signals
+        dire_result     = self.dire_detector.detect(self.image_bytes, self.filename)
+        clip_result     = self.clip_detector.detect(self.image_bytes, self.filename)
+        own_result      = self.own_detector.detect(self.image_bytes, self.filename)
+        prnu_result     = detect_prnu(self.image_bytes, self.filename)
+        ela_result      = detect_ela(self.image_bytes, self.filename)
         metadata_result = analyze_metadata(self.image_bytes, self.filename)
+        dct_result      = detect_dct_artifacts(self.image_bytes, self.filename)
 
-        # Add DCT frequency signal
-        dct_result = detect_dct_artifacts(self.image_bytes, self.filename)
-
-        # Combine all signals (now 26 total)
+        # Combine all signals (26 total)
         all_signals = base_report["all_signals"] + [
-    dire_result, clip_result, own_result, prnu_result,
-    ela_result, metadata_result, dct_result,
-]
-        # Recalculate final score with weighted ensemble
-        # Weights based on validation performance
+            dire_result, clip_result, own_result, prnu_result,
+            ela_result, metadata_result, dct_result,
+        ]
+
+        # Weighted fallback score (used when XGBoost model is absent)
         dire_confidence = dire_result.get("confidence", 0.0)
 
         if dire_confidence > 0.0:
@@ -116,11 +106,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 0.04 * dct_result["score"]
             )
 
-        # === Confidence Calibration ===
-        # Raw scores from individual signals are not perfectly calibrated.
-        # Apply Platt-style sigmoid calibration to push uncertain scores
-        # toward center and confident scores toward extremes.
-        # This makes the final probability more reliable for legal use.
+        # Platt-style calibration (weighted-sum fallback only)
         def calibrate(score: float) -> float:
             adjusted = score - 0.02
             if adjusted > 0.65:
@@ -131,68 +117,69 @@ class AdvancedEnsembleDetector(StatisticalDetector):
 
         weighted_score = calibrate(weighted_score)
 
-        xgb_model, feature_names, xgb_explainer = _load_xgb()
+        # XGBoost meta-model overrides weighted sum when available
+        xgb_model, feature_names, _ = _load_xgb()
         if xgb_model is not None:
             signal_map = {
                 s["signal_name"].lower().replace(" ", "_"): s["score"]
                 for s in all_signals
             }
-            # Use np.nan for missing features — XGBoost handles missing values natively
+            # np.nan lets XGBoost use its native missing-value branch selection
             feat_vec       = np.array([[signal_map.get(k, np.nan) for k in feature_names]])
             weighted_score = float(xgb_model.predict_proba(feat_vec)[0][1])
             logger.info(f"XGBoost ensemble score: {weighted_score:.4f}")
         else:
             logger.info("XGBoost model not found, using weighted sum fallback")
+            # Manual boost multipliers removed — the weighted sum above plus
+            # calibrate() is sufficient; XGBoost learns co-occurrence patterns
+            # from training data when available.
 
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
 
-        if xgb_model is None:
-            # Removed manual boost multipliers — XGBoost ensemble learns this
-            # from training data without double-counting suspicious signals
-
-        # Classification
+        # Classification thresholds
         if weighted_score > 0.80:
             classification = "likely_ai_generated"
-            confidence = "very_high"
+            confidence     = "very_high"
         elif weighted_score > 0.70:
             classification = "likely_ai_generated"
-            confidence = "high"
+            confidence     = "high"
         elif weighted_score > 0.50:
             classification = "possibly_ai_generated"
-            confidence = "medium"
+            confidence     = "medium"
         elif weighted_score > 0.30:
             classification = "possibly_authentic"
-            confidence = "medium"
+            confidence     = "medium"
         else:
             classification = "likely_authentic"
-            confidence = "high" if weighted_score < 0.20 else "medium"
-        
-        # Top reasons from all methods
+            confidence     = "high" if weighted_score < 0.20 else "medium"
+
         sorted_signals = sorted(all_signals, key=lambda x: x["score"], reverse=True)
-        top_reasons = [s["explanation"] for s in sorted_signals[:3]]
-        
+        top_reasons    = [s["explanation"] for s in sorted_signals[:3]]
+
         result = {
-            "ai_probability": float(weighted_score),
-            "classification": classification,
-            "confidence": confidence,
+            "ai_probability":          float(weighted_score),
+            "classification":          classification,
+            "confidence":              confidence,
             "suspicious_signals_count": suspicious_count,
-            "total_signals": len(all_signals),
-            "all_signals": all_signals,
-            "top_reasons": top_reasons,
-            "summary": f"Analyzed using {len(all_signals)} independent signals including "
-                      f"statistical analysis, diffusion reconstruction, and semantic embeddings. "
-                      f"{suspicious_count} signals indicate AI generation.",
+            "total_signals":           len(all_signals),
+            "all_signals":             all_signals,
+            "top_reasons":             top_reasons,
+            "summary": (
+                f"Analyzed using {len(all_signals)} independent signals including "
+                f"statistical analysis, diffusion reconstruction, and semantic embeddings. "
+                f"{suspicious_count} signals indicate AI generation."
+            ),
             "detection_version": "advanced-ensemble-v1.4",
-            "methods_used": ["statistical", "dire", "clip", "prnu", "ela", "metadata", "dct"]
+            "methods_used": ["statistical", "dire", "clip", "prnu", "ela", "metadata", "dct"],
         }
-        
+
         logger.info(
             f"Advanced ensemble complete: {classification} "
             f"(p={weighted_score:.3f}, {suspicious_count}/{len(all_signals)} signals)"
         )
-        
+
         return result
-    
+
     def cleanup(self):
         """Clean up GPU resources."""
         self.dire_detector.cleanup()
