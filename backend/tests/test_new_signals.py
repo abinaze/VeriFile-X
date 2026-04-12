@@ -44,7 +44,9 @@ def test_metadata_forensics_no_exif(sample_image_bytes):
     assert 0.0 <= result["score"] <= 1.0
     assert result["signal_name"] == "Metadata Forensics"
     # PNG with no EXIF should flag missing metadata
-    assert result["score"] > 0.5
+    # Score was reduced from 0.75 -> 0.40 to avoid false positives on
+    # screenshots/exports/social images that legitimately lack EXIF
+    assert result["score"] > 0.3
 
 
 def test_dct_detector_returns_valid_signal(sample_image_bytes):
