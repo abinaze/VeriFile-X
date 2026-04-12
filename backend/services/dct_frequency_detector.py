@@ -196,13 +196,13 @@ def detect_dct_artifacts(image_bytes: bytes, filename: str = "unknown") -> Dict[
             "method": "dct_frequency"
         }
 
-    except Exception as e:
-        logger.warning(f"DCT frequency analysis failed: {e}")
+    except Exception:
+        logger.warning("DCT frequency analysis failed", exc_info=True)
         return {
             "signal_name": "DCT Frequency Artifacts",
             "score": 0.5,
             "confidence": 0.0,
-            "explanation": f"DCT analysis unavailable: {str(e)}",
+            "explanation": "DCT analysis unavailable.",
             "raw_value": 0.0,
             "method": "dct_frequency"
         }
