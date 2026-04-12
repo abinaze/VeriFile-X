@@ -37,7 +37,8 @@ def main():
     rows = []
     with open(MANIFEST, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        all_rows = [r for r in reader if r["split"] == "val"]
+        # Use train split for feature extraction (val/test reserved for evaluation)
+        all_rows = [r for r in reader if r["split"] == "train"]
 
     import random
     random.seed(42)
