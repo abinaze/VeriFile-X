@@ -242,13 +242,13 @@ def analyze_metadata(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
         )
         return signal
 
-    except Exception as e:
-        logger.warning(f"Metadata forensics failed: {e}")
+    except Exception:
+        logger.warning("Metadata forensics failed", exc_info=True)
         return {
             "signal_name": "Metadata Forensics",
             "score": 0.5,
             "confidence": 0.0,
-            "explanation": f"Metadata analysis unavailable: {str(e)}",
+            "explanation": "Metadata analysis unavailable",
             "raw_value": 0,
             "method": "metadata_forensics"
         }
