@@ -126,12 +126,11 @@ class CLIPDetector:
             except Exception as e:
                 logger.warning(f"Failed to load reference database: {e}")
         
-        # Fallback to placeholder values
+        self.db_available = False
         logger.warning(
-            "Reference database not found, using placeholder centroids. "
-            "Run 'python scripts/build_clip_database.py' for better accuracy."
+            "CLIP reference database not found. Signal disabled. "
+            "Run scripts/build_clip_database.py to enable CLIP detection."
         )
-        self._initialize_placeholder_centroids()
     
     def _initialize_placeholder_centroids(self):
         """Initialize placeholder centroids (fallback)."""
@@ -188,6 +187,15 @@ class CLIPDetector:
     
     def detect(self, image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
         """Detect if image is AI-generated using CLIP embeddings."""
+        if not getattr(self, "db_available", False):
+            return {
+                "signal_name": "CLIP Embedding Analysis",
+                "score": 0.5, "confidence": 0.0,
+                "explanation": "CLIP reference database not built. Run scripts/build_clip_database.py.",
+                "raw_value": 0.0, "expected_range": "N/A",
+                "method": "clip_embedding_similarity",
+                "from_cache": False, "active": False,
+            }
         try:
             # Lazy load model (uses cache if available - 10x faster!)
             self._load_model()
@@ -230,7 +238,8 @@ class CLIPDetector:
                 "signal_name": "CLIP Embedding Analysis",
                 "score": 0.5,
                 "confidence": 0.1,
-                "explanation": f"Analysis failed: {str(e)}",
+                "explanation": "CLIP analysis failed — see server logs.",
+                "active": False,
                 "raw_value": 0.0,
                 "expected_range": "N/A",
                 "method": "clip_embedding_similarity",
