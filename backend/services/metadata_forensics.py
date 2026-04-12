@@ -100,7 +100,7 @@ def _check_timestamps(exif: Dict) -> tuple:
     if datetime_orig and datetime_mod:
         # Modified should be >= original
         try:
-            if datetime_mod < datetime_orig:
+            if len(datetime_mod) == 19 and len(datetime_orig) == 19 and datetime_mod < datetime_orig:
                 issues.append("File modified before original capture date")
         except Exception:
             pass
@@ -121,10 +121,10 @@ def analyze_metadata(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
         positives = []
         score_components = []
 
-        # === Check 1: Missing EXIF (strongest AI indicator) ===
+        # === Check 1: Missing EXIF (weak indicator — common in screenshots, exports, messaging apps) ===
         if not exif:
-            flags.append("No EXIF metadata — typical of AI-generated images")
-            score_components.append(0.75)
+            flags.append("No EXIF metadata — possible AI generation or web/social export")
+            score_components.append(0.40)
         else:
             positives.append("EXIF metadata present")
             score_components.append(0.15)
@@ -193,9 +193,9 @@ def analyze_metadata(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
         if width % 64 == 0 and height % 64 == 0 and width >= 512:
             flags.append(
                 f"Dimensions {width}x{height} are multiples of 64 "
-                "(common AI generation artifact)"
+                "(weak indicator — also common in exports and resized images)"
             )
-            score_components.append(0.60)
+            score_components.append(0.25)
 
         # === Compute final score ===
         if score_components:
@@ -204,7 +204,7 @@ def analyze_metadata(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
             ai_score = 0.5
 
         ai_score = min(1.0, max(0.0, ai_score))
-        confidence = 0.70 if exif else 0.85
+        confidence = 0.75 if exif else 0.45
 
         if flags:
             explanation = f"Metadata anomalies: {flags[0]}"
