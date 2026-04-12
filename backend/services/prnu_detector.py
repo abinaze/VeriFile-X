@@ -148,13 +148,13 @@ def detect_prnu(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]
             "method": "prnu_wavelet"
         }
 
-    except Exception:
-        logger.warning("PRNU detection failed", exc_info=True)
+    except Exception as e:
+        logger.warning(f"PRNU detection failed: {e}")
         return {
             "signal_name": "PRNU Camera Fingerprint",
             "score": 0.5,
             "confidence": 0.0,
-            "explanation": "PRNU analysis unavailable",
+            "explanation": f"PRNU analysis unavailable: {str(e)}",
             "raw_value": 0.0,
             "method": "prnu_wavelet"
         }

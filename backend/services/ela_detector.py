@@ -149,13 +149,13 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
             "method": "ela_jpeg"
         }
 
-    except Exception:
-        logger.warning("ELA detection failed", exc_info=True)
+    except Exception as e:
+        logger.warning(f"ELA detection failed: {e}")
         return {
             "signal_name": "ELA Compression Analysis",
             "score": 0.5,
             "confidence": 0.0,
-            "explanation": "ELA analysis unavailable.",
+            "explanation": f"ELA analysis unavailable: {str(e)}",
             "raw_value": 0.0,
             "method": "ela_jpeg"
         }

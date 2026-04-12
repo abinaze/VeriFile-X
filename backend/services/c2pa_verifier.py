@@ -257,8 +257,8 @@ def verify_c2pa(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]
             ),
         }
 
-    except Exception:
-        logger.error(f"C2PA verification failed for {filename}", exc_info=True)
+    except Exception as e:
+        logger.error(f"C2PA verification failed for {filename}: {e}")
         return {
             "provenance_status":  "unknown",
             "has_c2pa":           False,
@@ -268,7 +268,7 @@ def verify_c2pa(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]
             "assertions":         [],
             "soft_binding_valid": None,
             "confidence":         0.0,
-            "explanation":        "Verification could not be completed.",
+            "explanation":        f"Verification failed: {str(e)}",
             "file_hash":          "",
             "accuracy_note":      "Verification failed.",
         }
