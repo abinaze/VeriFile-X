@@ -99,8 +99,10 @@ def _extract_attribution_features(image_bytes: bytes) -> Dict[str, float]:
 
     # ── Colour channel statistics ─────────────────────────────────────────────
     r, g, b = arr_rgb[:,:,0], arr_rgb[:,:,1], arr_rgb[:,:,2]
-    rg_corr = float(np.corrcoef(r.flatten(), g.flatten())[0, 1])
-    rb_corr = float(np.corrcoef(r.flatten(), b.flatten())[0, 1])
+    rg_raw = np.corrcoef(r.flatten(), g.flatten())[0, 1]
+    rb_raw = np.corrcoef(r.flatten(), b.flatten())[0, 1]
+    rg_corr = float(rg_raw) if np.isfinite(rg_raw) else 0.5
+    rb_corr = float(rb_raw) if np.isfinite(rb_raw) else 0.5
     mean_colour_corr = (abs(rg_corr) + abs(rb_corr)) / 2
 
     # ── Spectral slope ────────────────────────────────────────────────────────
@@ -116,9 +118,10 @@ def _extract_attribution_features(image_bytes: bytes) -> Dict[str, float]:
         mag[r_idx == ri].mean() if (r_idx == ri).any() else 0.0
         for ri in range(1, r_max)
     ])
-    if len(radial) > 10:
-        log_r = np.log(np.arange(1, len(radial) + 1) + 1)
-        slope = float(np.polyfit(log_r, radial, 1)[0])
+    if len(radial) > 10 and np.any(np.array(radial) > 0):
+        log_r = np.log(np.arange(1, len(radial) + 1))
+        coeffs = np.polyfit(log_r, radial, 1)
+        slope = float(coeffs[0]) if np.isfinite(coeffs[0]) else -2.0
     else:
         slope = -2.0
 
