@@ -208,9 +208,9 @@ def process_batch(
                 f"Batch: processed {filename} "
                 f"(ai={report['summary']['ai_probability']:.3f})"
             )
-        except Exception:
-            logger.warning(f"Batch: failed {filename}", exc_info=True)
-            errors.append({"filename": filename, "error": "Image processing failed"})
+        except Exception as e:
+            logger.warning(f"Batch: failed {filename}: {e}")
+            errors.append({"filename": filename, "error": str(e)})
 
     if not reports:
         return {

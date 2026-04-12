@@ -206,10 +206,10 @@ def run_robustness_test(
         det_base.cleanup()
         base_score = base["ai_probability"]
         base_class = base["classification"]
-    except Exception:
-        logger.error("Baseline detection failed", exc_info=True)
+    except Exception as e:
+        logger.error(f"Baseline detection failed: {e}")
         return {
-            "error":            "Baseline detection failed",
+            "error":            str(e),
             "robustness_score": 0.0,
             "attacks_tested":   0,
         }
@@ -219,9 +219,8 @@ def run_robustness_test(
         from PIL import Image
         pil      = Image.open(BytesIO(image_bytes)).convert("RGB")
         img_arr  = np.array(pil)
-    except Exception:
-        logger.error("Image decode failed during robustness test", exc_info=True)
-        return {"error": "Image decode failed", "robustness_score": 0.0}
+    except Exception as e:
+        return {"error": f"Image decode failed: {e}", "robustness_score": 0.0}
 
     attack_results = {}
     total_robustness = []
