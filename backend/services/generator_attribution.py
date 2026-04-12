@@ -268,13 +268,13 @@ def attribute_generator(
             ),
         }
 
-    except Exception as e:
-        logger.error(f"Attribution failed for {filename}: {e}")
+    except Exception:
+        logger.error(f"Attribution failed for {filename}", exc_info=True)
         return {
             "predicted_generator": "unknown",
             "confidence":          0.0,
             "all_scores":          {g: 0.0 for g in _LABELS},
             "features":            {},
             "method":              "failed",
-            "accuracy_note":       f"Attribution failed: {str(e)}",
+            "accuracy_note":       "Attribution could not be completed.",
         }
