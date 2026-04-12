@@ -100,6 +100,7 @@ def _check_timestamps(exif: Dict) -> tuple:
     if datetime_orig and datetime_mod:
         # Modified should be >= original
         try:
+            # EXIF datetime format YYYY:MM:DD HH:MM:SS is safely string-comparable
             if len(datetime_mod) == 19 and len(datetime_orig) == 19 and datetime_mod < datetime_orig:
                 issues.append("File modified before original capture date")
         except Exception:
@@ -121,9 +122,9 @@ def analyze_metadata(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
         positives = []
         score_components = []
 
-        # === Check 1: Missing EXIF (weak indicator — common in screenshots, exports, messaging apps) ===
+        # === Check 1: Missing EXIF (weak indicator — common in screenshots, exports, web images) ===
         if not exif:
-            flags.append("No EXIF metadata — possible AI generation or web/social export")
+            flags.append("No EXIF metadata — possible AI generation or web export")
             score_components.append(0.40)
         else:
             positives.append("EXIF metadata present")
@@ -193,7 +194,7 @@ def analyze_metadata(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
         if width % 64 == 0 and height % 64 == 0 and width >= 512:
             flags.append(
                 f"Dimensions {width}x{height} are multiples of 64 "
-                "(weak indicator — also common in exports and resized images)"
+                "(weak AI generation indicator — also common in exports)"
             )
             score_components.append(0.25)
 
