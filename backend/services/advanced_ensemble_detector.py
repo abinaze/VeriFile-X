@@ -137,7 +137,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 s["signal_name"].lower().replace(" ", "_"): s["score"]
                 for s in all_signals
             }
-            feat_vec       = np.array([[signal_map.get(k, 0.5) for k in feature_names]])
+            # Use np.nan for missing features — XGBoost handles missing values natively
+            feat_vec       = np.array([[signal_map.get(k, np.nan) for k in feature_names]])
             weighted_score = float(xgb_model.predict_proba(feat_vec)[0][1])
             logger.info(f"XGBoost ensemble score: {weighted_score:.4f}")
         else:
@@ -146,10 +147,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
 
         if xgb_model is None:
-            if suspicious_count >= 12:
-                weighted_score = min(1.0, weighted_score * 1.3)
-            elif suspicious_count >= 10:
-                weighted_score = min(1.0, weighted_score * 1.2)
+            # Removed manual boost multipliers — XGBoost ensemble learns this
+            # from training data without double-counting suspicious signals
 
         # Classification
         if weighted_score > 0.80:
