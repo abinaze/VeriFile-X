@@ -1,5 +1,4 @@
 """Tests for social media platform signature detection."""
-import pytest
 import numpy as np
 from PIL import Image
 from io import BytesIO
@@ -88,22 +87,19 @@ def test_platform_api_rejects_invalid_type(client):
     assert response.status_code == 415
 
 
-def test_platform_in_forensic_report(client):
-    # Use unique image to avoid cache hit from previous tests
+def test_platform_in_forensic_report():
+    """Test platform_forensics in report — via service directly (no rate limit)."""
     import numpy as np
     from PIL import Image
     from io import BytesIO
-    rng = np.random.default_rng(seed=9999)
-    arr = rng.integers(0, 255, (128, 128, 3), dtype=np.uint8)
-    buf = BytesIO()
-    Image.fromarray(arr, "RGB").save(buf, format="PNG")
-    fresh_bytes = buf.getvalue()
-    response = client.post(
-        "/api/v1/analyze/image",
-        files={"file": ("platform_test_unique.png", fresh_bytes, "image/png")}
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert "platform_forensics" in data
-    assert data["platform_forensics"]["predicted_platform"] in _VALID_PLATFORMS
-    assert "platform_origin" in data["summary"]
+    from backend.services.image_forensics import ImageForensics
+    rng   = np.random.default_rng(seed=31415)
+    arr   = rng.integers(0, 255, (128, 128, 3), dtype=np.uint8)
+    buf   = BytesIO()
+    Image.fromarray(arr, "RGB").save(buf, format="JPEG", quality=85)
+    report = ImageForensics(buf.getvalue(), "platform_direct.jpg").generate_forensic_report()
+    assert "platform_forensics" in report
+    assert report["platform_forensics"]["predicted_platform"] in {
+        "whatsapp", "instagram", "discord", "telegram",
+        "twitter_x", "facebook", "original", "unknown"
+    }

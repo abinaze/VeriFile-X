@@ -113,6 +113,15 @@ async def analyze_image(
                 f"File content is not an image: {validation['mime_type']}"
             )
 
+        # Quality gate — reject images too small or unreadable for forensics
+        from backend.utils.image_quality import assess_image_quality
+        quality = assess_image_quality(file_bytes, file.filename)
+        if not quality["suitable"]:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Image unsuitable for analysis: {quality['reason']}"
+            )
+
         cached_result = forensics_cache.get(file_hash)
         if cached_result:
             logger.info(
@@ -144,25 +153,39 @@ async def analyze_image(
             f"classification={report['summary']['ai_classification']}"
         )
 
+        # Sanitize any NaN/Inf float values before JSON serialization
+        import math
+        def _sanitize(obj):
+            if isinstance(obj, float):
+                if math.isnan(obj) or math.isinf(obj):
+                    return 0.0
+                return obj
+            if isinstance(obj, dict):
+                return {k: _sanitize(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_sanitize(v) for v in obj]
+            return obj
+        report = _sanitize(report)
+
         return report
 
     except FileValidationError as e:
-        logger.warning("File validation failed", exc_info=True)
+        logger.warning("Validation failed: %s", str(e))
         raise HTTPException(status_code=422, detail="File validation failed. Check file type and size.")
 
     except ValueError as e:
-        logger.error(f"Value error during analysis: {str(e)}")
+        logger.error("Value error during analysis: %s", str(e))
         raise HTTPException(status_code=400, detail="Invalid image data")
 
     except IOError as e:
-        logger.error(f"I/O error during analysis: {str(e)}")
+        logger.error("I/O error during analysis: %s", str(e))
         raise HTTPException(status_code=422, detail="Unable to process image")
 
     except HTTPException:
         raise
 
-    except Exception as e:
-        logger.error("Unexpected analysis error", exc_info=True)
+    except Exception:
+        logger.error("Unexpected analysis error: %s", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Internal server error during analysis"
@@ -226,8 +249,8 @@ async def analyze_image_heatmap(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error("Heatmap generation error", exc_info=True)
+    except Exception:
+        logger.error("Heatmap generation error: %s", exc_info=True)
         raise HTTPException(status_code=500, detail="Heatmap generation failed")
     finally:
         await file.close()
@@ -267,8 +290,8 @@ async def analyze_attribution(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error("Attribution analysis error", exc_info=True)
+    except Exception:
+        logger.error("Attribution error: %s", exc_info=True)
         raise HTTPException(status_code=500, detail="Attribution analysis failed")
     finally:
         await file.close()
@@ -308,8 +331,8 @@ async def analyze_platform(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error("Platform detection error", exc_info=True)
+    except Exception:
+        logger.error("Platform detection error: %s", exc_info=True)
         raise HTTPException(status_code=500, detail="Platform detection failed")
     finally:
         await file.close()
@@ -342,8 +365,8 @@ async def analyze_c2pa(
         return result
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error("C2PA verification error", exc_info=True)
+    except Exception:
+        logger.error("C2PA verification error: %s", exc_info=True)
         raise HTTPException(status_code=500, detail="C2PA verification failed")
     finally:
         await file.close()
@@ -377,8 +400,8 @@ async def analyze_robustness(
         return result
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error("Robustness test error", exc_info=True)
+    except Exception:
+        logger.error("Robustness test error: %s", exc_info=True)
         raise HTTPException(status_code=500, detail="Robustness test failed")
     finally:
         await file.close()
@@ -428,8 +451,8 @@ async def analyze_batch(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error("Batch analysis error", exc_info=True)
+    except Exception:
+        logger.error("Batch analysis error: %s", exc_info=True)
         raise HTTPException(status_code=500, detail="Batch analysis failed")
     finally:
         for file in files:
@@ -490,8 +513,8 @@ async def export_report(
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error("Export error", exc_info=True)
+    except Exception:
+        logger.error("Export error: %s", exc_info=True)
         raise HTTPException(status_code=500, detail="Export generation failed. Please try again.")
     finally:
         await file.close()
