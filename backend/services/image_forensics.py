@@ -15,6 +15,7 @@ from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
 from backend.services.generator_attribution import attribute_generator
 from backend.services.platform_detector import detect_platform
 from backend.services.c2pa_verifier import verify_c2pa
+from backend.services.image_type_classifier import classify_image_type
 from backend.core.config import settings
 
 logger = setup_logger(__name__)
@@ -101,6 +102,7 @@ class ImageForensics:
         attribution  = attribute_generator(self.image_bytes, self.filename)
         platform     = detect_platform(self.image_bytes, self.filename)
         c2pa         = verify_c2pa(self.image_bytes, self.filename)
+        img_type     = classify_image_type(self.image_bytes, self.filename)
 
         width, height  = self.pil_image.size
         image_format   = self.pil_image.format or "Unknown"
@@ -129,6 +131,7 @@ class ImageForensics:
             "generator_attribution":  attribution,
             "platform_forensics":     platform,
             "c2pa_provenance":        c2pa,
+            "image_type":             img_type,
             "summary": {
                 "has_metadata":               exif_data.get("has_exif", False),
                 "suspicious_flags_count":     len(tampering["suspicious_flags"]),
@@ -140,6 +143,7 @@ class ImageForensics:
                 "predicted_generator":        attribution["predicted_generator"],
                 "platform_origin":            platform["predicted_platform"],
                 "c2pa_status":                c2pa["provenance_status"],
+                "image_type":                 img_type["image_type"],
             },
         }
 
