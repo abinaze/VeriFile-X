@@ -22,7 +22,6 @@ def download_coco_samples():
     print("📥 Downloading COCO validation samples...")
     
     # COCO 2017 validation annotations
-    annotations_url = "http://images.cocodataset.org/annotations/annotations_trainval2017.zip"
     
     # For now, we'll use a curated list of diverse COCO image URLs
     # In production, you'd parse the full annotations

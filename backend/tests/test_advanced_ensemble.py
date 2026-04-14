@@ -53,4 +53,4 @@ def test_advanced_ensemble_forensics_integration(sample_image_bytes):
     assert report["ai_detection"]["total_signals"] == 26
     assert "analyzer_version" in report["metadata"]
     assert "methods_used" in report["ai_detection"]
-    assert len(report["ai_detection"]["methods_used"]) == 7
+    assert len(report["ai_detection"]["methods_used"]) == 8

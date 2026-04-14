@@ -11,8 +11,6 @@ import os
 import sys
 import csv
 import argparse
-import zipfile
-import shutil
 import requests
 from pathlib import Path
 from tqdm import tqdm
@@ -77,10 +75,12 @@ def assign_split(index: int, total: int) -> str:
 def kaggle_download(dataset_slug: str, dest_dir: Path):
     """Download a Kaggle dataset. Requires ~/.kaggle/kaggle.json"""
     try:
-        import kaggle
-    except ImportError:
-        print("Install kaggle: pip install kaggle")
-        sys.exit(1)
+        import importlib
+        if importlib.util.find_spec("kaggle") is None:
+            print("Install kaggle: pip install kaggle")
+            import sys; sys.exit(1)
+    except Exception:
+        pass
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     print(f"Downloading from Kaggle: {dataset_slug}")
