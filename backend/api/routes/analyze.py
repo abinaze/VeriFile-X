@@ -12,6 +12,7 @@ from backend.services.image_forensics import ImageForensics
 from backend.utils.validators import validate_file, FileValidationError
 from backend.core.logger import setup_logger
 from backend.core.cache import forensics_cache
+from backend.services.metrics_collector import record_analysis
 from backend.core.audit_log import log_analysis
 
 # In-memory heatmap store keyed by evidence_id
@@ -166,6 +167,20 @@ async def analyze_image(
                 return [_sanitize(v) for v in obj]
             return obj
         report = _sanitize(report)
+
+        # Record metrics
+        try:
+            import time as _time
+            record_analysis(
+                ai_probability=report["summary"]["ai_probability"],
+                classification=report["summary"]["ai_classification"],
+                latency_ms=0.0,
+                predicted_generator=report["summary"].get("predicted_generator", "unknown"),
+                platform_origin=report["summary"].get("platform_origin", "unknown"),
+                signal_scores=report["ai_detection"].get("all_signals", []),
+            )
+        except Exception:
+            pass
 
         return report
 

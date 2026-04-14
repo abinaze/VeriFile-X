@@ -79,6 +79,24 @@ async def root():
     }
 
 
+
+
+@app.get("/api/v1/metrics", tags=["Observability"], summary="System metrics")
+@limiter.limit("30/minute")
+async def get_metrics(request: Request):
+    """Return real-time system metrics: request rates, score distributions, latency."""
+    from backend.services.metrics_collector import get_metrics
+    return get_metrics()
+
+
+@app.post("/api/v1/metrics/reset", tags=["Observability"], summary="Reset metrics (admin)")
+@limiter.limit("5/minute")
+async def reset_metrics(request: Request):
+    """Reset all metrics counters."""
+    from backend.services.metrics_collector import reset_metrics
+    reset_metrics()
+    return {"message": "Metrics reset successfully."}
+
 @app.get("/health")
 @limiter.limit("60/minute")
 async def health_check(request: Request):
