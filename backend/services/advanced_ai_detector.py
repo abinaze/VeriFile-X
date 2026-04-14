@@ -259,15 +259,21 @@ class AdvancedAIDetector:
         prob           = magnitude_flat / magnitude_flat.sum()
         spectral_ent   = entropy(prob + 1e-10)
 
-        if spectral_ent < 10.5:
-            score       = (10.5 - spectral_ent) / 2
-            explanation = f"Spectral entropy ({spectral_ent:.2f}) is too low - artificial frequency patterns"
-        elif spectral_ent > 13.5:
-            score       = (spectral_ent - 13.5) / 2
-            explanation = f"Spectral entropy ({spectral_ent:.2f}) is too high - unnatural randomness"
+        # Scale thresholds by image size (entropy depends on pixel count)
+        import math as _math
+        max_ent    = _math.log(max(self.width * self.height, 1))
+        low_cutoff = max(7.0, 0.82 * max_ent)
+        high_cutoff = min(16.0, 0.98 * max_ent)
+
+        if spectral_ent < low_cutoff:
+            score       = (low_cutoff - spectral_ent) / max(low_cutoff, 1)
+            explanation = f"Spectral entropy ({spectral_ent:.2f}) is too low for this image size - artificial patterns"
+        elif spectral_ent > high_cutoff:
+            score       = (spectral_ent - high_cutoff) / max(max_ent - high_cutoff, 0.1)
+            explanation = f"Spectral entropy ({spectral_ent:.2f}) is unusually high"
         else:
             score       = 0.0
-            explanation = f"Spectral entropy ({spectral_ent:.2f}) within natural range"
+            explanation = f"Spectral entropy ({spectral_ent:.2f}) within natural range for this image size"
 
         return {
             "signal_name":    "Spectral Entropy",

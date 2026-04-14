@@ -200,9 +200,8 @@ class AIDetector:
 
         # Edge density: lower = smoother = more suspicious
         edges = cv2.Canny(self.cv_gray, 100, 200)
-        edge_density = float(
-            edges.sum() / (self.cv_gray.shape[0] * self.cv_gray.shape[1])
-        )
+        # True edge density: fraction of pixels that are edges (0.0-1.0)
+        edge_density = float(np.count_nonzero(edges) / edges.size)
 
         logger.info(
             f"JPEG analysis: blockiness={blockiness:.2f}, "
