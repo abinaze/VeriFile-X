@@ -96,11 +96,13 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 0.05 * dct_result["score"]
             )
         else:
-            logger.info("DIRE unavailable — using statistical+CLIP+PRNU+ELA+metadata+DCT")
+            logger.info("DIRE unavailable — using statistical+CLIP+OwnEmbedding+PRNU+ELA+metadata+DCT")
+            own_weight = 0.12 if own_result.get("confidence", 0) > 0 else 0.0
             weighted_score = (
-                0.49 * base_report["ai_probability"] +
-                0.22 * clip_result["score"] +
-                0.11 * prnu_result["score"] +
+                (0.45 - own_weight * 0.1) * base_report["ai_probability"] +
+                own_weight * own_result["score"] +
+                0.20 * clip_result["score"] +
+                0.10 * prnu_result["score"] +
                 0.08 * ela_result["score"] +
                 0.06 * metadata_result["score"] +
                 0.04 * dct_result["score"]
@@ -170,7 +172,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 f"{suspicious_count} signals indicate AI generation."
             ),
             "detection_version": "advanced-ensemble-v1.4",
-            "methods_used": ["statistical", "dire", "clip", "prnu", "ela", "metadata", "dct"],
+            "methods_used": ["statistical", "dire", "clip", "own_embedding", "prnu", "ela", "metadata", "dct"],
         }
 
         logger.info(

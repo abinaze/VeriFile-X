@@ -169,16 +169,16 @@ async def analyze_image(
 
         return report
 
-    except FileValidationError as e:
-        logger.warning("Validation failed: %s", str(e))
+    except FileValidationError:
+        logger.warning("File validation failed", exc_info=True)
         raise HTTPException(status_code=422, detail="File validation failed. Check file type and size.")
 
-    except ValueError as e:
-        logger.error("Value error during analysis: %s", str(e))
+    except ValueError:
+        logger.error("Value error during analysis", exc_info=True)
         raise HTTPException(status_code=400, detail="Invalid image data")
 
-    except IOError as e:
-        logger.error("I/O error during analysis: %s", str(e))
+    except IOError:
+        logger.error("I/O error during analysis", exc_info=True)
         raise HTTPException(status_code=422, detail="Unable to process image")
 
     except HTTPException:
