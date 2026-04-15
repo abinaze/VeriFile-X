@@ -207,6 +207,8 @@ curl -X POST https://abinazebinoy-verifile-x-api.hf.space/api/v1/analyze/image \
 | `POST` | `/api/v1/cases/{id}/evidence` | Add evidence to case | 20/min |
 | `PATCH` | `/api/v1/cases/{id}/status` | Update case status | 20/min |
 | `GET` | `/api/v1/keys/verify` | Verify API key | 30/min |
+| `GET` | `/api/v1/metrics` | System observability metrics | 30/min |
+| `POST` | `/api/v1/metrics/reset` | Reset metrics counters | 5/min |
 | `GET` | `/docs` | Interactive API documentation | None |
 
 ---
@@ -307,6 +309,10 @@ pytest backend/tests/ --cov=backend --cov-report=html
 | 11 | Evidence case management | ✅ |
 | 12 | Report export suite (PDF/JSON/CSV) | ✅ |
 | 13 | API keys + RBAC | ✅ |
+| 14 | CI coverage + hardening | ✅ |
+| 15 | System hardening + quality gate | ✅ |
+| 16 | Monitoring + inconclusive verdict + image type | ✅ |
+| 17 | Frontend hardening + rate limit consolidation | ✅ |
 
 ---
 

@@ -16,7 +16,9 @@ from backend.api.routes import upload, analyze, cases, keys
 
 logger = setup_logger(__name__)
 
+# Shared rate limiter — imported by all routes
 limiter = Limiter(key_func=get_remote_address)
+shared_limiter = limiter  # alias for explicit import
 
 
 @asynccontextmanager

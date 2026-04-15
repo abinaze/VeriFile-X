@@ -1330,7 +1330,12 @@ async function analyzeFile(file) {
     const formData = new FormData();
     formData.append('file', file);
     try {
-        const response = await fetch(`${API_URL}/api/v1/analyze/image`, { method: 'POST', body: formData });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        let response;
+        try {
+            response = await fetch(`${API_URL}/api/v1/analyze/image`, {
+                signal: controller.signal, method: 'POST', body: formData });
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             throw new Error(err.detail || `Server error ${response.status}`);
@@ -1433,7 +1438,13 @@ function downloadPDF() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('VeriFile-X Forensic Analysis Report', 105, 14, { align: 'center' });
+    // Guard against missing fields
+        const safeGet = (obj, path, fallback = 'N/A') => {
+            try {
+                return path.split('.').reduce((o, k) => o[k], obj) ?? fallback;
+            } catch { return fallback; }
+        };
+        doc.text('VeriFile-X Forensic Analysis Report', 105, 14, { align: 'center' });
     doc.setFontSize(9);
     doc.text('AI-Generated Image Detection Platform v6.6.0', 105, 22, { align: 'center' });
 
