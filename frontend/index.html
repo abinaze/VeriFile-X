@@ -949,7 +949,7 @@ footer {
         <div class="hero-text-col">
             <div class="hero-badge">DIRE + CLIP + Statistical Analysis</div>
             <h1>Unmask AI Content with Confidence</h1>
-            <p>VeriFile-X is an advanced AI image verification platform that analyses any photograph using 26 independent forensic signals. Instantly determine whether an image is AI-generated or authentic — with cryptographic hashes, EXIF forensics, generator attribution, platform detection, and a downloadable evidence report.</p>
+            <p>VeriFile-X is an advanced AI image verification platform that analyses any image using 26 independent forensic signals. Instantly determine whether an image is AI-generated or authentic — with cryptographic hashes, EXIF forensics, generator attribution, platform detection, and a downloadable evidence report.</p>
             <a class="hero-cta" href="#upload-section">
                 Start Analysis
                 <svg class="hero-cta-arrow" viewBox="0 0 20 20">
@@ -964,11 +964,11 @@ footer {
 <div class="stats-bar">
     <div class="stats-inner">
         <div class="stat-item">
-            <div class="stat-number">25</div>
+            <div class="stat-number">26</div>
             <div class="stat-label">Detection Signals</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number">7</div>
+            <div class="stat-number">8</div>
             <div class="stat-label">AI Methods</div>
         </div>
         <div class="stat-item">
@@ -1329,13 +1329,18 @@ async function analyzeFile(file) {
     results.classList.remove('active');
     const formData = new FormData();
     formData.append('file', file);
+    // Client-side validation
+        if (file.size > 10 * 1024 * 1024) { alert('File too large. Maximum 10MB.'); uploadZone.style.display = 'block'; loading.classList.remove('active'); return; }
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowed.includes(file.type)) { alert('Unsupported type. Use JPEG, PNG or WebP.'); uploadZone.style.display = 'block'; loading.classList.remove('active'); return; }
+
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
-        let response;
-        try {
-            response = await fetch(`${API_URL}/api/v1/analyze/image`, {
-                signal: controller.signal, method: 'POST', body: formData });
+        const response = await fetch(`${API_URL}/api/v1/analyze/image`, {
+            signal: controller.signal, method: 'POST', body: formData
+        });
+        clearTimeout(timeoutId);
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
             throw new Error(err.detail || `Server error ${response.status}`);
@@ -1348,7 +1353,11 @@ async function analyzeFile(file) {
     } catch (error) {
         loading.classList.remove('active');
         uploadZone.style.display = 'block';
-        alert('Analysis failed: ' + error.message);
+        if (error.name === 'AbortError') {
+            alert('Analysis timed out (30s). Please try again.');
+        } else {
+            alert('Analysis failed: ' + error.message);
+        }
     }
 }
 
