@@ -27,9 +27,7 @@ import json
 import csv
 import io
 import logging
-import struct
 import zlib
-from datetime import datetime
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
@@ -160,13 +158,7 @@ class _PDFWriter:
         platform_o  = platform.get("predicted_platform", "N/A")
         c2pa_status = c2pa.get("provenance_status", "N/A")
 
-        # Build page 1 content
-        lines = []
-        y = 750
-        def add(text, x=50, bold=False):
-            lines.append((0, 0, ""))  # placeholder — we'll use Td chaining below
-
-        # We'll build a flat text stream manually
+        # Build page 1 content stream
         text_ops = []
         text_ops.append(b"BT")
         text_ops.append(b"/F1 16 Tf")
@@ -279,7 +271,7 @@ class _PDFWriter:
 
         xref_offset = buf.tell()
         buf.write(b"xref\n")
-        buf.write(f"0 6\n".encode())
+        buf.write(b"0 6\n")
         buf.write(b"0000000000 65535 f \n")
         for i in range(1, 6):
             buf.write(f"{offsets[i]:010d} 00000 n \n".encode())

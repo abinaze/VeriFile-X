@@ -170,7 +170,6 @@ async def analyze_image(
 
         # Record metrics
         try:
-            import time as _time
             record_analysis(
                 ai_probability=report["summary"]["ai_probability"],
                 classification=report["summary"]["ai_classification"],

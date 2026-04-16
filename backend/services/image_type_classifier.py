@@ -63,10 +63,7 @@ def classify_image_type(image_bytes: bytes, filename: str = "unknown") -> Dict[s
         edge_density = float(np.count_nonzero(edges) / max(edges.size, 1))
 
         # 3. Color saturation
-        arr_hsv      = np.array(img.convert("HSV") if hasattr(img, 'convert') else img)
         try:
-            hsv_img  = img.copy()
-            import colorsys
             rgb_flat = arr.reshape(-1, 3) / 255.0
             # Approximate saturation from RGB
             r, g, b  = rgb_flat[:, 0], rgb_flat[:, 1], rgb_flat[:, 2]
