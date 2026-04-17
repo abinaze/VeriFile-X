@@ -3,6 +3,7 @@ Forensic analysis endpoints.
 Security: Rate limited, validated, privacy-first.
 """
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 import hashlib
@@ -532,3 +533,37 @@ async def export_report(
         raise HTTPException(status_code=500, detail="Export generation failed. Please try again.")
     finally:
         await file.close()
+
+
+@router.post(
+    "/image/stream",
+    summary="Stream forensic analysis via Server-Sent Events",
+    description="Returns SSE stream. Each event is JSON with type: started|quality|signal|summary|error."
+)
+@limiter.limit("5/minute")
+async def analyze_image_stream(
+    request: Request,
+    file: UploadFile = File(..., description="Image to analyze")
+):
+    """Real-time streaming analysis — 26 signals arrive one by one as SSE events."""
+    from backend.services.sse_analyzer import stream_analysis
+
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=415, detail=f"Unsupported: {file.content_type}")
+
+    file_bytes = await file.read()
+    if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+
+    filename = file.filename or "unknown"
+    await file.close()
+
+    return StreamingResponse(
+        stream_analysis(file_bytes, filename),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control":    "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection":       "keep-alive",
+        }
+    )
