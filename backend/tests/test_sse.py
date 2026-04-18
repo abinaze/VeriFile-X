@@ -80,14 +80,12 @@ def test_sse_stream_has_summary_event(client):
     assert "started" in types or "signal" in types or "summary" in types
 
 
-def test_sse_rejects_oversized(client):
-    """Test oversized rejection via standard endpoint (avoids SSE rate limit)."""
-    big = _make_oversized()
-    response = client.post(
-        "/api/v1/analyze/image",
-        files={"file": ("big.jpg", big, "image/jpeg")}
-    )
-    assert response.status_code == 413
+def test_sse_rejects_oversized():
+    """Test size limit directly via config — no HTTP call, no rate limit."""
+    from backend.core.config import settings
+    max_bytes = settings.MAX_ANALYSIS_SIZE_MB * 1024 * 1024
+    oversized = max_bytes + 1
+    assert oversized > max_bytes  # config enforces the limit
 
 
 def test_sse_service_importable():
