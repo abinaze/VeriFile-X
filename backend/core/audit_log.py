@@ -1,16 +1,21 @@
 """
 Append-only audit log for forensic analysis tracking.
 Every analysis is recorded with timestamp, file hash, and verdict.
-This log is append-only — entries are never modified or deleted.
+
+Rotation: file is moved to audit_log.jsonl.bak when it exceeds 50MB.
 """
 import json
+import logging
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from backend.core.logger import setup_logger
 
-logger = setup_logger(__name__)
+from backend.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 AUDIT_LOG_PATH = Path("audit_log.jsonl")
+MAX_LOG_BYTES  = 50 * 1024 * 1024  # 50 MB
 
 
 def log_analysis(
@@ -21,34 +26,33 @@ def log_analysis(
     classification: str,
     total_signals: int,
     suspicious_signals: int,
-    methods_used: list
+    methods_used: list,
 ) -> dict:
-    """
-    Append one analysis record to the audit log.
-    Returns the log entry dict.
-    """
+    """Append one analysis record to the audit log. Returns the entry."""
     entry = {
-        "evidence_id": evidence_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "filename": filename,
-        "file_sha256": file_sha256,
+        "evidence_id":    evidence_id,
+        "timestamp":      datetime.now(timezone.utc).isoformat(),
+        "filename":       filename,
+        "file_sha256":    file_sha256,
         "verdict": {
-            "ai_probability": round(ai_probability, 4),
-            "classification": classification,
-            "total_signals": total_signals,
+            "ai_probability":    round(ai_probability, 4),
+            "classification":    classification,
+            "total_signals":     total_signals,
             "suspicious_signals": suspicious_signals,
-            "methods_used": methods_used
+            "methods_used":      methods_used,
         },
-        "analyzer_version": "6.0.0"
+        "analyzer_version": settings.VERSION,
     }
 
-    # Append to log file (never overwrite)
     try:
+        # Rotate at 50 MB to prevent unbounded disk growth
+        if AUDIT_LOG_PATH.exists() and AUDIT_LOG_PATH.stat().st_size > MAX_LOG_BYTES:
+            shutil.move(str(AUDIT_LOG_PATH), str(AUDIT_LOG_PATH) + ".bak")
         with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
-        logger.info(f"Audit log: recorded {evidence_id}")
-    except Exception as e:
-        logger.error(f"Audit log write failed: {e}")
+        logger.info("Audit log: recorded %s", evidence_id)
+    except Exception:
+        logger.error("Audit log write failed", exc_info=True)
 
     return entry
 
@@ -59,25 +63,23 @@ def get_recent_analyses(limit: int = 20) -> list:
         return []
     try:
         lines = AUDIT_LOG_PATH.read_text(encoding="utf-8").strip().split("\n")
-        entries = [json.loads(l) for l in lines if l.strip()]
+        entries = [json.loads(ln) for ln in lines if ln.strip()]
         return list(reversed(entries))[:limit]
-    except Exception as e:
-        logger.error(f"Audit log read failed: {e}")
+    except Exception:
+        logger.error("Audit log read failed", exc_info=True)
         return []
 
 
 def get_stats() -> dict:
-    """Return aggregate stats from the audit log."""
-    entries = get_recent_analyses(limit=10000)
+    """Return aggregate stats from the audit log (last 1000 entries)."""
+    entries = get_recent_analyses(limit=1000)
     if not entries:
         return {"total_analyses": 0}
-
-    ai_count = sum(1 for e in entries if "ai_generated" in e["verdict"]["classification"])
-    real_count = sum(1 for e in entries if "authentic" in e["verdict"]["classification"])
-
+    ai_count   = sum(1 for e in entries if "ai_generated" in e["verdict"]["classification"])
+    real_count = sum(1 for e in entries if "authentic"    in e["verdict"]["classification"])
     return {
-        "total_analyses": len(entries),
-        "ai_detected": ai_count,
+        "total_analyses":    len(entries),
+        "ai_detected":       ai_count,
         "authentic_detected": real_count,
-        "ambiguous": len(entries) - ai_count - real_count
+        "ambiguous":         len(entries) - ai_count - real_count,
     }
