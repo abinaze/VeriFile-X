@@ -142,10 +142,10 @@ async def analyze_image(
         import asyncio as _asyncio
         _t0 = time.perf_counter()
         forensics = ImageForensics(file_bytes, file.filename)
-        report = await _asyncio.get_event_loop().run_in_executor(
+        report = await _asyncio.get_running_loop().run_in_executor(
             None, forensics.generate_forensic_report
         )
-        _latency_ms = (time.perf_counter() - _t0) * 1000
+        _latency_ms = round((time.perf_counter() - _t0) * 1000, 1)
 
         forensics_cache.set(file_hash, report)
 
@@ -185,7 +185,7 @@ async def analyze_image(
             record_analysis(
                 ai_probability=report["summary"]["ai_probability"],
                 classification=report["summary"]["ai_classification"],
-                latency_ms=_latency_ms if "_latency_ms" in dir() else 0.0,
+                latency_ms=_latency_ms,
                 predicted_generator=report["summary"].get("predicted_generator", "unknown"),
                 platform_origin=report["summary"].get("platform_origin", "unknown"),
                 signal_scores=report["ai_detection"].get("all_signals", []),
