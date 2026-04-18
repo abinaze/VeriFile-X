@@ -84,7 +84,7 @@ def load_model(device: str = "cpu") -> Optional[OwnEmbeddingModel]:
 
     model = OwnEmbeddingModel()
     logger.info(f"Loading trained model from {MODEL_PATH}")
-    state = torch.load(MODEL_PATH, map_location=device)
+    state = torch.load(MODEL_PATH, map_location=device, weights_only=True)
     model.load_state_dict(state)
     model.eval()
     logger.info("Model loaded successfully")
