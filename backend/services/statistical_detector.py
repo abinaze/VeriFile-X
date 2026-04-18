@@ -110,7 +110,12 @@ class StatisticalDetector(CovarianceDetector):
             spectrum = self._get_radial_spectrum()
             
             # Build natural model
-            natural_mean, natural_cov = self._build_natural_model()
+            if StatisticalDetector.NATURAL_MEAN_SPECTRUM is None:
+                natural_mean, natural_cov = self._build_natural_model()
+                StatisticalDetector.NATURAL_MEAN_SPECTRUM = natural_mean
+                StatisticalDetector.NATURAL_COV_SPECTRUM  = natural_cov
+            natural_mean = StatisticalDetector.NATURAL_MEAN_SPECTRUM
+            natural_cov  = StatisticalDetector.NATURAL_COV_SPECTRUM
             
             # Ensure same length
             min_len = min(len(spectrum), len(natural_mean))
