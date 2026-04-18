@@ -78,7 +78,7 @@ def generate_heatmap(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
 
         # Load model with gradients enabled (no torch.no_grad here)
         model = OwnEmbeddingModel()
-        state = torch.load(_MODEL_PATH, map_location=device)
+        state = torch.load(_MODEL_PATH, map_location=device, weights_only=True)
         model.load_state_dict(state)
         model = model.to(device)
         model.eval()

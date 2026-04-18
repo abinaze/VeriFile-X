@@ -12,6 +12,7 @@ Privacy note:
 - Cache cleared on server restart (no persistence)
 """
 import hashlib
+import threading
 from typing import Dict, Optional, Any, Union
 from datetime import datetime, timedelta
 from backend.core.logger import setup_logger
@@ -35,6 +36,7 @@ class ForensicsCache:
     """
 
     def __init__(self):
+        self._lock  = threading.Lock()
         self._cache: Dict[str, Dict[str, Any]] = {}
         logger.info("Forensics cache initialized")
 
@@ -71,11 +73,12 @@ class ForensicsCache:
         """
         key = self._compute_key(file_identifier)
 
-        if key not in self._cache:
-            logger.info(f"Cache MISS: {key[:16]}...")
-            return None
+        with self._lock:
+            if key not in self._cache:
+                logger.info(f"Cache MISS: {key[:16]}...")
+                return None
 
-        entry = self._cache[key]
+            entry = self._cache[key]
 
         # Check TTL expiry
         age = datetime.now() - entry["cached_at"]

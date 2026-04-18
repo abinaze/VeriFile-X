@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 import hashlib
+import time
 from typing import List
 
 from backend.services.image_forensics import ImageForensics
@@ -15,9 +16,6 @@ from backend.core.logger import setup_logger
 from backend.core.cache import forensics_cache
 from backend.services.metrics_collector import record_analysis
 from backend.core.audit_log import log_analysis
-
-# In-memory heatmap store keyed by evidence_id
-_heatmap_store: dict = {}
 
 logger = setup_logger(__name__)
 
@@ -130,11 +128,24 @@ async def analyze_image(
                 f"Cache HIT: Returning cached result for {file.filename} "
                 f"(saved ~2-5 seconds of processing)"
             )
-            return cached_result
+            # Sanitize on cache hit too — cached entries may predate sanitizer
+            import math as _math_cache
+            def _sanitize_hit(obj):
+                if isinstance(obj, float):
+                    return 0.0 if (_math_cache.isnan(obj) or _math_cache.isinf(obj)) else obj
+                if isinstance(obj, dict): return {k: _sanitize_hit(v) for k, v in obj.items()}
+                if isinstance(obj, list): return [_sanitize_hit(v) for v in obj]
+                return obj
+            return _sanitize_hit(cached_result)
 
         logger.info(f"Cache MISS: Running full analysis for {file.filename}")
+        import asyncio as _asyncio
+        _t0 = time.perf_counter()
         forensics = ImageForensics(file_bytes, file.filename)
-        report = forensics.generate_forensic_report()
+        report = await _asyncio.get_running_loop().run_in_executor(
+            None, forensics.generate_forensic_report
+        )
+        _latency_ms = round((time.perf_counter() - _t0) * 1000, 1)
 
         forensics_cache.set(file_hash, report)
 
@@ -174,7 +185,7 @@ async def analyze_image(
             record_analysis(
                 ai_probability=report["summary"]["ai_probability"],
                 classification=report["summary"]["ai_classification"],
-                latency_ms=0.0,
+                latency_ms=_latency_ms,
                 predicted_generator=report["summary"].get("predicted_generator", "unknown"),
                 platform_origin=report["summary"].get("platform_origin", "unknown"),
                 signal_scores=report["ai_detection"].get("all_signals", []),
@@ -200,7 +211,7 @@ async def analyze_image(
         raise
 
     except Exception:
-        logger.error("Unexpected analysis error: %s", exc_info=True)
+        logger.error("Unexpected analysis error", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Internal server error during analysis"
@@ -265,7 +276,7 @@ async def analyze_image_heatmap(
     except HTTPException:
         raise
     except Exception:
-        logger.error("Heatmap generation error: %s", exc_info=True)
+        logger.error("Heatmap generation error", exc_info=True)
         raise HTTPException(status_code=500, detail="Heatmap generation failed")
     finally:
         await file.close()
@@ -306,7 +317,7 @@ async def analyze_attribution(
     except HTTPException:
         raise
     except Exception:
-        logger.error("Attribution error: %s", exc_info=True)
+        logger.error("Attribution error", exc_info=True)
         raise HTTPException(status_code=500, detail="Attribution analysis failed")
     finally:
         await file.close()
@@ -347,7 +358,7 @@ async def analyze_platform(
     except HTTPException:
         raise
     except Exception:
-        logger.error("Platform detection error: %s", exc_info=True)
+        logger.error("Platform detection error", exc_info=True)
         raise HTTPException(status_code=500, detail="Platform detection failed")
     finally:
         await file.close()
@@ -381,7 +392,7 @@ async def analyze_c2pa(
     except HTTPException:
         raise
     except Exception:
-        logger.error("C2PA verification error: %s", exc_info=True)
+        logger.error("C2PA verification error", exc_info=True)
         raise HTTPException(status_code=500, detail="C2PA verification failed")
     finally:
         await file.close()
@@ -416,7 +427,7 @@ async def analyze_robustness(
     except HTTPException:
         raise
     except Exception:
-        logger.error("Robustness test error: %s", exc_info=True)
+        logger.error("Robustness test error", exc_info=True)
         raise HTTPException(status_code=500, detail="Robustness test failed")
     finally:
         await file.close()
@@ -467,7 +478,7 @@ async def analyze_batch(
     except HTTPException:
         raise
     except Exception:
-        logger.error("Batch analysis error: %s", exc_info=True)
+        logger.error("Batch analysis error", exc_info=True)
         raise HTTPException(status_code=500, detail="Batch analysis failed")
     finally:
         for file in files:
@@ -529,7 +540,7 @@ async def export_report(
     except HTTPException:
         raise
     except Exception:
-        logger.error("Export error: %s", exc_info=True)
+        logger.error("Export error", exc_info=True)
         raise HTTPException(status_code=500, detail="Export generation failed. Please try again.")
     finally:
         await file.close()

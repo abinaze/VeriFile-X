@@ -33,9 +33,11 @@ class ImageForensics:
     def extract_exif(self) -> Dict[str, Any]:
         exif_data = {}
         try:
-            exif = self.pil_image._getexif()
+            # Use public Pillow 6+ API — _getexif() was deprecated/removed
+            exif_obj = self.pil_image.getexif()
+            exif = dict(exif_obj) if exif_obj else None
             if not exif:
-                logger.warning(f"No EXIF data found in {self.filename}")
+                logger.warning("No EXIF data found in %s", self.filename)
                 return {"has_exif": False}
             exif_data["has_exif"] = True
             for tag_id, value in exif.items():

@@ -78,8 +78,12 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
         # AI images: error concentrated in specific patterns (e.g. edges)
         # Real photos: error distributed across image
         flat = diff_array.flatten()
-        high_error_pct = float(np.sum(flat > np.percentile(flat, 90)) / len(flat))
-        error_concentration = abs(high_error_pct - 0.10)  # Expected ~10% above 90th pct
+        # Fixed: np.percentile(flat,90) means exactly 10% are above it by definition
+        # Use absolute threshold: pixels more than 2-sigma above mean
+        _ela_threshold = float(np.mean(flat) + 2.0 * np.std(flat))
+        high_error_pct = float(np.sum(flat > _ela_threshold) / max(len(flat), 1))
+        # For Gaussian noise ~2.3% of pixels exceed mean+2*sigma; more = anomaly
+        error_concentration = max(0.0, high_error_pct - 0.023)
 
         # === Combine into AI score ===
         # Very low mean error + low variance = likely AI (uniform synthesis)

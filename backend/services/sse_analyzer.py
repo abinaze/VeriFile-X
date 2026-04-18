@@ -15,7 +15,6 @@ import json
 import asyncio
 import logging
 from typing import AsyncGenerator
-from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,6 @@ async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[s
     })
 
     try:
-        from PIL import Image
         from backend.utils.image_quality import assess_image_quality
 
         # Quality gate

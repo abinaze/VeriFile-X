@@ -98,14 +98,25 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         else:
             logger.info("DIRE unavailable — using statistical+CLIP+OwnEmbedding+PRNU+ELA+metadata+DCT")
             own_weight = 0.12 if own_result.get("confidence", 0) > 0 else 0.0
+            # Normalise weights to always sum to exactly 1.0
+            _w = dict(
+                stat  = 0.40,
+                own   = own_weight,
+                clip  = 0.20,
+                prnu  = 0.10,
+                ela   = 0.08,
+                meta  = 0.06,
+                dct   = 0.04,
+            )
+            _total = sum(_w.values())
             weighted_score = (
-                (0.45 - own_weight * 0.1) * base_report["ai_probability"] +
-                own_weight * own_result["score"] +
-                0.20 * clip_result["score"] +
-                0.10 * prnu_result["score"] +
-                0.08 * ela_result["score"] +
-                0.06 * metadata_result["score"] +
-                0.04 * dct_result["score"]
+                (_w["stat"]  / _total) * base_report["ai_probability"] +
+                (_w["own"]   / _total) * own_result["score"] +
+                (_w["clip"]  / _total) * clip_result["score"] +
+                (_w["prnu"]  / _total) * prnu_result["score"] +
+                (_w["ela"]   / _total) * ela_result["score"] +
+                (_w["meta"]  / _total) * metadata_result["score"] +
+                (_w["dct"]   / _total) * dct_result["score"]
             )
 
         # Platt-style calibration (weighted-sum fallback only)
