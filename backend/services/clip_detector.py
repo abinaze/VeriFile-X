@@ -185,6 +185,11 @@ class CLIPDetector:
         
         return float(ai_probability)
     
+    def _neutral_result(self, reason: str) -> dict:
+        return {"signal_name": "CLIP Embedding", "score": 0.5, "confidence": 0.0,
+                "active": False, "explanation": reason, "raw_value": 0.0,
+                "method": "clip_embedding"}
+
     def detect(self, image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
         """Detect if image is AI-generated using CLIP embeddings."""
         if not getattr(self, "db_available", False):

@@ -25,8 +25,8 @@ class StatisticalDetector(CovarianceDetector):
     
     # Natural image frequency model (precomputed from research)
     # These are approximate values from natural image statistics literature
-    NATURAL_MEAN_SPECTRUM = None  # Will compute on first use
-    NATURAL_COV_SPECTRUM = None   # Will compute on first use
+    _natural_model_cache: dict = {}  # keyed by r_max for size-safety
+    _natural_model_lock = None  # class-level threading.Lock
     
     def _get_radial_spectrum(self) -> np.ndarray:
         """
@@ -110,12 +110,14 @@ class StatisticalDetector(CovarianceDetector):
             spectrum = self._get_radial_spectrum()
             
             # Build natural model
-            if StatisticalDetector.NATURAL_MEAN_SPECTRUM is None:
-                natural_mean, natural_cov = self._build_natural_model()
-                StatisticalDetector.NATURAL_MEAN_SPECTRUM = natural_mean
-                StatisticalDetector.NATURAL_COV_SPECTRUM  = natural_cov
-            natural_mean = StatisticalDetector.NATURAL_MEAN_SPECTRUM
-            natural_cov  = StatisticalDetector.NATURAL_COV_SPECTRUM
+            import threading as _thr
+            if StatisticalDetector._natural_model_lock is None:
+                StatisticalDetector._natural_model_lock = _thr.Lock()
+            r_key = min(self.height, self.width) // 4
+            with StatisticalDetector._natural_model_lock:
+                if r_key not in StatisticalDetector._natural_model_cache:
+                    StatisticalDetector._natural_model_cache[r_key] =                         self._build_natural_model()
+                natural_mean, natural_cov =                     StatisticalDetector._natural_model_cache[r_key]
             
             # Ensure same length
             min_len = min(len(spectrum), len(natural_mean))
@@ -196,7 +198,10 @@ class StatisticalDetector(CovarianceDetector):
             
             # Sample for computational efficiency
             if len(flat_mag) > 10000:
-                flat_mag = np.random.choice(flat_mag, 10000, replace=False)
+                # Deterministic seed from image content for reproducibility
+                import hashlib as _hl
+                _seed = int(_hl.sha256(self.image_bytes[:64]).hexdigest()[:8], 16) % (2**31)
+                flat_mag = np.random.default_rng(_seed).choice(flat_mag, 10000, replace=False)
             
             # Create histogram (probability distribution)
             hist, bin_edges = np.histogram(flat_mag, bins=50, density=True)

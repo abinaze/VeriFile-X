@@ -51,7 +51,8 @@ def test_metrics_performance_keys(client):
 
 
 def test_metrics_reset_clears_data(client):
-    r = client.post("/api/v1/metrics/reset")
+    r = client.post("/api/v1/metrics/reset",
+                   headers={"X-Admin-Key": "test-admin-key-12345"})
     assert r.status_code == 200
     m = client.get("/api/v1/metrics").json()
     assert m["detection"]["n_scored"] == 0

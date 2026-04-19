@@ -80,6 +80,13 @@ class ForensicsCache:
 
             entry = self._cache[key]
 
+            # TTL check inside lock to prevent TOCTOU race condition
+            age = datetime.now() - entry.get("cached_at", datetime.now())
+            if age > timedelta(minutes=CACHE_TTL_MINUTES):
+                self._cache.pop(key, None)
+                logger.info(f"Cache EXPIRED: {key[:16]}...")
+                return None
+
         # Check TTL expiry
         age = datetime.now() - entry["cached_at"]
         if age > timedelta(minutes=CACHE_TTL_MINUTES):

@@ -5,6 +5,7 @@ Every analysis is recorded with timestamp, file hash, and verdict.
 Rotation: file is moved to audit_log.jsonl.bak when it exceeds 50MB.
 """
 import json
+import threading
 import logging
 import shutil
 from datetime import datetime, timezone
@@ -15,7 +16,8 @@ from backend.core.config import settings
 logger = logging.getLogger(__name__)
 
 AUDIT_LOG_PATH = Path("audit_log.jsonl")
-MAX_LOG_BYTES  = 50 * 1024 * 1024  # 50 MB
+MAX_LOG_BYTES      = 50 * 1024 * 1024  # 50 MB
+_audit_write_lock  = threading.Lock()
 
 
 def log_analysis(
@@ -45,11 +47,13 @@ def log_analysis(
     }
 
     try:
-        # Rotate at 50 MB to prevent unbounded disk growth
-        if AUDIT_LOG_PATH.exists() and AUDIT_LOG_PATH.stat().st_size > MAX_LOG_BYTES:
-            shutil.move(str(AUDIT_LOG_PATH), str(AUDIT_LOG_PATH) + ".bak")
-        with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry) + "\n")
+        with _audit_write_lock:
+            # Rotate at 50MB — use timestamp to avoid clobbering previous backup
+            if AUDIT_LOG_PATH.exists() and AUDIT_LOG_PATH.stat().st_size > MAX_LOG_BYTES:
+                ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+                shutil.move(str(AUDIT_LOG_PATH), f"{AUDIT_LOG_PATH}.{ts}.bak")
+            with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
         logger.info("Audit log: recorded %s", evidence_id)
     except Exception:
         logger.error("Audit log write failed", exc_info=True)

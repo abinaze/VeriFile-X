@@ -80,7 +80,7 @@ async def analyze_image(
             )
             raise HTTPException(
                 status_code=415,
-                detail=f"Unsupported media type: {file.content_type}. "
+                detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp"
                        f"Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}"
             )
 
@@ -130,9 +130,13 @@ async def analyze_image(
             )
             # Sanitize on cache hit too — cached entries may predate sanitizer
             import math as _math_cache
+            import numpy as _np_hit
             def _sanitize_hit(obj):
-                if isinstance(obj, float):
-                    return 0.0 if (_math_cache.isnan(obj) or _math_cache.isinf(obj)) else obj
+                if isinstance(obj, (float, _np_hit.floating)):
+                    v = float(obj)
+                    return 0.0 if (_math_cache.isnan(v) or _math_cache.isinf(v)) else v
+                if isinstance(obj, _np_hit.integer):
+                    return int(obj)
                 if isinstance(obj, dict): return {k: _sanitize_hit(v) for k, v in obj.items()}
                 if isinstance(obj, list): return [_sanitize_hit(v) for v in obj]
                 return obj
@@ -251,14 +255,15 @@ async def analyze_image_heatmap(
 
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
 
         file_bytes = await file.read()
 
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
 
-        result = generate_heatmap(file_bytes, file.filename)
+        import asyncio as _aio_hm
+        result = await _aio_hm.to_thread(generate_heatmap, file_bytes, file.filename)
 
         logger.info(
             f"Heatmap generated: file={file.filename}, "
@@ -297,14 +302,15 @@ async def analyze_attribution(
 
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
 
         file_bytes = await file.read()
 
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
 
-        result = attribute_generator(file_bytes, file.filename)
+        import asyncio as _aio_attr
+        result = await _aio_attr.to_thread(attribute_generator, file_bytes, file.filename)
 
         logger.info(
             f"Attribution complete: file={file.filename}, "
@@ -338,14 +344,15 @@ async def analyze_platform(
 
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
 
         file_bytes = await file.read()
 
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
 
-        result = detect_platform(file_bytes, file.filename)
+        import asyncio as _aio_plat
+        result = await _aio_plat.to_thread(detect_platform, file_bytes, file.filename)
 
         logger.info(
             f"Platform detection: file={file.filename}, "
@@ -378,11 +385,12 @@ async def analyze_c2pa(
 
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
         file_bytes = await file.read()
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
-        result = verify_c2pa(file_bytes, file.filename)
+        import asyncio as _aio_c2pa
+        result = await _aio_c2pa.to_thread(verify_c2pa, file_bytes, file.filename)
         logger.info(
             f"C2PA verification: file={file.filename}, "
             f"status={result['provenance_status']}, "
@@ -413,11 +421,12 @@ async def analyze_robustness(
 
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
         file_bytes = await file.read()
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
-        result = run_robustness_test(file_bytes, file.filename)
+        import asyncio as _aio_rob
+        result = await _aio_rob.to_thread(run_robustness_test, file_bytes, file.filename)
         logger.info(
             f"Robustness test: file={file.filename}, "
             f"overall={result.get('overall_robustness', 0):.3f}, "
@@ -505,14 +514,19 @@ async def export_report(
 
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail=f"Unsupported media type: {file.content_type}")
+            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
         file_bytes = await file.read()
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
 
         from backend.services.image_forensics import ImageForensics
-        forensics = ImageForensics(file_bytes, file.filename)
-        report    = forensics.generate_forensic_report()
+        import asyncio as _aio_export
+        _exp_hash = hashlib.sha256(file_bytes).hexdigest()
+        report = forensics_cache.get(_exp_hash)
+        if not report:
+            forensics = ImageForensics(file_bytes, file.filename)
+            report = await _aio_export.to_thread(forensics.generate_forensic_report)
+            forensics_cache.set(_exp_hash, report)
 
         stem = file.filename.rsplit(".", 1)[0] if "." in file.filename else file.filename
 
