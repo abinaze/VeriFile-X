@@ -60,6 +60,9 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"]       = "1; mode=block"
     response.headers["Referrer-Policy"]         = "strict-origin-when-cross-origin"
     response.headers["Cache-Control"]           = "no-store" if "/api/" in str(request.url.path) else "public, max-age=3600"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"]   = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://raw.githubusercontent.com"
+    response.headers["Permissions-Policy"]        = "camera=(), microphone=(), geolocation=()"
     return response
 
 app.include_router(upload.router)
@@ -93,8 +96,12 @@ async def get_metrics(request: Request):
 
 @app.post("/api/v1/metrics/reset", tags=["Observability"], summary="Reset metrics (admin)")
 @limiter.limit("5/minute")
-async def reset_metrics(request: Request):
-    """Reset all metrics counters."""
+async def reset_metrics_endpoint(request: Request):
+    """Reset all metrics counters. Requires X-Admin-Key header."""
+    admin_key = request.headers.get("X-Admin-Key", "")
+    if not admin_key or len(admin_key) < 16:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="X-Admin-Key header required")
     from backend.services.metrics_collector import reset_metrics
     reset_metrics()
     return {"message": "Metrics reset successfully."}
