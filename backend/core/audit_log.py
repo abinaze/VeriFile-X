@@ -50,8 +50,7 @@ def log_analysis(
         with _audit_write_lock:
             # Rotate at 50MB — use timestamp to avoid clobbering previous backup
             if AUDIT_LOG_PATH.exists() and AUDIT_LOG_PATH.stat().st_size > MAX_LOG_BYTES:
-                from datetime import datetime
-                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
                 shutil.move(str(AUDIT_LOG_PATH), f"{AUDIT_LOG_PATH}.{ts}.bak")
             with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")

@@ -108,7 +108,8 @@ def test_metrics_endpoint(client):
     assert "performance" in data
 
 def test_metrics_reset_endpoint(client):
-    response = client.post("/api/v1/metrics/reset")
+    response = client.post("/api/v1/metrics/reset",
+                        headers={"X-Admin-Key": "test-admin-key-12345"})
     assert response.status_code == 200
     assert "reset" in response.json()["message"].lower()
 

@@ -263,9 +263,7 @@ async def analyze_image_heatmap(
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
 
         import asyncio as _aio_hm
-        result = await _aio_hm.get_running_loop().run_in_executor(
-            None, generate_heatmap, file_bytes, file.filename
-        )
+        result = await _aio_hm.to_thread(generate_heatmap, file_bytes, file.filename)
 
         logger.info(
             f"Heatmap generated: file={file.filename}, "
@@ -312,9 +310,7 @@ async def analyze_attribution(
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
 
         import asyncio as _aio_attr
-        result = await _aio_attr.get_running_loop().run_in_executor(
-            None, attribute_generator, file_bytes, file.filename
-        )
+        result = await _aio_attr.to_thread(attribute_generator, file_bytes, file.filename)
 
         logger.info(
             f"Attribution complete: file={file.filename}, "
@@ -356,9 +352,7 @@ async def analyze_platform(
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
 
         import asyncio as _aio_plat
-        result = await _aio_plat.get_running_loop().run_in_executor(
-            None, detect_platform, file_bytes, file.filename
-        )
+        result = await _aio_plat.to_thread(detect_platform, file_bytes, file.filename)
 
         logger.info(
             f"Platform detection: file={file.filename}, "
@@ -396,9 +390,7 @@ async def analyze_c2pa(
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
         import asyncio as _aio_c2pa
-        result = await _aio_c2pa.get_running_loop().run_in_executor(
-            None, verify_c2pa, file_bytes, file.filename
-        )
+        result = await _aio_c2pa.to_thread(verify_c2pa, file_bytes, file.filename)
         logger.info(
             f"C2PA verification: file={file.filename}, "
             f"status={result['provenance_status']}, "
@@ -434,9 +426,7 @@ async def analyze_robustness(
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
         import asyncio as _aio_rob
-        result = await _aio_rob.get_running_loop().run_in_executor(
-            None, run_robustness_test, file_bytes, file.filename
-        )
+        result = await _aio_rob.to_thread(run_robustness_test, file_bytes, file.filename)
         logger.info(
             f"Robustness test: file={file.filename}, "
             f"overall={result.get('overall_robustness', 0):.3f}, "
@@ -535,9 +525,7 @@ async def export_report(
         report = forensics_cache.get(_exp_hash)
         if not report:
             forensics = ImageForensics(file_bytes, file.filename)
-            report = await _aio_export.get_running_loop().run_in_executor(
-                None, forensics.generate_forensic_report
-            )
+            report = await _aio_export.to_thread(forensics.generate_forensic_report)
             forensics_cache.set(_exp_hash, report)
 
         stem = file.filename.rsplit(".", 1)[0] if "." in file.filename else file.filename
