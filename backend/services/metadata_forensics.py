@@ -47,7 +47,8 @@ def _extract_full_exif(pil_image: Image.Image) -> Dict[str, Any]:
     """Extract all available EXIF data."""
     result = {}
     try:
-        raw = pil_image._getexif()
+        exif_obj = pil_image.getexif()
+        raw = dict(exif_obj) if exif_obj else None
         if not raw:
             return {}
         for tag_id, value in raw.items():
