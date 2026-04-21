@@ -27,6 +27,9 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
     3. Analyze the distribution of error levels across regions
     4. Inconsistent errors = manipulation or AI generation indicators
     """
+    _ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+    _is_lossless = _ext in ("png", "webp", "gif", "bmp", "tiff", "tif")
+
     try:
         # Open original image
         original = Image.open(BytesIO(image_bytes)).convert("RGB")
@@ -121,6 +124,11 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
         # Confidence based on image size
         pixel_count = width * height
         confidence = min(0.80, 0.4 + (pixel_count / (512 * 512)) * 0.40)
+
+        # Reduce confidence for lossless formats — ELA is less reliable
+        # because the first JPEG re-save creates large but meaningless errors.
+        if _is_lossless:
+            confidence = round(confidence * 0.5, 4)
 
         if mean_error < 2.0:
             explanation = (
