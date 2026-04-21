@@ -10,7 +10,6 @@ class FileInfo(BaseModel):
     filename: str
     format: Optional[str]
     mode: Optional[str]
-    size: tuple
     width: int
     height: int
     file_size_bytes: int
