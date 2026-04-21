@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 from pathlib import Path as _Path
 
-_XGB_MODEL_PATH = _Path("data/reference/ensemble_xgb.pkl")
+_XGB_MODEL_PATH = _Path(__file__).parent.parent.parent / "data" / "reference" / "ensemble_xgb.pkl"
 _xgb_cache: dict = {}
 
 
@@ -98,6 +98,10 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         else:
             logger.info("DIRE unavailable — using statistical+CLIP+OwnEmbedding+PRNU+ELA+metadata+DCT")
             own_weight = 0.12 if own_result.get("confidence", 0) > 0 else 0.0
+            if own_weight == 0.0:
+                logger.debug(
+                    "own_embedding has zero confidence — weight excluded; "                    "remaining weights will be renormalized to 1.0"
+                )
             # Normalise weights to always sum to exactly 1.0
             _w = dict(
                 stat  = 0.40,
