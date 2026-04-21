@@ -116,9 +116,18 @@ def detect_dct_artifacts(image_bytes: bytes, filename: str = "unknown") -> Dict[
             # Measure smoothness of spectral rolloff
             spectral_smoothness = float(np.std(rp_diff))
 
-            # Check for spectral peaks (GAN artifact)
+            # Very smooth spectrum (low variation) = AI
+            if spectral_smoothness < 0.05:
+                smooth_score = 0.70
+            elif spectral_smoothness < 0.10:
+                smooth_score = 0.50
+            else:
+                smooth_score = 0.25
         else:
+            # Image too small to compute reliable radial spectrum;
+            # use neutral score and low spectral smoothness
             spectral_smoothness = 0.5
+            smooth_score = 0.50
 
         # === Signal 3: Checkerboard artifact detection ===
         # Up-convolution in GANs creates checkerboard patterns at 2x, 4x, 8x freq
@@ -139,14 +148,6 @@ def detect_dct_artifacts(image_bytes: bytes, filename: str = "unknown") -> Dict[
             hf_score = 0.35
         else:
             hf_score = 0.20
-
-        # Very smooth spectrum (low variation) = AI
-        if spectral_smoothness < 0.05:
-            smooth_score = 0.70
-        elif spectral_smoothness < 0.10:
-            smooth_score = 0.50
-        else:
-            smooth_score = 0.25
 
         # Checkerboard artifacts = GAN
         if checkerboard_ratio > 3.0:
