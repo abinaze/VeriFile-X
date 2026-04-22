@@ -34,7 +34,7 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
-CASES_PATH = Path("cases.jsonl")
+CASES_PATH = Path(__file__).parent.parent / "data" / "cases.jsonl"
 _VALID_STATUSES = {"open", "closed", "archived"}
 
 

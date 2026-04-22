@@ -81,7 +81,6 @@ async def analyze_image(
             raise HTTPException(
                 status_code=415,
                 detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp"
-                       f"Allowed: {', '.join(ALLOWED_IMAGE_TYPES)}"
             )
 
         file_bytes = await file.read()
@@ -474,7 +473,8 @@ async def analyze_batch(
             raise HTTPException(status_code=415, detail="No valid image files in batch.")
 
         logger.info(f"Batch analysis: {len(images)} images submitted")
-        result = process_batch(images)
+        import asyncio as _aio_batch
+        result = await _aio_batch.to_thread(process_batch, images)
 
         logger.info(
             f"Batch complete: processed={result.get('processed', 0)}, "

@@ -94,14 +94,18 @@ def _batch_statistics(reports: List[Dict[str, Any]]) -> Dict[str, Any]:
     for g in generators:
         generator_counts[g] = generator_counts.get(g, 0) + 1
 
-    ai_count   = sum(1 for c in classes if "ai_generated" in c)
-    real_count = sum(1 for c in classes if "authentic" in c)
+    # Classification strings: "likely_ai_generated", "possibly_ai_generated",
+    #   "likely_authentic", "possibly_authentic", "uncertain"
+    # Use exclusive categories to prevent double-counting.
+    ai_count   = sum(1 for cls in classes if "ai_generated" in cls)
+    real_count = sum(1 for cls in classes if "authentic" in cls and "ai_generated" not in cls)
+    uncertain_count = len(classes) - ai_count - real_count
 
     return {
         "total_images":          len(reports),
         "ai_detected_count":     ai_count,
         "authentic_count":       real_count,
-        "uncertain_count":       len(reports) - ai_count - real_count,
+        "uncertain_count":       uncertain_count,
         "mean_ai_probability":   round(sum(probs) / len(probs), 4) if probs else 0.0,
         "max_ai_probability":    round(max(probs), 4) if probs else 0.0,
         "min_ai_probability":    round(min(probs), 4) if probs else 0.0,

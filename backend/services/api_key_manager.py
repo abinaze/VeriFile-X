@@ -19,7 +19,9 @@ from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
 
-KEYS_PATH = Path("api_keys.jsonl")
+import threading as _threading
+_key_write_lock = _threading.Lock()
+KEYS_PATH = Path(__file__).parent.parent / "data" / "api_keys.jsonl"
 
 ROLES = {
     "viewer":  {"GET"},
@@ -101,7 +103,8 @@ def verify_key(raw_key: str) -> Optional[Dict[str, Any]]:
         if entry.get("key_hash") == key_hash and entry.get("active", False):
             entry["last_used"] = _now()
             entry["use_count"] = entry.get("use_count", 0) + 1
-            _save_key(entry)
+            with _key_write_lock:
+                _save_key(entry)
             return {k: v for k, v in entry.items() if k != "key_hash"}
     return None
 

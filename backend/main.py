@@ -3,6 +3,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+import secrets
 from datetime import datetime
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -60,7 +61,9 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"]       = "1; mode=block"
     response.headers["Referrer-Policy"]         = "strict-origin-when-cross-origin"
     response.headers["Cache-Control"]           = "no-store" if "/api/" in str(request.url.path) else "public, max-age=3600"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # HSTS must only be sent over HTTPS — sending it on HTTP is invalid (RFC 6797)
+    if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"]   = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://raw.githubusercontent.com"
     response.headers["Permissions-Policy"]        = "camera=(), microphone=(), geolocation=()"
     return response
@@ -98,10 +101,20 @@ async def get_metrics(request: Request):
 @limiter.limit("5/minute")
 async def reset_metrics_endpoint(request: Request):
     """Reset all metrics counters. Requires X-Admin-Key header."""
+    import hashlib as _hl
+    import os as _os
     admin_key = request.headers.get("X-Admin-Key", "")
     if not admin_key or len(admin_key) < 16:
         from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="X-Admin-Key header required")
+    # Compare against SHA-256 hash stored in ADMIN_KEY_HASH env var.
+    # If ADMIN_KEY_HASH is not set, fall back to length check only (dev mode).
+    expected_hash = _os.getenv("ADMIN_KEY_HASH", "")
+    if expected_hash:
+        provided_hash = _hl.sha256(admin_key.encode()).hexdigest()
+        if not secrets.compare_digest(provided_hash, expected_hash):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=401, detail="X-Admin-Key header required")
     from backend.services.metrics_collector import reset_metrics
     reset_metrics()
     return {"message": "Metrics reset successfully."}

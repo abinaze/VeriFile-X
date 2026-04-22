@@ -15,7 +15,7 @@ from backend.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-AUDIT_LOG_PATH = Path("audit_log.jsonl")
+AUDIT_LOG_PATH = Path(__file__).parent.parent / "data" / "audit_log.jsonl"
 MAX_LOG_BYTES      = 50 * 1024 * 1024  # 50 MB
 _audit_write_lock  = threading.Lock()
 
@@ -47,6 +47,7 @@ def log_analysis(
     }
 
     try:
+        AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         with _audit_write_lock:
             # Rotate at 50MB — use timestamp to avoid clobbering previous backup
             if AUDIT_LOG_PATH.exists() and AUDIT_LOG_PATH.stat().st_size > MAX_LOG_BYTES:
