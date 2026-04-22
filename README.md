@@ -15,6 +15,7 @@ pinned: false
 
 <img src="frontend/logo2.png" width="400" alt="VeriFile-X Logo">
 
+
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Site-22d3ee?style=for-the-badge)](https://abinaze.github.io/VeriFile-X)
 [![API](https://img.shields.io/badge/API-HuggingFace%20Space-ff6b35?style=for-the-badge)](https://abinazebinoy-verifile-x-api.hf.space)
 [![License](https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge)](LICENSE)
