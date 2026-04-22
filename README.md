@@ -13,7 +13,7 @@ pinned: false
 
 **Forensic-Grade AI Image Detection**
 
-<img src="frontend/logo2.png" width="400" alt="VeriFile-X Logo">
+<img src="frontend/logo2.png" width="400" alt="VeriFile-X Logo"><br>
 
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Site-22d3ee?style=for-the-badge)](https://abinaze.github.io/VeriFile-X)
