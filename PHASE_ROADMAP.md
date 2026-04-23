@@ -75,15 +75,6 @@ Server-Sent Events endpoint for real-time per-signal streaming. 26 signals strea
 
 ## Bug Fix Commits (post Phase 18)
 
-The following fixes were applied after the audit report and CodeQL scan. Each is a separate commit.
-
-### Fix 1 — `fix(cache): remove double TTL check; add lock to set()`
-**File:** `backend/core/cache.py`
-Second TTL check outside the lock created a race condition and potential `KeyError`. `set()` had zero locking — concurrent eviction and write were completely unprotected. Fixed with a single `RLock` wrapping all operations.
-
-### Fix 2 — `fix(dct): assign smooth_score in else-branch to prevent NameError`
-**File:** `backend/services/dct_frequency_detector.py`
-When `len(radial_power) <= 10` (small images), `smooth_score` was never assigned but used in the score formula — guaranteed `NameError` crash. Fixed by assigning `smooth_score = 0.50` in the else branch.
 
 ### Fix 3 — `fix(api-keys): add write lock; fix storage path`
 **File:** `backend/services/api_key_manager.py`
