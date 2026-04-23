@@ -72,16 +72,7 @@ Metrics collector. System metrics endpoint. Admin-protected metrics reset (`X-Ad
 Server-Sent Events endpoint for real-time per-signal streaming. 26 signals streamed as they complete. Rate-limited: 5/minute.
 
 ---
-`, `backend/core/audit_log.py`
-`Path("cases.jsonl")` and `Path("audit_log.jsonl")` resolved to wherever the server process was started. Fixed to `Path(__file__).parent.parent / "data" / "*.jsonl"`. Data directory created automatically with `mkdir(parents=True, exist_ok=True)`.
-
-### Fix 5 — `fix(analyze): remove duplicate Allowed: string in 415 error`
-**File:** `backend/api/routes/analyze.py`
-Two f-strings were concatenated without a separator: `"...image/webpAllowed: image/jpeg..."`. Removed the redundant second segment.
-
-### Fix 6 — `fix(analyze): wrap process_batch in asyncio.to_thread`
-**File:** `backend/api/routes/analyze.py`
-`process_batch()` was called synchronously on the async event loop — blocking all other requests for the entire batch duration (up to 30–50 seconds for 10 images). Wrapped in `await asyncio.to_thread(...)`.
+()` was called synchronously on the async event loop — blocking all other requests for the entire batch duration (up to 30–50 seconds for 10 images). Wrapped in `await asyncio.to_thread(...)`.
 
 ### Fix 7 — `fix(config): replace os.getenv() defaults with proper pydantic-settings fields`
 **File:** `backend/core/config.py`
