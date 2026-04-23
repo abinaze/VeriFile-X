@@ -72,16 +72,7 @@ Metrics collector. System metrics endpoint. Admin-protected metrics reset (`X-Ad
 Server-Sent Events endpoint for real-time per-signal streaming. 26 signals streamed as they complete. Rate-limited: 5/minute.
 
 ---
-
-## Bug Fix Commits (post Phase 18)
-
-
-### Fix 3 — `fix(api-keys): add write lock; fix storage path`
-**File:** `backend/services/api_key_manager.py`
-Concurrent calls to `verify_key()` wrote to `api_keys.jsonl` without any lock, corrupting the file under load. Path resolved relative to CWD — unreliable. Fixed with `_key_write_lock`, and path is now `data/api_keys.jsonl` relative to the package.
-
-### Fix 4 — `fix(paths): resolve storage files relative to package, not CWD`
-**Files:** `backend/services/case_manager.py`, `backend/core/audit_log.py`
+`, `backend/core/audit_log.py`
 `Path("cases.jsonl")` and `Path("audit_log.jsonl")` resolved to wherever the server process was started. Fixed to `Path(__file__).parent.parent / "data" / "*.jsonl"`. Data directory created automatically with `mkdir(parents=True, exist_ok=True)`.
 
 ### Fix 5 — `fix(analyze): remove duplicate Allowed: string in 415 error`
