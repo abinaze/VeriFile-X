@@ -73,28 +73,6 @@ Server-Sent Events endpoint for real-time per-signal streaming. 26 signals strea
 
 ---
 
-### Fix 11 — `fix(batch): fix uncertain_count negative values`
-**File:** `backend/services/batch_processor.py`
-`"authentic"` substring matching was non-exclusive — a classification like `"possibly_authentic"` could be counted in both `real_count` and potentially affect `uncertain_count` in unexpected ways. Fixed with exclusive classification: `authentic` only if `ai_generated` not in the string.
-
-### Fix 12 — `fix(ensemble): resolve XGB path via __file__; log when own_weight=0`
-**File:** `backend/services/advanced_ensemble_detector.py`
-`Path("data/reference/ensemble_xgb.pkl")` resolved relative to CWD — the model was never found when the server was started from any directory other than the project root. Fixed with `Path(__file__).parent.parent.parent / "data" / ...`. Added a `logger.debug()` when `own_weight` is excluded so the silent renormalization is visible in logs.
-
-### Fix 13 — `security(admin): validate X-Admin-Key against hash, not just length`
-**File:** `backend/main.py`
-The admin key check only verified `len(key) >= 16` — any 16-character string passed. Added SHA-256 comparison against `ADMIN_KEY_HASH` environment variable using `secrets.compare_digest()` to prevent timing attacks.
-
-### Fix 14 — `fix(hsts): send Strict-Transport-Security only over HTTPS`
-**File:** `backend/main.py`
-HSTS was unconditionally added to every response including local HTTP development traffic. Per RFC 6797, HSTS sent over HTTP is ignored by browsers but is technically invalid and confusing. Now only sent when `request.url.scheme == "https"` or `X-Forwarded-Proto: https` is set.
-
-### Fix 15 — `chore: bump VERSION to 7.2.0`
-**File:** `backend/core/config.py`
-Version incremented to reflect the fix batch.
-
----
-
 ## Planned Phases
 
 ### Phase 19 — Webhook System
