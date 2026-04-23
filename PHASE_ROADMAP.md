@@ -72,14 +72,7 @@ Metrics collector. System metrics endpoint. Admin-protected metrics reset (`X-Ad
 Server-Sent Events endpoint for real-time per-signal streaming. 26 signals streamed as they complete. Rate-limited: 5/minute.
 
 ---
-()` was called synchronously on the async event loop — blocking all other requests for the entire batch duration (up to 30–50 seconds for 10 images). Wrapped in `await asyncio.to_thread(...)`.
-
-### Fix 7 — `fix(config): replace os.getenv() defaults with proper pydantic-settings fields`
-**File:** `backend/core/config.py`
-`os.getenv()` calls inside the class body were evaluated at import time, bypassing pydantic-settings' env-var loading and `.env` file support. Replaced with plain Python defaults — pydantic-settings reads the environment automatically.
-
-### Fix 8 — `fix(models): remove FileInfo.size field with no matching report key`
-**File:** `backend/models/forensics.py`
+ackend/models/forensics.py`
 `FileInfo.size: tuple` was defined in the Pydantic model but the actual report dict never populates a `size` key — causing validation failure if the model is used. Removed the phantom field.
 
 ### Fix 9 — `fix(ela): halve confidence for lossless PNG/WebP inputs`
