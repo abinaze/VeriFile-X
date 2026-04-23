@@ -72,16 +72,6 @@ Metrics collector. System metrics endpoint. Admin-protected metrics reset (`X-Ad
 Server-Sent Events endpoint for real-time per-signal streaming. 26 signals streamed as they complete. Rate-limited: 5/minute.
 
 ---
-ackend/models/forensics.py`
-`FileInfo.size: tuple` was defined in the Pydantic model but the actual report dict never populates a `size` key — causing validation failure if the model is used. Removed the phantom field.
-
-### Fix 9 — `fix(ela): halve confidence for lossless PNG/WebP inputs`
-**File:** `backend/services/ela_detector.py`
-ELA is designed for JPEG compression analysis. On lossless PNG/WebP inputs, the first-time JPEG re-save produces artificially large errors unrelated to AI generation or tampering. Confidence is now halved for lossless formats.
-
-### Fix 10 — `fix(prnu): replace mean-filter fallback with Laplacian noise residual`
-**File:** `backend/services/prnu_detector.py`
-The PyWavelets exception fallback used `scipy.ndimage.uniform_filter` — a mean filter — which captures edges as strongly as noise. The PRNU residual computed from it was mathematically wrong. Replaced with a Laplacian-based residual (`cv2.Laplacian`), which correctly isolates high-frequency noise.
 
 ### Fix 11 — `fix(batch): fix uncertain_count negative values`
 **File:** `backend/services/batch_processor.py`
