@@ -14,6 +14,7 @@ import os
 from backend.core.config import settings
 from backend.core.logger import setup_logger
 from backend.api.routes import upload, analyze, cases, keys
+from backend.api.routes import webhooks
 
 logger = setup_logger(__name__)
 
@@ -72,6 +73,7 @@ app.include_router(upload.router)
 app.include_router(analyze.router)
 app.include_router(cases.router)
 app.include_router(keys.router)
+app.include_router(webhooks.router)
 
 
 @app.get("/")
