@@ -158,7 +158,7 @@ def delete_webhook(webhook_id: str) -> bool:
         return False
     entry = {**hooks[webhook_id], "status": "deleted", "active": False}
     _append_hook(entry)
-    logger.info("Deleted webhook %s", webhook_id)
+    logger.info("Deleted webhook id ending with %s", webhook_id[-8:])
     return True
 
 
