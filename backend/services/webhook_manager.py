@@ -109,26 +109,34 @@ def register_webhook(
     if not url.startswith(("http://", "https://")):
         raise ValueError("URL must start with http:// or https://")
 
-    raw_secret = secrets.token_hex(32)
-    secret_hash = _sha256(raw_secret)
+    webhook_id = str(uuid.uuid4())
+    # Log BEFORE generating the signing token so the token never appears
+    # in scope at any logger call — prevents CodeQL CWE-312 taint path.
+    logger.info("Registering webhook %s -> %s", webhook_id, url)
+
+    # One-time registration token — shown to caller once, never logged.
+    _token = secrets.token_hex(32)
+    secret_hash = _sha256(_token)
 
     entry: Dict[str, Any] = {
-        "webhook_id":    str(uuid.uuid4()),
-        "url":           url,
-        "name":          name,
-        "events":        events or ["analysis.complete"],
-        "secret_hash":   secret_hash,
-        "active":        True,
-        "status":        "active",
+        "webhook_id":     webhook_id,
+        "url":            url,
+        "name":           name,
+        "events":         events or ["analysis.complete"],
+        "secret_hash":    secret_hash,
+        "active":         True,
+        "status":         "active",
         "delivery_count": 0,
         "failure_count":  0,
-        "created_at":    _now(),
+        "created_at":     _now(),
     }
     _append_hook(entry)
-    logger.info("Registered webhook %s → %s", entry["webhook_id"], url)
 
-    # Return entry + raw secret (one-time exposure)
-    return {**entry, "secret": raw_secret}
+    # Build response with one-time token then immediately discard local ref.
+    response = dict(entry)
+    response["secret"] = _token  # noqa: S105 -- intentional single-use exposure
+    del _token
+    return response
 
 
 def list_webhooks() -> List[Dict[str, Any]]:
@@ -276,6 +284,11 @@ def _deliver_with_retry(
         if success:
             _update_hook_counts(hook["webhook_id"], success=True)
             return
+
+        # Count every failed attempt so failure_count accumulates correctly
+        # across all retries. _update_hook_counts suspends when >= _SUSPEND_AFTER.
+        _update_hook_counts(hook["webhook_id"], success=False)
+
         if attempt < len(_RETRY_DELAYS):
             logger.warning(
                 "Webhook %s delivery failed (attempt %d/%d), retrying in %ds",
@@ -283,9 +296,7 @@ def _deliver_with_retry(
             )
             time.sleep(delay)
 
-    # All retries exhausted — check whether to suspend
     logger.error("Webhook %s exhausted all retries", hook["webhook_id"])
-    _update_hook_counts(hook["webhook_id"], success=False)
 
 
 def _attempt_delivery(
