@@ -152,6 +152,17 @@ async def analyze_image(
 
         forensics_cache.set(file_hash, report)
 
+        # Fire outbound webhooks (non-blocking daemon threads)
+        try:
+            from backend.services.webhook_manager import fire_webhooks as _fw
+            _fw(
+                evidence_id=report.get("evidence_id", ""),
+                result=report,
+                event="analysis.complete",
+            )
+        except Exception:
+            logger.warning("Webhook fire failed", exc_info=True)
+
         log_analysis(
             evidence_id=report.get("evidence_id", "unknown"),
             filename=file.filename,
