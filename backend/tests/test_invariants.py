@@ -70,7 +70,7 @@ def test_noise_image_signal_count():
     det = AdvancedEnsembleDetector(_make_noise_image(), "noise.jpg")
     r   = det.detect()
     det.cleanup()
-    assert r["total_signals"] == 26
+    assert r["total_signals"] == 28
     for sig in r["all_signals"]:
         assert 0.0 <= sig["score"] <= 1.0
         assert 0.0 <= sig["confidence"] <= 1.0
@@ -230,7 +230,7 @@ def test_forensic_report_complete_schema():
     missing = required - set(report.keys())
     assert not missing, f"Report missing keys: {missing}"
     assert 0.0 <= report["summary"]["ai_probability"] <= 1.0
-    assert report["summary"]["total_detection_signals"] == 26
+    assert report["summary"]["total_detection_signals"] == 28
     assert "platform_origin" in report["summary"]
     assert "c2pa_status" in report["summary"]
     assert "c2pa_status" in report["summary"]

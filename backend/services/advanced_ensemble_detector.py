@@ -30,6 +30,8 @@ from backend.services.prnu_detector import detect_prnu
 from backend.services.ela_detector import detect_ela
 from backend.services.metadata_forensics import analyze_metadata
 from backend.services.dct_frequency_detector import detect_dct_artifacts
+from backend.services.jpeg_ghost_detector import detect_jpeg_ghost
+from backend.services.noise_map_detector import detect_noise_map
 
 logger = setup_logger(__name__)
 
@@ -60,7 +62,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         Run complete advanced detection with all methods.
 
         Returns:
-            Complete report with 26 detection signals
+            Complete report with 28 detection signals
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
 
@@ -74,26 +76,34 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         prnu_result     = detect_prnu(self.image_bytes, self.filename)
         ela_result      = detect_ela(self.image_bytes, self.filename)
         metadata_result = analyze_metadata(self.image_bytes, self.filename)
-        dct_result      = detect_dct_artifacts(self.image_bytes, self.filename)
+        dct_result        = detect_dct_artifacts(self.image_bytes, self.filename)
+        jpeg_ghost_result = detect_jpeg_ghost(self.image_bytes, self.filename)
+        noise_map_result  = detect_noise_map(self.image_bytes, self.filename)
 
-        # Combine all signals (26 total)
+        # Combine all 28 signals
         all_signals = base_report["all_signals"] + [
             dire_result, clip_result, own_result, prnu_result,
             ela_result, metadata_result, dct_result,
+            jpeg_ghost_result, noise_map_result,
         ]
 
         # Weighted fallback score (used when XGBoost model is absent)
         dire_confidence = dire_result.get("confidence", 0.0)
 
         if dire_confidence > 0.0:
+            # DIRE-available branch — weights sum to exactly 1.0
+            # stat=0.29 DIRE=0.22 CLIP=0.17 PRNU=0.08 ELA=0.07
+            # meta=0.06 DCT=0.05  jpeg=0.04 noise=0.02
             weighted_score = (
-                0.31 * base_report["ai_probability"] +
-                0.24 * dire_result["score"] +
-                0.18 * clip_result["score"] +
-                0.09 * prnu_result["score"] +
+                0.29 * base_report["ai_probability"] +
+                0.22 * dire_result["score"] +
+                0.17 * clip_result["score"] +
+                0.08 * prnu_result["score"] +
                 0.07 * ela_result["score"] +
                 0.06 * metadata_result["score"] +
-                0.05 * dct_result["score"]
+                0.05 * dct_result["score"] +
+                0.04 * jpeg_ghost_result["score"] +
+                0.02 * noise_map_result["score"]
             )
         else:
             logger.info("DIRE unavailable — using statistical+CLIP+OwnEmbedding+PRNU+ELA+metadata+DCT")
@@ -104,23 +114,27 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 )
             # Normalise weights to always sum to exactly 1.0
             _w = dict(
-                stat  = 0.40,
-                own   = own_weight,
-                clip  = 0.20,
-                prnu  = 0.10,
-                ela   = 0.08,
-                meta  = 0.06,
-                dct   = 0.04,
+                stat       = 0.40,
+                own        = own_weight,
+                clip       = 0.20,
+                prnu       = 0.10,
+                ela        = 0.08,
+                meta       = 0.06,
+                dct        = 0.04,
+                jpeg_ghost = 0.04,
+                noise_map  = 0.02,
             )
             _total = sum(_w.values())
             weighted_score = (
-                (_w["stat"]  / _total) * base_report["ai_probability"] +
-                (_w["own"]   / _total) * own_result["score"] +
-                (_w["clip"]  / _total) * clip_result["score"] +
-                (_w["prnu"]  / _total) * prnu_result["score"] +
-                (_w["ela"]   / _total) * ela_result["score"] +
-                (_w["meta"]  / _total) * metadata_result["score"] +
-                (_w["dct"]   / _total) * dct_result["score"]
+                (_w["stat"]       / _total) * base_report["ai_probability"] +
+                (_w["own"]        / _total) * own_result["score"] +
+                (_w["clip"]       / _total) * clip_result["score"] +
+                (_w["prnu"]       / _total) * prnu_result["score"] +
+                (_w["ela"]        / _total) * ela_result["score"] +
+                (_w["meta"]       / _total) * metadata_result["score"] +
+                (_w["dct"]        / _total) * dct_result["score"] +
+                (_w["jpeg_ghost"] / _total) * jpeg_ghost_result["score"] +
+                (_w["noise_map"]  / _total) * noise_map_result["score"]
             )
 
         # Platt-style calibration (weighted-sum fallback only)
@@ -183,11 +197,16 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             "top_reasons":             top_reasons,
             "summary": (
                 f"Analyzed using {len(all_signals)} independent signals including "
-                f"statistical analysis, diffusion reconstruction, and semantic embeddings. "
+                f"statistical analysis, diffusion reconstruction, semantic embeddings, "
+                f"JPEG ghost analysis, and noise map forensics. "
                 f"{suspicious_count} signals indicate AI generation."
             ),
-            "detection_version": "advanced-ensemble-v1.4",
-            "methods_used": ["statistical", "dire", "clip", "own_embedding", "prnu", "ela", "metadata", "dct"],
+            "detection_version": "advanced-ensemble-v1.5",
+            "methods_used": [
+                "statistical", "dire", "clip", "own_embedding",
+                "prnu", "ela", "metadata", "dct",
+                "jpeg_ghost", "noise_map",
+            ],
         }
 
         logger.info(
