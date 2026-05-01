@@ -131,6 +131,9 @@ async def analyze_image(
             import math as _math_cache
             import numpy as _np_hit
             def _sanitize_hit(obj):
+                # Handle numpy scalar types explicitly (bool, int, float variants)
+                if isinstance(obj, _np_hit.generic):
+                    return obj.item()
                 if isinstance(obj, (float, _np_hit.floating)):
                     v = float(obj)
                     return 0.0 if (_math_cache.isnan(v) or _math_cache.isinf(v)) else v
@@ -182,7 +185,11 @@ async def analyze_image(
 
         # Sanitize any NaN/Inf float values before JSON serialization
         import math
+        import numpy as _np_sanitize
         def _sanitize(obj):
+            # Handle numpy scalar types (np.float64, np.int32, etc.)
+            if isinstance(obj, _np_sanitize.generic):
+                return obj.item()
             if isinstance(obj, float):
                 if math.isnan(obj) or math.isinf(obj):
                     return 0.0

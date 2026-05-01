@@ -90,10 +90,29 @@ class ImageForensics:
 
     def detect_ai_generation(self) -> Dict[str, Any]:
         logger.info(f"Running advanced ensemble AI detection for {self.filename}")
-        detector = AdvancedEnsembleDetector(self.image_bytes, self.filename)
-        result   = detector.detect()
-        detector.cleanup()
-        return result
+        try:
+            detector = AdvancedEnsembleDetector(self.image_bytes, self.filename)
+            result   = detector.detect()
+            detector.cleanup()
+            return result
+        except Exception as exc:
+            logger.error(
+                "AdvancedEnsembleDetector raised unexpectedly for %s: %s",
+                self.filename, exc, exc_info=True,
+            )
+            # Return a safe neutral result so the rest of the forensic report
+            # can still be generated (EXIF, hashes, tampering analysis, etc.)
+            return {
+                "ai_probability": 0.5,
+                "classification": "analysis_failed",
+                "confidence": "none",
+                "suspicious_signals_count": 0,
+                "total_signals": 0,
+                "all_signals": [],
+                "top_reasons": [f"Ensemble detector failed: {exc}"],
+                "summary": "AI detection could not complete due to an internal error.",
+                "detection_version": "error",
+            }
 
     def generate_forensic_report(self) -> Dict[str, Any]:
         logger.info(f"Generating forensic report for {self.filename}")
