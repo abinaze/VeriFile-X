@@ -77,13 +77,13 @@ class AdvancedAIDetector:
         y, x = np.ogrid[:self.height, :self.width]
         r    = np.sqrt((x - center_x)**2 + (y - center_y)**2).astype(int)
 
-        r_max         = min(center_y, center_x)
-        radial_profile = np.zeros(r_max)
-
-        for radius in range(r_max):
-            mask = (r >= radius) & (r < radius + 1)
-            if mask.any():
-                radial_profile[radius] = magnitude[mask].mean()
+        r_max = min(center_y, center_x)
+        # Vectorized radial average — O(H*W) not O(r_max*H*W).
+        r_clipped = np.clip(r.ravel(), 0, r_max - 1)
+        mag_flat  = magnitude.ravel()
+        sums   = np.bincount(r_clipped, weights=mag_flat, minlength=r_max)
+        counts = np.bincount(r_clipped,                   minlength=r_max).clip(1)
+        radial_profile = sums / counts
 
         valid_range = slice(5, r_max // 2)
         log_r       = np.log(np.arange(5, r_max // 2) + 1)
@@ -156,6 +156,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(coeff_kurtosis),
             "expected_range": "3-10",
+            "method":         "dct_coefficients",
         }
 
     def analyze_wavelet_energy(self) -> Dict[str, Any]:
@@ -189,6 +190,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(energy_variance),
             "expected_range": "< 0.015",
+            "method":         "wavelet_energy",
         }
 
     def analyze_glcm_texture(self) -> Dict[str, Any]:
@@ -217,6 +219,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(homogeneity),
             "expected_range": "< 0.85",
+            "method":         "glcm_texture",
         }
 
     def analyze_noise_residual(self) -> Dict[str, Any]:
@@ -245,6 +248,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(residual_kurtosis),
             "expected_range": "5-20",
+            "method":         "noise_residual",
         }
 
     def analyze_spectral_entropy(self) -> Dict[str, Any]:
@@ -282,6 +286,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(spectral_ent),
             "expected_range": "10.5-13.5",
+            "method":         "spectral_entropy",
         }
 
     def analyze_lbp_texture(self) -> Dict[str, Any]:
@@ -310,6 +315,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(lbp_entropy),
             "expected_range": "> 2.0",
+            "method":         "lbp_texture",
         }
 
     def analyze_edge_statistics(self) -> Dict[str, Any]:
@@ -339,6 +345,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(orientation_entropy),
             "expected_range": "> 2.5",
+            "method":         "edge_statistics",
         }
 
     def analyze_color_correlation(self) -> Dict[str, Any]:
@@ -370,6 +377,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(mean_corr),
             "expected_range": "0.3-0.9",
+            "method":         "color_correlation",
         }
 
     def analyze_compression_artifacts(self) -> Dict[str, Any]:
@@ -379,12 +387,18 @@ class AdvancedAIDetector:
         Real photos have authentic compression patterns.
         """
         blockiness_scores = []
+        # Correct JPEG blockiness: compare ADJACENT block boundaries,
+        # not within the same block (intra-block contrast != JPEG artifacts).
         for i in range(0, self.height - 8, 8):
+            for j in range(0, self.width - 16, 8):
+                col_right = self.cv_gray[i:i + 8, j + 7].astype(float)
+                col_left  = self.cv_gray[i:i + 8, j + 8].astype(float)
+                blockiness_scores.append(np.abs(col_right - col_left).mean())
+        for i in range(0, self.height - 16, 8):
             for j in range(0, self.width - 8, 8):
-                block  = self.cv_gray[i:i+8, j:j+8].astype(float)
-                v_diff = np.abs(block[:, 7] - block[:, 0]).mean()
-                h_diff = np.abs(block[7, :] - block[0, :]).mean()
-                blockiness_scores.append(v_diff + h_diff)
+                row_bottom = self.cv_gray[i + 7, j:j + 8].astype(float)
+                row_top    = self.cv_gray[i + 8, j:j + 8].astype(float)
+                blockiness_scores.append(np.abs(row_bottom - row_top).mean())
 
         blockiness = float(np.mean(blockiness_scores)) if blockiness_scores else 0.0
 
@@ -405,6 +419,7 @@ class AdvancedAIDetector:
             "explanation":    explanation,
             "raw_value":      float(blockiness),
             "expected_range": "2.0-8.0",
+            "method":         "compression_artifacts",
         }
 
     def calculate_final_score(self, signals: List[Dict[str, Any]]) -> Dict[str, Any]:
