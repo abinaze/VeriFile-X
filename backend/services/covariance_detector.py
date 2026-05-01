@@ -51,7 +51,12 @@ class CovarianceDetector(UltraAdvancedDetector):
         
         # Sample for computational efficiency (use 10k pixels max)
         if len(r_noise) > 10000:
-            indices = np.random.choice(len(r_noise), 10000, replace=False)
+            # Use content-derived seed for determinism — same image always
+            # produces the same sample even under concurrent requests.
+            import hashlib as _hl
+            _seed = int(_hl.sha256(self.image_bytes[:64]).hexdigest()[:8], 16) % (2**31)
+            _rng = np.random.default_rng(_seed)
+            indices = _rng.choice(len(r_noise), 10000, replace=False)
             r_noise = r_noise[indices]
             g_noise = g_noise[indices]
             b_noise = b_noise[indices]
