@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-MODEL_PATH = Path("data/reference/own_embedding_model.pt")
+MODEL_PATH = Path(__file__).parent.parent.parent.parent / "data" / "reference" / "own_embedding_model.pt"
 
 TRANSFORM = transforms.Compose([
     transforms.Resize((224, 224)),

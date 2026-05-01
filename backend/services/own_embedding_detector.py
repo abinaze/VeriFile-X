@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
-CENTROIDS_PATH = Path("data/reference/own_centroids.pkl")
+CENTROIDS_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "own_centroids.pkl"
 
 
 class OwnEmbeddingDetector:
