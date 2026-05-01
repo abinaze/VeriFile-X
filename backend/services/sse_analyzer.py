@@ -1,7 +1,7 @@
 """
 Server-Sent Events (SSE) streaming analysis.
 
-Runs the 28-signal forensic pipeline and streams each signal result
+Runs the 30-signal forensic pipeline and streams each signal result
 to the client as it completes, enabling a real-time waterfall UI.
 
 Protocol:
@@ -32,7 +32,7 @@ async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[s
     yield _sse("started", {
         "filename": filename,
         "file_size": len(image_bytes),
-        "message": "Analysis started — running 28 signals",
+        "message": "Analysis started — running 30 signals",
     })
 
     try:
@@ -77,6 +77,8 @@ async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[s
             from backend.services.dct_frequency_detector import detect_dct_artifacts
             from backend.services.jpeg_ghost_detector import detect_jpeg_ghost
             from backend.services.noise_map_detector import detect_noise_map
+            from backend.services.noiseprint_detector import detect_noiseprint
+            from backend.services.cfa_detector import detect_cfa_artifacts
             return [
                 detect_prnu(image_bytes, filename),
                 detect_ela(image_bytes, filename),
@@ -84,6 +86,8 @@ async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[s
                 detect_dct_artifacts(image_bytes, filename),
                 detect_jpeg_ghost(image_bytes, filename),
                 detect_noise_map(image_bytes, filename),
+                detect_noiseprint(image_bytes, filename),
+                detect_cfa_artifacts(image_bytes, filename),
             ]
 
         extra_signals = await loop.run_in_executor(None, _run_extra)

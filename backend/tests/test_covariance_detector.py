@@ -62,7 +62,7 @@ def test_covariance_forensics_integration(sample_image_bytes):
     
     assert "ai_detection" in report
     # System has 21 signals: 19 statistical + 1 DIRE + 1 CLIP
-    assert report["ai_detection"]["total_signals"] == 28
+    assert report["ai_detection"]["total_signals"] == 30
     assert "analyzer_version" in report["metadata"]
     assert "detection_version" in report["ai_detection"]
 
