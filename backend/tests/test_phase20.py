@@ -218,11 +218,11 @@ class TestPhase20EnsembleIntegration:
         assert callable(detect_noise_map)
 
     def test_sse_announces_28_signals(self):
-        """SSE started message must announce 28 signals."""
+        """SSE started message must announce 30 signals."""
         import inspect
         from backend.services import sse_analyzer
         src = inspect.getsource(sse_analyzer)
-        assert "28 signals" in src, "SSE must announce 28 signals after Phase 20"
+        assert "30 signals" in src, "SSE must announce 30 signals after Phase 22"
 
     def test_weights_sum_to_one(self):
         """DIRE-available ensemble weights must sum to exactly 1.0."""
