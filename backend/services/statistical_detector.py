@@ -2,6 +2,7 @@
 Statistical Modeling & Probability Analysis for AI Detection
 Implements cutting-edge probability-based methods from research.
 """
+import threading
 import numpy as np
 from typing import Dict, Any, Tuple
 from scipy import fft
