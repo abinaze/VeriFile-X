@@ -1,3 +1,9 @@
+"""
+Advanced Ensemble Detector combining Statistical + DIRE + CLIP + Phase-20/21/22 signals.
+
+This module must have its docstring as the first statement so that
+help(), IDEs, and documentation generators can find it.
+"""
 import pickle
 import numpy as np
 from pathlib import Path as _Path
@@ -16,10 +22,6 @@ def _load_xgb():
         _xgb_cache.get("explainer"),
     )
 
-
-"""
-Advanced Ensemble Detector combining Statistical + DIRE + CLIP.
-"""
 from typing import Dict, Any
 from backend.core.logger import setup_logger
 from backend.services.statistical_detector import StatisticalDetector
@@ -92,10 +94,13 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             noiseprint_result, cfa_result,
         ]
 
-        # Weighted fallback score (used when XGBoost model is absent)
-        dire_confidence = dire_result.get("confidence", 0.0)
+        # Weighted fallback score (used when XGBoost model is absent).
+        # Use explicit "available" flag rather than inferring from confidence.
+        # A failed DIRE that returns a small fallback confidence (e.g. 0.1)
+        # would otherwise trigger the high-weight DIRE branch incorrectly.
+        dire_available = bool(dire_result.get("available", False))
 
-        if dire_confidence > 0.0:
+        if dire_available:
             # DIRE-available branch — weights sum to exactly 1.0
             # stat=0.26 DIRE=0.21 CLIP=0.16 PRNU=0.08 ELA=0.07
             # meta=0.06 DCT=0.05  jpeg=0.04 noiseprint=0.03 noise=0.02 cfa=0.02

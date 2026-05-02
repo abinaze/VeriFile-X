@@ -97,7 +97,7 @@ class CLIPDetector:
     
     def _load_reference_database(self):
         """Load pre-computed reference centroids."""
-        database_path = Path("data/reference/clip_database.pkl")
+        database_path = Path(__file__).parent.parent.parent / "data" / "reference" / "clip_database.pkl"
         
         if database_path.exists():
             logger.info(f"Loading CLIP reference database from {database_path}")
@@ -114,7 +114,10 @@ class CLIPDetector:
                 self.fake_centroid = torch.from_numpy(
                     database['ai_centroid']
                 ).float().to(self.device)
-                
+
+                # Mark database as available BEFORE returning
+                self.db_available = True
+
                 logger.info(
                     f"Loaded reference database: "
                     f"{database['real_count']} real, "

@@ -112,6 +112,11 @@ async def reset_metrics_endpoint(request: Request):
     # Compare against SHA-256 hash stored in ADMIN_KEY_HASH env var.
     # If ADMIN_KEY_HASH is not set, fall back to length check only (dev mode).
     expected_hash = _os.getenv("ADMIN_KEY_HASH", "")
+    if not expected_hash:
+        logger.warning(
+            "ADMIN_KEY_HASH env var not set. Any string >=16 chars grants admin access. "
+            "Set ADMIN_KEY_HASH in production (sha256 of your key) to enforce proper auth."
+        )
     if expected_hash:
         provided_hash = _hl.sha256(admin_key.encode()).hexdigest()
         if not secrets.compare_digest(provided_hash, expected_hash):

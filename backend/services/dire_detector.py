@@ -281,6 +281,7 @@ class DIREDetector:
                 "explanation": explanation,
                 "raw_value": float(error),
                 "expected_range": "< 0.030 for AI",
+                "available": True,
                 "method": "diffusion_reconstruction",
                 "from_cache": self._from_cache,
                 "threshold_interpretation": threshold_msg
@@ -295,6 +296,7 @@ class DIREDetector:
                 "explanation": f"Analysis failed: {str(e)}",
                 "raw_value": 0.0,
                 "expected_range": "N/A",
+                "available": False,
                 "method": "diffusion_reconstruction",
                 "from_cache": False
             }

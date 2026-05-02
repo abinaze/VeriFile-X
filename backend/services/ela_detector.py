@@ -125,10 +125,23 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
         pixel_count = width * height
         confidence = min(0.80, 0.4 + (pixel_count / (512 * 512)) * 0.40)
 
-        # Reduce confidence for lossless formats — ELA is less reliable
-        # because the first JPEG re-save creates large but meaningless errors.
+        # For lossless formats (PNG, WebP, etc.) the first JPEG re-save
+        # creates large but entirely meaningless errors — there is no prior
+        # JPEG history to measure. Return a neutral non-participating score
+        # rather than a potentially wrong score with halved confidence.
         if _is_lossless:
-            confidence = round(confidence * 0.5, 4)
+            return {
+                "signal_name": "ELA Compression Analysis",
+                "score": 0.5,
+                "confidence": 0.0,
+                "explanation": (
+                    f"ELA skipped for lossless format (.{_ext}): "
+                    "first JPEG re-save creates spurious errors with no forensic meaning."
+                ),
+                "raw_value": 0.0,
+                "expected_range": "N/A for lossless",
+                "method": "ela_jpeg",
+            }
 
         if mean_error < 2.0:
             explanation = (

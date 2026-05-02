@@ -82,13 +82,13 @@ class UltraAdvancedDetector(AdvancedAIDetector):
                 y, x = np.ogrid[:patch_size, :patch_size]
                 r    = np.sqrt((x - center_x)**2 + (y - center_y)**2).astype(int)
 
-                r_max          = patch_size // 4
-                radial_profile = np.zeros(r_max)
-
-                for radius in range(r_max):
-                    mask = (r >= radius) & (r < radius + 1)
-                    if mask.any():
-                        radial_profile[radius] = magnitude[mask].mean()
+                r_max = patch_size // 4
+                # Vectorized radial average — O(patch²) not O(r_max*patch²).
+                r_clip = np.clip(r.ravel(), 0, r_max - 1)
+                m_flat = magnitude.ravel()
+                sums_p   = np.bincount(r_clip, weights=m_flat, minlength=r_max)
+                counts_p = np.bincount(r_clip,                  minlength=r_max).clip(1)
+                radial_profile = sums_p / counts_p
 
                 valid_range = slice(5, r_max - 5)
                 log_r       = np.log(np.arange(5, r_max - 5) + 1)
@@ -143,13 +143,13 @@ class UltraAdvancedDetector(AdvancedAIDetector):
         y, x = np.ogrid[:self.height, :self.width]
         r    = np.sqrt((x - center_x)**2 + (y - center_y)**2).astype(int)
 
-        r_max          = min(center_y, center_x) // 2
-        radial_profile = np.zeros(r_max)
-
-        for radius in range(r_max):
-            mask = (r >= radius) & (r < radius + 1)
-            if mask.any():
-                radial_profile[radius] = magnitude[mask].mean()
+        r_max = min(center_y, center_x) // 2
+        # Vectorized radial average — O(H*W) not O(r_max*H*W).
+        r_clip = np.clip(r.ravel(), 0, r_max - 1)
+        m_flat = magnitude.ravel()
+        sums_g   = np.bincount(r_clip, weights=m_flat, minlength=r_max)
+        counts_g = np.bincount(r_clip,                  minlength=r_max).clip(1)
+        radial_profile = sums_g / counts_g
 
         valid_range = slice(10, r_max - 10)
         log_r       = np.log(np.arange(10, r_max - 10) + 1)

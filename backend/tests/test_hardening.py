@@ -98,9 +98,9 @@ def test_docs_accessible(client):
     assert client.get("/docs").status_code == 200
 
 
-def test_version_is_770():
+def test_version_is_780():
     from backend.core.config import settings
-    assert settings.VERSION == "7.7.0"
+    assert settings.VERSION == "7.8.0"
 
 
 def test_config_file_sizes_positive():

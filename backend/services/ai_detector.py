@@ -188,12 +188,20 @@ class AIDetector:
         """
         blockiness_scores = []
 
+        # Correct JPEG blockiness: compare last column/row of one block
+        # with first column/row of the ADJACENT block (inter-block boundary).
+        # The previous code compared within the same block (intra-block contrast),
+        # which measures content contrast, not JPEG quantization artifacts.
         for i in range(0, self.cv_gray.shape[0] - 8, 8):
+            for j in range(0, self.cv_gray.shape[1] - 16, 8):
+                col_right = self.cv_gray[i:i + 8, j + 7].astype(float)
+                col_left  = self.cv_gray[i:i + 8, j + 8].astype(float)
+                blockiness_scores.append(np.abs(col_right - col_left).mean())
+        for i in range(0, self.cv_gray.shape[0] - 16, 8):
             for j in range(0, self.cv_gray.shape[1] - 8, 8):
-                block = self.cv_gray[i:i + 8, j:j + 8].astype(float)
-                v_diff = np.abs(block[:, 7] - block[:, 0]).mean()
-                h_diff = np.abs(block[7, :] - block[0, :]).mean()
-                blockiness_scores.append(v_diff + h_diff)
+                row_bottom = self.cv_gray[i + 7, j:j + 8].astype(float)
+                row_top    = self.cv_gray[i + 8, j:j + 8].astype(float)
+                blockiness_scores.append(np.abs(row_bottom - row_top).mean())
 
         # Guard against NaN when image smaller than 8x8
         blockiness = float(np.mean(blockiness_scores)) if blockiness_scores else 0.0
@@ -248,13 +256,22 @@ class AIDetector:
             f"sat={mean_saturation:.2f}"
         )
 
+        # Coefficient of variation of saturation: low CV = unnaturally uniform.
+        # Replaces the old `mean_saturation > 150` threshold which incorrectly
+        # flagged real sunsets, wildlife, and food photos as suspicious.
+        sat_channel = hsv[:, :, 1].astype(float)
+        sat_cv = float(sat_channel.std() / (sat_channel.mean() + 1e-10))
+
         return {
             "hue_variance": h_var,
             "saturation_variance": s_var,
             "value_variance": v_var,
             "color_entropy": color_entropy,
             "mean_saturation": mean_saturation,
-            "suspicious": bool(mean_saturation > 150)
+            "saturation_cv": sat_cv,
+            # Low CV = unnaturally homogeneous saturation = AI indicator.
+            # Real photos: CV typically 0.4-1.2. AI: often 0.1-0.35.
+            "suspicious": bool(sat_cv < 0.35 and color_entropy < 3.5)
         }
 
     def calculate_ai_probability(self, signals: Dict[str, Dict]) -> float:
@@ -299,13 +316,13 @@ class AIDetector:
             for name, score in normalized_scores.items()
         )
 
-        # UPDATED: More aggressive boosting when signals agree
-        # Boost if 2+ signals agree (was 3+)
-        if suspicious_count >= 2:
-            probability = min(1.0, probability * 1.3)  # Was 1.2
-        # Extra boost if 3+ signals agree
+        # Apply a single boost based on signal agreement.
+        # Use elif to prevent compounding multipliers:
+        # previously both blocks ran when count >= 3, giving *1.3 * *1.5 = *1.95.
         if suspicious_count >= 3:
-            probability = min(1.0, probability * 1.5)  # Additional boost
+            probability = min(1.0, probability * 1.4)
+        elif suspicious_count >= 2:
+            probability = min(1.0, probability * 1.2)
 
         logger.info(
             f"AI probability: {probability:.3f} "

@@ -2,6 +2,7 @@
 Statistical Modeling & Probability Analysis for AI Detection
 Implements cutting-edge probability-based methods from research.
 """
+import threading
 import numpy as np
 from typing import Dict, Any, Tuple
 from scipy import fft
@@ -26,7 +27,7 @@ class StatisticalDetector(CovarianceDetector):
     # Natural image frequency model (precomputed from research)
     # These are approximate values from natural image statistics literature
     _natural_model_cache: dict = {}  # keyed by r_max for size-safety
-    _natural_model_lock = None  # class-level threading.Lock
+    _natural_model_lock = threading.Lock()  # initialized at class definition — no race condition
     
     def _get_radial_spectrum(self) -> np.ndarray:
         """
@@ -50,13 +51,13 @@ class StatisticalDetector(CovarianceDetector):
         
         # Radial average
         r_max = min(center_y, center_x) // 2
-        radial_profile = np.zeros(r_max)
-        
-        for radius in range(r_max):
-            mask = (r >= radius) & (r < radius + 1)
-            if mask.any():
-                radial_profile[radius] = log_magnitude[mask].mean()
-        
+        # Vectorized bincount — O(H*W) instead of O(r_max * H * W).
+        r_clipped = np.clip(r.ravel(), 0, r_max - 1)
+        lm_flat   = log_magnitude.ravel()
+        sums   = np.bincount(r_clipped, weights=lm_flat,  minlength=r_max)
+        counts = np.bincount(r_clipped,                    minlength=r_max).clip(1)
+        radial_profile = sums / counts
+
         return radial_profile
     
     def _build_natural_model(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -110,9 +111,6 @@ class StatisticalDetector(CovarianceDetector):
             spectrum = self._get_radial_spectrum()
             
             # Build natural model
-            import threading as _thr
-            if StatisticalDetector._natural_model_lock is None:
-                StatisticalDetector._natural_model_lock = _thr.Lock()
             r_key = min(self.height, self.width) // 4
             with StatisticalDetector._natural_model_lock:
                 if r_key not in StatisticalDetector._natural_model_cache:
@@ -188,9 +186,12 @@ class StatisticalDetector(CovarianceDetector):
             Detection signal with score, confidence, explanation
         """
         try:
-            # Get magnitude spectrum
+            # Get magnitude spectrum — fftshift moves DC to center
+            # (without fftshift the DC component is at the corner, corrupting
+            # the histogram distribution that feeds the KL divergence).
             f_transform = fft.fft2(self.cv_gray)
-            magnitude = np.abs(f_transform)
+            f_shift = fft.fftshift(f_transform)
+            magnitude = np.abs(f_shift)
             
             # Flatten and normalize to probability distribution
             flat_mag = magnitude.flatten()
@@ -286,8 +287,8 @@ class StatisticalDetector(CovarianceDetector):
             alpha_original = -coeffs_original[0]
             
             # Add small noise perturbation
-            np.random.seed(42)
-            noise = np.random.normal(0, 2, self.cv_gray.shape)
+            rng = np.random.default_rng(42)
+            noise = rng.normal(0, 2, self.cv_gray.shape)
             perturbed_image = np.clip(self.cv_gray + noise, 0, 255).astype(np.uint8)
             
             # Compute perturbed spectrum
@@ -301,12 +302,12 @@ class StatisticalDetector(CovarianceDetector):
             r = np.sqrt((x - center_x)**2 + (y - center_y)**2).astype(int)
             
             r_max = min(center_y, center_x) // 2
-            perturbed_spectrum = np.zeros(r_max)
-            
-            for radius in range(r_max):
-                mask = (r >= radius) & (r < radius + 1)
-                if mask.any():
-                    perturbed_spectrum[radius] = log_magnitude[mask].mean()
+            # Vectorized — same O(H*W) fix as _get_radial_spectrum.
+            r_clipped = np.clip(r.ravel(), 0, r_max - 1)
+            lm_flat   = log_magnitude.ravel()
+            sums_p   = np.bincount(r_clipped, weights=lm_flat, minlength=r_max)
+            counts_p = np.bincount(r_clipped,                   minlength=r_max).clip(1)
+            perturbed_spectrum = sums_p / counts_p
             
             # Fit power law to perturbed
             perturbed_spectrum = perturbed_spectrum[:len(original_spectrum)]

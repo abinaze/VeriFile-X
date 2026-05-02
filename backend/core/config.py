@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     DEBUG:        bool = False
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME:  str = "VeriFile-X"
-    VERSION:       str = "7.7.0"
+    VERSION:       str = "7.8.0"
 
     # =========================================================================
     # RATE LIMITING
