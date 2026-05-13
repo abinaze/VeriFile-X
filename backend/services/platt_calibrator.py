@@ -44,9 +44,11 @@ logger = setup_logger(__name__)
 
 _PARAMS_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "platt_params.json"
 
-# Default parameters — A < 0 because higher raw score → higher AI probability
-_DEFAULT_A = -1.2
-_DEFAULT_B =  0.6
+# Default parameters: sigmoid(A*f + B) must be monotonically increasing in f.
+# A > 0 ensures higher raw score → higher calibrated probability.
+# A=5.0, B=-2.5 gives: calibrate(0)≈0.08, calibrate(0.5)=0.50, calibrate(1)≈0.92
+_DEFAULT_A =  5.0
+_DEFAULT_B = -2.5
 
 # Wilson score z-value for 90% two-sided interval
 _WILSON_Z  = 1.645
