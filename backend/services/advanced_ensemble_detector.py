@@ -153,16 +153,9 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 (_w["cfa"]        / _total) * cfa_result["score"]
             )
 
-        # Platt-style calibration (weighted-sum fallback only)
-        def calibrate(score: float) -> float:
-            adjusted = score - 0.02
-            if adjusted > 0.65:
-                return min(1.0, 0.65 + (adjusted - 0.65) * 1.15)
-            elif adjusted < 0.35:
-                return max(0.0, 0.35 - (0.35 - adjusted) * 1.15)
-            return adjusted
-
-        weighted_score = calibrate(weighted_score)
+        # Platt scaling calibration — proper sigmoid fit replacing hand-tuned stub
+        from backend.services.platt_calibrator import calibrate as _platt_calibrate
+        weighted_score = _platt_calibrate(weighted_score)
 
         # XGBoost meta-model overrides weighted sum when available
         xgb_model, feature_names, _ = _load_xgb()
@@ -225,9 +218,25 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             ],
         }
 
+        # MCMC probabilistic distribution
+        from backend.services.mcmc_engine import run_mcmc as _run_mcmc
+        import hashlib as _hl
+        _seed = int(_hl.sha256(self.image_bytes[:64]).hexdigest()[:8], 16) % (2**31)
+        probability_distribution = _run_mcmc(
+            signals=all_signals,
+            point_estimate=weighted_score,
+            rng_seed=_seed,
+        )
+        result["probability_distribution"] = probability_distribution
+
+        # Platt Wilson interval for calibration confidence
+        from backend.services.platt_calibrator import calibrate_with_interval as _cwi
+        result["calibration"] = _cwi(weighted_score, signals=all_signals)
+
         logger.info(
             f"Advanced ensemble complete: {classification} "
-            f"(p={weighted_score:.3f}, {suspicious_count}/{len(all_signals)} signals)"
+            f"(p={weighted_score:.3f}, certainty={probability_distribution['certainty']}, "
+            f"{suspicious_count}/{len(all_signals)} signals)"
         )
 
         return result
