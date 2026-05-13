@@ -141,7 +141,7 @@ class ImageForensics:
         report = {
             # UUID5 derived from file SHA-256 — same file always gives same ID
             # enabling cross-case deduplication and historical lookup.
-            "evidence_id": str(uuid.uuid5(uuid.NAMESPACE_URL, sha256)),
+            "evidence_id": str(uuid.uuid5(uuid.NAMESPACE_URL, hashes["sha256"])),
             "metadata": {
                 "analysis_timestamp": datetime.now().isoformat(),
                 "analyzer_version":   settings.VERSION,
