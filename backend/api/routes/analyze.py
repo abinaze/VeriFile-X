@@ -513,6 +513,30 @@ async def analyze_batch(
 
 
 @router.post(
+    "/segment",
+    summary="Segment-level AI detection — per-tile probability grid",
+)
+async def analyze_segment(
+    file: UploadFile = File(...),
+):
+    """
+    Divide the image into overlapping 64x64 tiles and return a 2-D grid
+    of per-tile AI probability scores.  Useful for detecting partial AI
+    insertion (real background with AI-generated subject composited in).
+    """
+    try:
+        image_bytes = await file.read()
+        from backend.utils.validators import validate_file
+        validate_file(image_bytes, file.filename or "upload")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    from backend.services.segment_detector import detect_segments
+    result = detect_segments(image_bytes, file.filename or "upload")
+    return result
+
+
+@router.post(
     "/export/{fmt}",
     summary="Export forensic report in PDF, JSON, or CSV format",
     description="Re-analyze image and return report as downloadable file. fmt: pdf | json | csv"
