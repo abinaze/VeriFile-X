@@ -19,6 +19,7 @@ psutil==5.9.8
 
 # Image Processing & Forensics
 Pillow==12.1.1
+pillow-heif>=0.13.0
 imagehash==4.3.1
 
 # AI Detection & Analysis
