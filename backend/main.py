@@ -15,6 +15,7 @@ from backend.core.config import settings
 from backend.core.logger import setup_logger
 from backend.api.routes import upload, analyze, cases, keys
 from backend.api.routes import webhooks
+from backend.api.routes import feedback
 
 logger = setup_logger(__name__)
 
@@ -26,6 +27,19 @@ shared_limiter = limiter  # alias for explicit import
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("VeriFile-X API starting up")
+
+    # Register HEIF/HEIC format support via pillow-heif.
+    # Must be called before any Pillow image operations.
+    # Falls back silently if pillow-heif is not installed.
+    try:
+        import pillow_heif
+        pillow_heif.register_heif_opener()
+        logger.info("pillow-heif registered: HEIC/HEIF format support enabled")
+    except ImportError:
+        logger.warning(
+            "pillow-heif not installed — HEIC/HEIF images will be rejected. "
+            "Install with: pip install pillow-heif"
+        )
     logger.info(f"Debug mode: {settings.DEBUG}")
     logger.info(f"Max file size: {settings.MAX_FILE_SIZE_MB}MB")
     yield
@@ -74,6 +88,7 @@ app.include_router(analyze.router)
 app.include_router(cases.router)
 app.include_router(keys.router)
 app.include_router(webhooks.router)
+app.include_router(feedback.router)
 
 
 @app.get("/")

@@ -25,6 +25,9 @@ class Settings(BaseSettings):
         "image/jpeg",
         "image/png",
         "image/webp",
+        "image/tiff",
+        "image/heic",
+        "image/heif",
     )
 
     ALLOWED_VIDEO_TYPES: tuple = ()
@@ -56,7 +59,7 @@ class Settings(BaseSettings):
     DEBUG:        bool = False
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME:  str = "VeriFile-X"
-    VERSION:       str = "8.0.0"
+    VERSION:       str = "8.3.0"
 
     # =========================================================================
     # RATE LIMITING
