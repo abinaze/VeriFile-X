@@ -114,14 +114,15 @@ def record_feedback(
             name  = sig.get("signal_name", "")
             score = float(sig.get("score", 0.5))
 
-            # "Guilty" = signal agreed with the wrong prediction
-            # If system said AI (true=real): guilty signals have high scores
-            # If system said real (true=AI): guilty signals have low scores
+            # "Guilty" = signal strongly agreed with the wrong prediction.
+            # error = |score - true_label| measures how wrong the signal was.
+            # High error means the signal pointed away from truth (guilty).
+            # Low error means the signal was actually correct — skip it.
             error = abs(score - true_ai)
-            if error > _GUILTY_THRESHOLD:
-                continue  # Signal was actually right — don't penalise
+            if error <= _GUILTY_THRESHOLD:
+                continue  # Signal was close to correct — don't penalise
 
-            guilt = 1.0 - error   # how strongly it agreed with wrong answer
+            guilt = error   # how strongly it agreed with wrong answer
             current = weights.get(name, 1.0)
             new_w   = current * (1.0 - _LEARNING_RATE * guilt)
             new_w   = max(_MIN_WEIGHT, min(_MAX_WEIGHT, new_w))
