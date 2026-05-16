@@ -13,6 +13,7 @@ All branches follow the naming convention `feature/phase-N-name` or `fix/descrip
 | PLANNED | Design complete, ready to build |
 | FUTURE | Scoped, design in progress |
 
+
 ---
 
 ## Completed Phases
