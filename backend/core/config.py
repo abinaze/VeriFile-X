@@ -34,7 +34,8 @@ class Settings(BaseSettings):
     ALLOWED_DOC_TYPES: tuple   = ()
 
     ALLOWED_UPLOAD_EXTENSIONS: tuple = (
-        ".jpg", ".jpeg", ".png", ".webp"
+        ".jpg", ".jpeg", ".png", ".webp",
+        ".tiff", ".tif", ".heic", ".heif"
     )
 
     # =========================================================================
@@ -43,6 +44,9 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = (
         "http://localhost:3000,"
+        "http://localhost:8000,"
+        "http://localhost:8080,"
+        "http://127.0.0.1:8000,"
         "https://abinaze.github.io,"
         "https://abinazebinoy-verifile-x-api.hf.space"
     )
@@ -59,7 +63,7 @@ class Settings(BaseSettings):
     DEBUG:        bool = False
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME:  str = "VeriFile-X"
-    VERSION:       str = "8.3.0"
+    VERSION:       str = "8.4.0"
 
     # =========================================================================
     # RATE LIMITING

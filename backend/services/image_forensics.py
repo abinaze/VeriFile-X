@@ -112,6 +112,9 @@ class ImageForensics:
                 "top_reasons": [f"Ensemble detector failed: {exc}"],
                 "summary": "AI detection could not complete due to an internal error.",
                 "detection_version": "error",
+                # methods_used is required by frontend renderResults()
+                # Missing this key causes: TypeError: Cannot read properties of undefined
+                "methods_used": [],
             }
 
     def generate_forensic_report(self) -> Dict[str, Any]:
