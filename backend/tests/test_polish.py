@@ -12,9 +12,9 @@ def _make_image(width=128, height=128, seed=99):
     return buf.getvalue()
 
 
-def test_version_is_830():
+def test_version_is_840():
     from backend.core.config import settings
-    assert settings.VERSION == "8.3.0"
+    assert settings.VERSION == "8.4.0"
 
 
 def test_metrics_endpoint_schema(client):
