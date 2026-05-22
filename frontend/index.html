@@ -1324,15 +1324,16 @@ function resetUI() {
 }
 
 async function analyzeFile(file) {
+    // Validate BEFORE any UI changes — prevents flicker of broken loading state
+    if (file.size > 10 * 1024 * 1024) { alert('File too large. Maximum 10MB.'); return; }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/tiff'];
+    if (!allowed.includes(file.type)) { alert('Unsupported format. Use JPEG, PNG, WebP, or TIFF.'); return; }
+
     uploadZone.style.display = 'none';
     loading.classList.add('active');
     results.classList.remove('active');
     const formData = new FormData();
     formData.append('file', file);
-    // Client-side validation
-        if (file.size > 10 * 1024 * 1024) { alert('File too large. Maximum 10MB.'); uploadZone.style.display = 'block'; loading.classList.remove('active'); return; }
-        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!allowed.includes(file.type)) { alert('Unsupported type. Use JPEG, PNG or WebP.'); uploadZone.style.display = 'block'; loading.classList.remove('active'); return; }
 
     try {
         const controller = new AbortController();
@@ -1375,7 +1376,7 @@ function renderResults(data) {
     badge.textContent = cls;
     badge.className   = 'classification-badge ' + (prob >= 70 ? 'badge-ai' : prob >= 40 ? 'badge-maybe' : 'badge-human');
 
-    document.getElementById('methods').textContent       = 'Detection methods: ' + ai.methods_used.join(', ');
+    document.getElementById('methods').textContent       = 'Detection methods: ' + (ai.methods_used || []).join(', ');
     document.getElementById('suspiciousCount').textContent = ai.suspicious_signals_count + '/' + ai.total_signals;
     document.getElementById('totalSignals').textContent  = ai.total_signals;
     document.getElementById('confidenceLevel').textContent = (ai.confidence || 'N/A').replace(/_/g, ' ');
@@ -1480,7 +1481,7 @@ function downloadPDF() {
     doc.setFont('helvetica', 'bold');
     doc.text('VERDICT: ' + ai.classification.replace(/_/g, ' ').toUpperCase() + ' — ' + prob + '%', 105, y + 10, { align: 'center' });
     doc.setFontSize(9);
-    doc.text('Confidence: ' + (ai.confidence || 'N/A') + '  |  Methods: ' + ai.methods_used.join(', ') + '  |  Signals: ' + ai.suspicious_signals_count + '/' + ai.total_signals, 105, y + 17, { align: 'center' });
+    doc.text('Confidence: ' + (ai.confidence || 'N/A') + '  |  Methods: ' + (ai.methods_used || []).join(', ') + '  |  Signals: ' + ai.suspicious_signals_count + '/' + ai.total_signals, 105, y + 17, { align: 'center' });
     y += 30;
 
     doc.setTextColor(0, 0, 0);
