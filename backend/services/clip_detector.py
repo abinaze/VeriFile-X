@@ -180,9 +180,12 @@ class CLIPDetector:
             self.fake_centroid.unsqueeze(0)
         ).item()
         
-        # Convert to probability via softmax-like formula
-        exp_fake = np.exp(sim_to_fake * 10)
-        exp_real = np.exp(sim_to_real * 10)
+        # Convert to probability via temperature-scaled softmax.
+        # Temperature=10 amplifies tiny centroid differences to extremes — reduced
+        # to 4.0 which still discriminates well but avoids false confidence on
+        # images near the boundary (weak centroid separation of 0.198).
+        exp_fake = np.exp(sim_to_fake * 4.0)
+        exp_real = np.exp(sim_to_real * 4.0)
         
         ai_probability = exp_fake / (exp_fake + exp_real)
         
@@ -195,6 +198,17 @@ class CLIPDetector:
 
     def detect(self, image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
         """Detect if image is AI-generated using CLIP embeddings."""
+        try:
+            # Load model FIRST — this also loads the reference database and
+            # sets self.db_available = True on success. Checking db_available
+            # BEFORE calling _load_model() is the bug: the attribute is only
+            # set inside _load_reference_database() which is called from
+            # _load_model(), so the guard always fired and CLIP never ran.
+            self._load_model()
+        except Exception as e:
+            logger.warning(f"CLIP model loading failed: {e}")
+            return self._neutral_result(f"CLIP model unavailable: {e}")
+
         if not getattr(self, "db_available", False):
             return {
                 "signal_name": "CLIP Embedding Analysis",
@@ -205,8 +219,7 @@ class CLIPDetector:
                 "from_cache": False, "active": False,
             }
         try:
-            # Lazy load model (uses cache if available - 10x faster!)
-            self._load_model()
+            pass  # model already loaded above
             
             logger.info(f"Running CLIP detection on {filename}")
             
