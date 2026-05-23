@@ -118,40 +118,35 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 0.02 * cfa_result["score"]
             )
         else:
-            logger.info("DIRE unavailable — using statistical+CLIP+OwnEmbedding+PRNU+ELA+metadata+DCT")
-            own_weight = 0.12 if own_result.get("confidence", 0) > 0 else 0.0
-            if own_weight == 0.0:
-                logger.debug(
-                    "own_embedding has zero confidence — weight excluded; "                    "remaining weights will be renormalized to 1.0"
+            logger.info("DIRE unavailable — using confidence-gated dynamic ensemble")
+            # Build signal list; exclude any signal whose confidence=0 so that
+            # inactive signals (ELA on PNG/WebP, missing own_embedding, etc.)
+            # don't bias the weighted sum toward 0.5.
+            _raw_signals = [
+                ("stat",       0.38, base_report["ai_probability"],   1.0),  # stat always active
+                ("own",        0.12, own_result["score"],             own_result.get("confidence", 0)),
+                ("clip",       0.18, clip_result["score"],            clip_result.get("confidence", 0)),
+                ("prnu",       0.10, prnu_result["score"],            prnu_result.get("confidence", 0)),
+                ("ela",        0.08, ela_result["score"],             ela_result.get("confidence", 0)),
+                ("meta",       0.06, metadata_result["score"],        metadata_result.get("confidence", 0)),
+                ("dct",        0.04, dct_result["score"],             dct_result.get("confidence", 0)),
+                ("jpeg_ghost", 0.04, jpeg_ghost_result["score"],      jpeg_ghost_result.get("confidence", 0)),
+                ("noiseprint", 0.03, noiseprint_result["score"],      noiseprint_result.get("confidence", 0)),
+                ("noise_map",  0.02, noise_map_result["score"],       noise_map_result.get("confidence", 0)),
+                ("cfa",        0.02, cfa_result["score"],             cfa_result.get("confidence", 0)),
+            ]
+            # Filter: only include signals with confidence > 0
+            _active = [(name, w, score) for name, w, score, conf in _raw_signals if conf > 0]
+            if not _active:
+                logger.warning("No active signals — returning neutral 0.5")
+                weighted_score = 0.5
+            else:
+                _total = sum(w for _, w, _ in _active)
+                weighted_score = sum((w / _total) * score for _, w, score in _active)
+                logger.info(
+                    "Dynamic ensemble: %d/%d signals active, sum_w=%.4f",
+                    len(_active), len(_raw_signals), _total,
                 )
-            # Normalise weights to always sum to exactly 1.0
-            _w = dict(
-                stat       = 0.38,
-                own        = own_weight,
-                clip       = 0.18,
-                prnu       = 0.10,
-                ela        = 0.08,
-                meta       = 0.06,
-                dct        = 0.04,
-                jpeg_ghost = 0.04,
-                noiseprint = 0.03,
-                noise_map  = 0.02,
-                cfa        = 0.02,
-            )
-            _total = sum(_w.values())
-            weighted_score = (
-                (_w["stat"]       / _total) * base_report["ai_probability"] +
-                (_w["own"]        / _total) * own_result["score"] +
-                (_w["clip"]       / _total) * clip_result["score"] +
-                (_w["prnu"]       / _total) * prnu_result["score"] +
-                (_w["ela"]        / _total) * ela_result["score"] +
-                (_w["meta"]       / _total) * metadata_result["score"] +
-                (_w["dct"]        / _total) * dct_result["score"] +
-                (_w["jpeg_ghost"] / _total) * jpeg_ghost_result["score"] +
-                (_w["noiseprint"] / _total) * noiseprint_result["score"] +
-                (_w["noise_map"]  / _total) * noise_map_result["score"] +
-                (_w["cfa"]        / _total) * cfa_result["score"]
-            )
 
         # Platt scaling calibration — proper sigmoid fit replacing hand-tuned stub
         from backend.services.platt_calibrator import calibrate as _platt_calibrate

@@ -83,6 +83,18 @@ async def analyze_image(
                 detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp"
             )
 
+        # Check Content-Length header BEFORE reading to avoid loading huge files into RAM
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > MAX_ANALYSIS_SIZE_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
+                    )
+            except ValueError:
+                pass  # Invalid Content-Length header — proceed and check after read
+
         file_bytes = await file.read()
 
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
@@ -92,8 +104,7 @@ async def analyze_image(
             )
             raise HTTPException(
                 status_code=413,
-                detail=f"Payload too large. "
-                       f"Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
+                detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
             )
 
         file_hash = hashlib.sha256(file_bytes).hexdigest()

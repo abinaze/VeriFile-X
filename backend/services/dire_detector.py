@@ -239,14 +239,18 @@ class DIREDetector:
             # Preprocess
             image = self._preprocess_image(image_bytes)
 
-            # Forward diffusion (add noise at timestep 50)
-            noisy_image = self._add_noise(image, timestep=50)
+            # Forward diffusion — noise latents at scheduler start timestep
+            # (timestep arg is now ignored; _add_noise uses scheduler.timesteps[0])
+            noisy_latents = self._add_noise(image, timestep=50)
 
-            # Reverse diffusion (denoise with 20 steps)
-            reconstructed = self._denoise(noisy_image, steps=20)
+            # Reverse diffusion — returns pixel-space image after VAE decode
+            reconstructed = self._denoise(noisy_latents, steps=20)
 
-            # Compute reconstruction error
-            error = self._compute_reconstruction_error(image, reconstructed)
+            # Compute reconstruction error in pixel space
+            # We need to decode the original latents to pixel space for fair comparison
+            with __import__('torch').no_grad():
+                orig_pixels = self.pipe.vae.decode(image / 0.18215).sample
+            error = self._compute_reconstruction_error(orig_pixels, reconstructed)
 
             # Convert error to AI probability score
             # Lower error = better reconstruction = more likely AI
