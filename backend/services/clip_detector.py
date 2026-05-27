@@ -118,6 +118,8 @@ class CLIPDetector:
                 # Mark database as available BEFORE returning
                 self.db_available = True
 
+                # Cache separation for confidence scaling in detect()
+                self._db_separation = float(database.get("separation", 0.1))
                 logger.info(
                     f"Loaded reference database: "
                     f"{database['real_count']} real, "
@@ -245,7 +247,8 @@ class CLIPDetector:
             return {
                 "signal_name": "CLIP Embedding Analysis",
                 "score": float(ai_score),
-                "confidence": 0.90,
+                # Scale confidence with centroid separation — weak DB gives lower confidence
+                "confidence": float(min(0.90, self._db_separation * 4.5)) if hasattr(self, "_db_separation") else 0.50,
                 "explanation": explanation,
                 "raw_value": float(ai_score),
                 "expected_range": "> 0.5 for AI",
