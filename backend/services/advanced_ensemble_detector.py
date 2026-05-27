@@ -104,19 +104,39 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             # DIRE-available branch — weights sum to exactly 1.0
             # stat=0.26 DIRE=0.21 CLIP=0.16 PRNU=0.08 ELA=0.07
             # meta=0.06 DCT=0.05  jpeg=0.04 noiseprint=0.03 noise=0.02 cfa=0.02
-            weighted_score = (
-                0.26 * base_report["ai_probability"] +
-                0.21 * dire_result["score"] +
-                0.16 * clip_result["score"] +
-                0.08 * prnu_result["score"] +
-                0.07 * ela_result["score"] +
-                0.06 * metadata_result["score"] +
-                0.05 * dct_result["score"] +
-                0.04 * jpeg_ghost_result["score"] +
-                0.03 * noiseprint_result["score"] +
-                0.02 * noise_map_result["score"] +
-                0.02 * cfa_result["score"]
-            )
+            # own_result excluded from DIRE branch when confidence=0 (model missing).
+            # When own_result has confidence>0, include it with weight 0.08 by
+            # redistributing from stat (0.26->0.20) and CLIP (0.16->0.14).
+            _own_conf = own_result.get("confidence", 0.0)
+            if _own_conf > 0:
+                weighted_score = (
+                    0.20 * base_report["ai_probability"] +
+                    0.21 * dire_result["score"] +
+                    0.14 * clip_result["score"] +
+                    0.08 * own_result["score"] +
+                    0.08 * prnu_result["score"] +
+                    0.07 * ela_result["score"] +
+                    0.06 * metadata_result["score"] +
+                    0.05 * dct_result["score"] +
+                    0.04 * jpeg_ghost_result["score"] +
+                    0.03 * noiseprint_result["score"] +
+                    0.02 * noise_map_result["score"] +
+                    0.02 * cfa_result["score"]
+                )
+            else:
+                weighted_score = (
+                    0.26 * base_report["ai_probability"] +
+                    0.21 * dire_result["score"] +
+                    0.16 * clip_result["score"] +
+                    0.08 * prnu_result["score"] +
+                    0.07 * ela_result["score"] +
+                    0.06 * metadata_result["score"] +
+                    0.05 * dct_result["score"] +
+                    0.04 * jpeg_ghost_result["score"] +
+                    0.03 * noiseprint_result["score"] +
+                    0.02 * noise_map_result["score"] +
+                    0.02 * cfa_result["score"]
+                )
         else:
             logger.info("DIRE unavailable — using confidence-gated dynamic ensemble")
             # Build signal list; exclude any signal whose confidence=0 so that
@@ -178,9 +198,13 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         elif weighted_score > 0.70:
             classification = "likely_ai_generated"
             confidence     = "high"
-        elif weighted_score > 0.50:
+        elif weighted_score > 0.60:
             classification = "possibly_ai_generated"
             confidence     = "medium"
+        elif weighted_score >= 0.40:
+            # Explicit inconclusive zone — conflicting or weak signals
+            classification = "inconclusive"
+            confidence     = "low"
         elif weighted_score > 0.30:
             classification = "possibly_authentic"
             confidence     = "medium"
