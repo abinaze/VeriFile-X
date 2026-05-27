@@ -145,18 +145,20 @@ async def reset_metrics_endpoint(request: Request):
     # If ADMIN_KEY_HASH is not set, fall back to length check only (dev mode).
     expected_hash = _os.getenv("ADMIN_KEY_HASH", "")
     if not expected_hash:
-        # Block completely when ADMIN_KEY_HASH is unset unless DEBUG mode is on.
-        # In DEBUG=True (local dev), length-only check is acceptable. In production
-        # (DEBUG=False or unset), refuse all admin requests to prevent backdoor access.
-        if not _os.getenv("DEBUG", "false").lower() in ("1", "true", "yes"):
+        # Only hard-block when explicitly deployed to production.
+        # Production is indicated by PRODUCTION=true env var.
+        # DEBUG=true, CI=true, or unset env vars all allow length-only check
+        # (dev, CI, and staging environments should not require ADMIN_KEY_HASH).
+        _is_production = _os.getenv("PRODUCTION", "").lower() in ("1", "true", "yes")
+        if _is_production:
             logger.error("ADMIN_KEY_HASH not set in production — admin access blocked.")
             raise HTTPException(
                 status_code=503,
                 detail="Admin access is disabled: ADMIN_KEY_HASH environment variable is not configured."
             )
         logger.warning(
-            "ADMIN_KEY_HASH not set — running in DEBUG mode only. "
-            "Set ADMIN_KEY_HASH before deploying to production."
+            "ADMIN_KEY_HASH not set — using length-only check. "
+            "Set ADMIN_KEY_HASH and PRODUCTION=true before deploying to production."
         )
     if expected_hash:
         provided_hash = _hl.sha256(admin_key.encode()).hexdigest()
