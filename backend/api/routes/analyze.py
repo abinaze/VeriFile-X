@@ -19,8 +19,8 @@ from backend.core.audit_log import log_analysis
 
 logger = setup_logger(__name__)
 
-# Rate limiter — shared with main.py app-level limiter via import
-from backend.main import limiter  # type: ignore[attr-defined]  # noqa: E402
+# Standalone limiter for this router — same config as main.py
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(
     prefix="/api/v1/analyze",
