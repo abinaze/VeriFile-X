@@ -19,7 +19,8 @@ from backend.core.audit_log import log_analysis
 
 logger = setup_logger(__name__)
 
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiter — shared with main.py app-level limiter via import
+from backend.main import limiter  # type: ignore[attr-defined]  # noqa: E402
 
 router = APIRouter(
     prefix="/api/v1/analyze",
@@ -27,7 +28,7 @@ router = APIRouter(
 )
 
 # Allowed MIME types for analysis endpoint
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/tiff", "image/heic", "image/heif"}
 
 # Max file size: 10MB for analysis (CPU-intensive operation)
 MAX_ANALYSIS_SIZE_BYTES = 10 * 1024 * 1024
@@ -97,6 +98,20 @@ async def analyze_image(
 
         file_bytes = await file.read()
 
+        # Apply EXIF orientation before all forensic analysis.
+        # iPhone portrait photos have EXIF rotation=6 (90° CW) — without this,
+        # all spatial signals (PRNU, CFA, noise map) run on a sideways image.
+        try:
+            from PIL import Image as _PIL_img, ImageOps as _EXIF_ops
+            from io import BytesIO as _BytesIO_exif
+            _img_exif = _PIL_img.open(_BytesIO_exif(file_bytes))
+            _img_exif = _EXIF_ops.exif_transpose(_img_exif)
+            _buf_exif = _BytesIO_exif()
+            _img_exif.save(_buf_exif, format=_img_exif.format or "PNG")
+            file_bytes = _buf_exif.getvalue()
+        except Exception:
+            pass  # Proceed with original bytes if EXIF correction fails
+
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             logger.warning(
                 f"Rejected upload: size={len(file_bytes)} bytes "
@@ -122,6 +137,11 @@ async def analyze_image(
             raise FileValidationError(
                 f"File content is not an image: {validation['mime_type']}"
             )
+        # Use extension_valid from validate_file (previously silently discarded)
+        if not validation.get("extension_valid", True):
+            raise FileValidationError(
+                f"File extension not allowed: {validation.get('extension', 'unknown')}"
+            )
 
         # Quality gate — reject images too small or unreadable for forensics
         from backend.utils.image_quality import assess_image_quality
@@ -131,6 +151,7 @@ async def analyze_image(
                 status_code=422,
                 detail=f"Image unsuitable for analysis: {quality['reason']}"
             )
+        _confidence_cap = quality.get("confidence_cap", 1.0)
 
         cached_result = forensics_cache.get(file_hash)
         if cached_result:
@@ -165,6 +186,13 @@ async def analyze_image(
         _latency_ms = round((time.perf_counter() - _t0) * 1000, 1)
 
         forensics_cache.set(file_hash, report)
+
+        # Apply quality-based confidence cap to all signal confidences
+        if _confidence_cap < 1.0:
+            for sig in report.get("ai_detection", {}).get("all_signals", []):
+                if "confidence" in sig:
+                    sig["confidence"] = min(float(sig["confidence"]), _confidence_cap)
+            logger.info("Applied confidence_cap=%.2f (image quality gate)", _confidence_cap)
 
         # Fire outbound webhooks (non-blocking daemon threads)
         try:
