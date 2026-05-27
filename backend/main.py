@@ -13,6 +13,23 @@ import os
 
 from backend.core.config import settings
 from backend.core.logger import setup_logger
+import random as _random
+import numpy as _np_seed
+
+# Deterministic seeds — critical for a forensics tool where the same
+# image must always produce the same result across server restarts.
+# Note: MCMC uses an image-derived seed (correct); these seeds cover
+# the global numpy RNG used by KL divergence and Mahalanobis distance.
+_random.seed(42)
+_np_seed.random.seed(42)
+try:
+    import torch as _torch_seed
+    _torch_seed.manual_seed(42)
+    if _torch_seed.cuda.is_available():
+        _torch_seed.cuda.manual_seed_all(42)
+except ImportError:
+    pass
+
 from backend.api.routes import upload, analyze, cases, keys
 from backend.api.routes import webhooks
 from backend.api.routes import feedback
@@ -128,9 +145,18 @@ async def reset_metrics_endpoint(request: Request):
     # If ADMIN_KEY_HASH is not set, fall back to length check only (dev mode).
     expected_hash = _os.getenv("ADMIN_KEY_HASH", "")
     if not expected_hash:
+        # Block completely when ADMIN_KEY_HASH is unset unless DEBUG mode is on.
+        # In DEBUG=True (local dev), length-only check is acceptable. In production
+        # (DEBUG=False or unset), refuse all admin requests to prevent backdoor access.
+        if not _os.getenv("DEBUG", "false").lower() in ("1", "true", "yes"):
+            logger.error("ADMIN_KEY_HASH not set in production — admin access blocked.")
+            raise HTTPException(
+                status_code=503,
+                detail="Admin access is disabled: ADMIN_KEY_HASH environment variable is not configured."
+            )
         logger.warning(
-            "ADMIN_KEY_HASH env var not set. Any string >=16 chars grants admin access. "
-            "Set ADMIN_KEY_HASH in production (sha256 of your key) to enforce proper auth."
+            "ADMIN_KEY_HASH not set — running in DEBUG mode only. "
+            "Set ADMIN_KEY_HASH before deploying to production."
         )
     if expected_hash:
         provided_hash = _hl.sha256(admin_key.encode()).hexdigest()
@@ -144,8 +170,27 @@ async def reset_metrics_endpoint(request: Request):
 @app.get("/health")
 @limiter.limit("60/minute")
 async def health_check(request: Request):
+    """Reports real detector model loading status — not just process liveness."""
+    from pathlib import Path as _HPath
+    _ref = _HPath(__file__).parent.parent / "data" / "reference"
+    _clip_ok  = (_ref / "clip_database.pkl").exists()
+    _own_ok   = (_ref / "own_embedding_model.pt").exists()
+    _xgb_ok   = (_ref / "ensemble_xgb.pkl").exists()
+    _platt_ok = (_ref / "platt_params.json").exists()
+    _degraded = not (_clip_ok and _own_ok and _xgb_ok)
     return {
-        "status": "healthy",
+        "status": "degraded" if _degraded else "healthy",
         "debug_mode": settings.DEBUG,
         "timestamp": datetime.now().isoformat(),
+        "detector_models": {
+            "clip_database":     "ok" if _clip_ok  else "missing",
+            "own_embedding":     "ok" if _own_ok   else "missing",
+            "xgboost_ensemble":  "ok" if _xgb_ok   else "missing",
+            "platt_calibration": "ok" if _platt_ok else "defaults",
+        },
+        "accuracy_note": (
+            "Running on statistical signals only (~55-68% accuracy). "
+            "Build reference models for full accuracy." if _degraded
+            else "All models loaded."
+        ),
     }
