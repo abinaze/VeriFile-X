@@ -135,11 +135,11 @@ async def get_metrics(request: Request):
 @limiter.limit("5/minute")
 async def reset_metrics_endpoint(request: Request):
     """Reset all metrics counters. Requires X-Admin-Key header."""
+    from fastapi import HTTPException  # import once at top of function scope
     import hashlib as _hl
     import os as _os
     admin_key = request.headers.get("X-Admin-Key", "")
     if not admin_key or len(admin_key) < 16:
-        from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="X-Admin-Key header required")
     # Compare against SHA-256 hash stored in ADMIN_KEY_HASH env var.
     # If ADMIN_KEY_HASH is not set, fall back to length check only (dev mode).
@@ -161,7 +161,6 @@ async def reset_metrics_endpoint(request: Request):
     if expected_hash:
         provided_hash = _hl.sha256(admin_key.encode()).hexdigest()
         if not secrets.compare_digest(provided_hash, expected_hash):
-            from fastapi import HTTPException
             raise HTTPException(status_code=401, detail="X-Admin-Key header required")
     from backend.services.metrics_collector import reset_metrics
     reset_metrics()

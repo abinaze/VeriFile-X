@@ -85,7 +85,7 @@ def test_health_endpoint_structure(client):
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "healthy"
+    assert data["status"] in ("healthy", "degraded")  # degraded when model files absent (CI)
     assert "timestamp" in data
     assert "debug_mode" in data
 
