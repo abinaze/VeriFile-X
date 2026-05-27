@@ -137,17 +137,19 @@ class AdvancedAIDetector:
                 dct_coeffs.extend(dct_block.flatten()[1:])
 
         dct_coeffs    = np.array(dct_coeffs)
-        coeff_kurtosis = kurtosis(dct_coeffs)
+        # scipy.stats.kurtosis() returns EXCESS kurtosis (Fisher, normal=0 not 3).
+        # Old threshold < 2.5 was wrong for this domain and fired on most real photos.
+        coeff_kurtosis = kurtosis(dct_coeffs)  # excess kurtosis
 
-        if coeff_kurtosis < 2.5:
+        if coeff_kurtosis < -0.5:
             score       = 0.7
-            explanation = f"DCT coefficient kurtosis ({coeff_kurtosis:.2f}) is abnormally low, indicating over-smoothing"
+            explanation = f"DCT excess kurtosis ({coeff_kurtosis:.2f}) is abnormally low — over-smoothing, AI indicator"
         elif coeff_kurtosis > 12:
             score       = 0.5
-            explanation = f"DCT coefficient kurtosis ({coeff_kurtosis:.2f}) is abnormally high"
+            explanation = f"DCT excess kurtosis ({coeff_kurtosis:.2f}) is abnormally high"
         else:
             score       = 0.0
-            explanation = f"DCT coefficient distribution (kurtosis={coeff_kurtosis:.2f}) matches natural images"
+            explanation = f"DCT coefficient distribution (excess kurtosis={coeff_kurtosis:.2f}) consistent with natural images"
 
         return {
             "signal_name":    "DCT Coefficients",
@@ -229,9 +231,10 @@ class AdvancedAIDetector:
         Real cameras have characteristic sensor noise patterns.
         """
         lap               = cv2.Laplacian(self.cv_gray, cv2.CV_64F)
+        # excess kurtosis — real camera noise: 2-15; AI synthetic: often < 1
         residual_kurtosis = kurtosis(lap.flatten())
 
-        if residual_kurtosis < 4:
+        if residual_kurtosis < 1:
             score       = 0.8
             explanation = f"Noise residual kurtosis ({residual_kurtosis:.2f}) is too low - lacks camera noise"
         elif residual_kurtosis > 25:
