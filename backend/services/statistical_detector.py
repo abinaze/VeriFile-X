@@ -26,7 +26,7 @@ class StatisticalDetector(CovarianceDetector):
     
     # Natural image frequency model (precomputed from research)
     # These are approximate values from natural image statistics literature
-    _natural_model_cache: dict = {}  # keyed by r_max for size-safety
+    _natural_model_cache: dict = {}  # keyed by r_max; capped at 32 entries to prevent unbounded growth
     _natural_model_lock = threading.Lock()  # initialized at class definition — no race condition
     
     def _get_radial_spectrum(self) -> np.ndarray:
@@ -114,6 +114,10 @@ class StatisticalDetector(CovarianceDetector):
             r_key = min(self.height, self.width) // 4
             with StatisticalDetector._natural_model_lock:
                 if r_key not in StatisticalDetector._natural_model_cache:
+                    # Evict oldest entry when cache exceeds 32 entries
+                    if len(StatisticalDetector._natural_model_cache) >= 32:
+                        _evict_key = next(iter(StatisticalDetector._natural_model_cache))
+                        del StatisticalDetector._natural_model_cache[_evict_key]
                     StatisticalDetector._natural_model_cache[r_key] =                         self._build_natural_model()
                 natural_mean, natural_cov =                     StatisticalDetector._natural_model_cache[r_key]
             

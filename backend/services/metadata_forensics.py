@@ -60,7 +60,16 @@ def _extract_full_exif(pil_image: Image.Image) -> Dict[str, Any]:
                 result["GPSInfo"] = gps
             else:
                 try:
-                    result[tag] = str(value)[:200]
+                    # Format IFDRational/tuple values as human-readable fractions
+                    if hasattr(value, 'numerator') and hasattr(value, 'denominator'):
+                        if value.denominator == 1:
+                            result[tag] = str(int(value.numerator))
+                        else:
+                            result[tag] = f"{value.numerator}/{value.denominator}"
+                    elif isinstance(value, tuple) and len(value) == 2 and isinstance(value[1], int):
+                        result[tag] = f"{value[0]}/{value[1]}" if value[1] != 1 else str(value[0])
+                    else:
+                        result[tag] = str(value)[:200]
                 except Exception:
                     pass
     except Exception:
@@ -79,7 +88,7 @@ def _check_gps_plausibility(gps_info: Dict) -> tuple:
         if isinstance(lat, tuple) and len(lat) >= 1:
             lat_val = float(lat[0])
             lon_val = float(lon[0]) if isinstance(lon, tuple) else 0
-            if 0 <= lat_val <= 90 and 0 <= lon_val <= 180:
+            if -90 <= lat_val <= 90 and -180 <= lon_val <= 180:  # signed coords — negative = W hemisphere
                 return True, f"GPS valid ({lat_val:.2f}, {lon_val:.2f})"
             else:
                 return False, "GPS coordinates out of valid range"

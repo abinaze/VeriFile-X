@@ -44,7 +44,7 @@ _GENERATOR_PROFILES = {
 
 _LABELS = ["stylegan", "dalle3", "sd14", "sdxl", "midjourney", "real"]
 
-_ATTRIBUTION_MODEL_PATH = Path("data/reference/attribution_xgb.pkl")
+_ATTRIBUTION_MODEL_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "attribution_xgb.pkl"
 
 
 def _extract_attribution_features(image_bytes: bytes) -> Dict[str, float]:

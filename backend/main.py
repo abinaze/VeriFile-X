@@ -13,6 +13,23 @@ import os
 
 from backend.core.config import settings
 from backend.core.logger import setup_logger
+import random as _random
+import numpy as _np_seed
+
+# Deterministic seeds — critical for a forensics tool where the same
+# image must always produce the same result across server restarts.
+# Note: MCMC uses an image-derived seed (correct); these seeds cover
+# the global numpy RNG used by KL divergence and Mahalanobis distance.
+_random.seed(42)
+_np_seed.random.seed(42)
+try:
+    import torch as _torch_seed
+    _torch_seed.manual_seed(42)
+    if _torch_seed.cuda.is_available():
+        _torch_seed.cuda.manual_seed_all(42)
+except ImportError:
+    pass
+
 from backend.api.routes import upload, analyze, cases, keys
 from backend.api.routes import webhooks
 from backend.api.routes import feedback
@@ -118,24 +135,34 @@ async def get_metrics(request: Request):
 @limiter.limit("5/minute")
 async def reset_metrics_endpoint(request: Request):
     """Reset all metrics counters. Requires X-Admin-Key header."""
+    from fastapi import HTTPException  # import once at top of function scope
     import hashlib as _hl
     import os as _os
     admin_key = request.headers.get("X-Admin-Key", "")
     if not admin_key or len(admin_key) < 16:
-        from fastapi import HTTPException
         raise HTTPException(status_code=401, detail="X-Admin-Key header required")
     # Compare against SHA-256 hash stored in ADMIN_KEY_HASH env var.
     # If ADMIN_KEY_HASH is not set, fall back to length check only (dev mode).
     expected_hash = _os.getenv("ADMIN_KEY_HASH", "")
     if not expected_hash:
+        # Only hard-block when explicitly deployed to production.
+        # Production is indicated by PRODUCTION=true env var.
+        # DEBUG=true, CI=true, or unset env vars all allow length-only check
+        # (dev, CI, and staging environments should not require ADMIN_KEY_HASH).
+        _is_production = _os.getenv("PRODUCTION", "").lower() in ("1", "true", "yes")
+        if _is_production:
+            logger.error("ADMIN_KEY_HASH not set in production — admin access blocked.")
+            raise HTTPException(
+                status_code=503,
+                detail="Admin access is disabled: ADMIN_KEY_HASH environment variable is not configured."
+            )
         logger.warning(
-            "ADMIN_KEY_HASH env var not set. Any string >=16 chars grants admin access. "
-            "Set ADMIN_KEY_HASH in production (sha256 of your key) to enforce proper auth."
+            "ADMIN_KEY_HASH not set — using length-only check. "
+            "Set ADMIN_KEY_HASH and PRODUCTION=true before deploying to production."
         )
     if expected_hash:
         provided_hash = _hl.sha256(admin_key.encode()).hexdigest()
         if not secrets.compare_digest(provided_hash, expected_hash):
-            from fastapi import HTTPException
             raise HTTPException(status_code=401, detail="X-Admin-Key header required")
     from backend.services.metrics_collector import reset_metrics
     reset_metrics()
@@ -144,8 +171,27 @@ async def reset_metrics_endpoint(request: Request):
 @app.get("/health")
 @limiter.limit("60/minute")
 async def health_check(request: Request):
+    """Reports real detector model loading status — not just process liveness."""
+    from pathlib import Path as _HPath
+    _ref = _HPath(__file__).parent.parent / "data" / "reference"
+    _clip_ok  = (_ref / "clip_database.pkl").exists()
+    _own_ok   = (_ref / "own_embedding_model.pt").exists()
+    _xgb_ok   = (_ref / "ensemble_xgb.pkl").exists()
+    _platt_ok = (_ref / "platt_params.json").exists()
+    _degraded = not (_clip_ok and _own_ok and _xgb_ok)
     return {
-        "status": "healthy",
+        "status": "degraded" if _degraded else "healthy",
         "debug_mode": settings.DEBUG,
         "timestamp": datetime.now().isoformat(),
+        "detector_models": {
+            "clip_database":     "ok" if _clip_ok  else "missing",
+            "own_embedding":     "ok" if _own_ok   else "missing",
+            "xgboost_ensemble":  "ok" if _xgb_ok   else "missing",
+            "platt_calibration": "ok" if _platt_ok else "defaults",
+        },
+        "accuracy_note": (
+            "Running on statistical signals only (~55-68% accuracy). "
+            "Build reference models for full accuracy." if _degraded
+            else "All models loaded."
+        ),
     }

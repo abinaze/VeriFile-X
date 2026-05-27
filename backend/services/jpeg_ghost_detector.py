@@ -43,7 +43,8 @@ from backend.core.logger import setup_logger
 logger = setup_logger(__name__)
 
 # Quality levels to probe (51–99 inclusive, step 2 for speed; full scan = step 1)
-_Q_RANGE = range(51, 100, 2)
+# Extended to Q=30 to catch WhatsApp (~50) and Instagram (~60-75) recompression
+_Q_RANGE = range(30, 100, 2)
 
 # A flat NSE curve (std/mean < threshold) means no prior JPEG history
 _FLAT_CURVE_THRESHOLD = 0.06
@@ -143,6 +144,21 @@ def detect_jpeg_ghost(image_bytes: bytes, filename: str = "unknown") -> Dict[str
     """
     _ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     _is_lossless = _ext in ("png", "gif", "bmp", "tiff", "tif", "webp")
+
+    # Return neutral immediately for lossless formats — they have no prior
+    # JPEG history, so the NSE curve is always flat and will be misinterpreted
+    # as "no ghost = AI". Running the expensive Q scan would be wasted CPU.
+    if _is_lossless:
+        return {
+            "signal_name": "JPEG Ghost Analysis",
+            "score": 0.5, "confidence": 0.0,
+            "explanation": (
+                f"JPEG Ghost skipped for lossless format (.{_ext}): "
+                "no prior JPEG compression history to detect."
+            ),
+            "raw_value": 0.0, "expected_range": "N/A for lossless",
+            "method": "jpeg_ghost",
+        }
 
     try:
         pil_img = Image.open(BytesIO(image_bytes)).convert("RGB")
