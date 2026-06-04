@@ -27,6 +27,13 @@ After completion:
 """
 import os
 import sys
+
+# Force UTF-8 output on Windows (cp1252 terminal crashes on box-drawing chars)
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
 import time
 import shutil
 import logging
@@ -37,7 +44,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 
-# ── Logging to both console and file ──────────────────────────────────────
+# -- Logging to both console and file --------------------------------------
 ROOT     = Path(__file__).parents[1]
 LOG_FILE = ROOT / "data" / "training_log.txt"
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -59,7 +66,7 @@ MANIFEST    = DATA / "manifest.csv"
 FEATURES    = DATA / "features.csv"
 REFERENCE   = DATA / "reference"
 
-# ── Expected output files for each step (used to detect completion) ───────
+# -- Expected output files for each step (used to detect completion) -------
 STEP_OUTPUTS: dict[str, list[Path]] = {
     "step1": [DATA / "ai" / "cifake"],
     "step2": [DATA / "real" / "coco_val"],
@@ -93,7 +100,7 @@ STEP_ETA_MIN = {
 }
 
 
-# ── Utilities ──────────────────────────────────────────────────────────────
+# -- Utilities --------------------------------------------------------------
 
 def _python() -> str:
     """Return the Python executable to use (same as the current interpreter)."""
@@ -188,6 +195,9 @@ def _run(
 
     t0 = time.monotonic()
     run_env = os.environ.copy()
+    # Force UTF-8 I/O in child processes — prevents cp1252 crashes on Windows
+    run_env["PYTHONUTF8"] = "1"
+    run_env["PYTHONIOENCODING"] = "utf-8"
     if env:
         run_env.update(env)
 
@@ -199,17 +209,17 @@ def _run(
     elapsed = time.monotonic() - t0
 
     if result.returncode == 0:
-        logger.info(f"  ✅ {step} done in {elapsed/60:.1f} min")
+        logger.info(f"  [OK] {step} done in {elapsed/60:.1f} min")
         return True
     else:
         logger.error(
-            f"  ✗ {step} FAILED (exit code {result.returncode}) "
+            f"  [FAIL] {step} FAILED (exit code {result.returncode}) "
             f"after {elapsed/60:.1f} min"
         )
         return False
 
 
-# ── Individual step runners ────────────────────────────────────────────────
+# -- Individual step runners ------------------------------------------------
 
 def step1_download_ai(args, dry_run: bool) -> bool:
     """Download CIFAKE AI-generated dataset."""
@@ -301,7 +311,7 @@ def step7_train_ensemble(args, dry_run: bool) -> bool:
     )
 
 
-# ── Validation report ──────────────────────────────────────────────────────
+# -- Validation report ------------------------------------------------------
 
 def validation_report() -> None:
     """Print a summary of all model artefacts and their status."""
@@ -323,9 +333,9 @@ def validation_report() -> None:
     for name, path in files.items():
         if path.exists():
             size_kb = path.stat().st_size // 1024
-            logger.info(f"  ✅ {name:<35} {size_kb:>8} KB  at {path}")
+            logger.info(f"  [OK] {name:<35} {size_kb:>8} KB  at {path}")
         else:
-            logger.warning(f"  ✗  {name:<35}  NOT FOUND  (expected at {path})")
+            logger.warning(f"  [FAIL]  {name:<35}  NOT FOUND  (expected at {path})")
 
     # Parse ensemble results if available
     results_path = REFERENCE / "ensemble_results.json"
@@ -351,7 +361,7 @@ def validation_report() -> None:
     logger.info("=" * 70)
 
 
-# ── Main ───────────────────────────────────────────────────────────────────
+# -- Main -------------------------------------------------------------------
 
 ALL_STEPS = ["step1", "step2", "step3", "step4", "step5", "step6", "step7"]
 
@@ -363,7 +373,7 @@ def main() -> None:
         epilog=__doc__,
     )
 
-    # ── Pipeline control ─────────────────────────────────────────────────
+    # -- Pipeline control -------------------------------------------------
     parser.add_argument(
         "--start-at", metavar="STEP",
         choices=ALL_STEPS,
@@ -396,7 +406,7 @@ def main() -> None:
         ),
     )
 
-    # ── Hardware / training hyperparameters ──────────────────────────────
+    # -- Hardware / training hyperparameters ------------------------------
     parser.add_argument(
         "--embed-epochs", type=int, default=20,
         help="Epochs for train_embedding.py. Default: 20 (RTX 4050).",
@@ -430,7 +440,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # ── Header ────────────────────────────────────────────────────────────
+    # -- Header ------------------------------------------------------------
     logger.info("=" * 70)
     logger.info("VeriFile-X — Training Pipeline")
     logger.info(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -439,11 +449,11 @@ def main() -> None:
     logger.info(f"Log:     {LOG_FILE}")
     logger.info("=" * 70)
 
-    # ── Pre-flight checks ─────────────────────────────────────────────────
+    # -- Pre-flight checks -------------------------------------------------
     _check_gpu()
     _check_disk(min_gb=15.0)
 
-    # ── Determine which steps to run ──────────────────────────────────────
+    # -- Determine which steps to run --------------------------------------
     skip_set: set[str] = set(s.strip() for s in args.skip.split(",") if s.strip())
 
     if args.only:
@@ -472,7 +482,7 @@ def main() -> None:
             "Actual time depends on data size and hardware."
         )
 
-    # ── Step dispatch ─────────────────────────────────────────────────────
+    # -- Step dispatch -----------------------------------------------------
     step_fns = {
         "step1": step1_download_ai,
         "step2": step2_download_real,
@@ -488,9 +498,9 @@ def main() -> None:
 
     for step in run_steps:
         logger.info("")
-        logger.info(f"━━━ {step}: {STEP_NAMES[step]} ━━━")
+        logger.info(f"--- {step}: {STEP_NAMES[step]} ---")
 
-        # ── Disk space check before each step ────────────────────────────
+        # -- Disk space check before each step ----------------------------
         if not args.dry_run:
             free_gb = _check_disk(min_gb=5.0)
             if free_gb < 3.0:
@@ -499,12 +509,12 @@ def main() -> None:
                 )
                 sys.exit(1)
 
-        # ── Skip-if-done ──────────────────────────────────────────────────
+        # -- Skip-if-done --------------------------------------------------
         if args.skip_done and _step_already_done(step):
-            logger.info(f"  ↩  Outputs already exist — skipping (--skip-done).")
+            logger.info(f"  <-  Outputs already exist — skipping (--skip-done).")
             continue
 
-        # ── Run the step ──────────────────────────────────────────────────
+        # -- Run the step --------------------------------------------------
         fn = step_fns[step]
         ok = fn(args, dry_run=args.dry_run)
 
@@ -517,7 +527,7 @@ def main() -> None:
             )
             break
 
-    # ── Summary ───────────────────────────────────────────────────────────
+    # -- Summary -----------------------------------------------------------
     elapsed_total = time.monotonic() - pipeline_start
     logger.info("")
     logger.info("=" * 70)
