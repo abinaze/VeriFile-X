@@ -6,6 +6,7 @@ import csv
 import argparse
 import zipfile
 import tarfile
+import time
 import requests
 from pathlib import Path
 from tqdm import tqdm
@@ -19,25 +20,73 @@ MANIFEST  = ROOT / "data" / "manifest.csv"
 
 # -- Helpers ----------------------------------------------------------------
 
-def download_file(url: str, dest: Path, desc: str = "") -> Path:
-    """Download with progress bar. Resumes if file partially downloaded."""
+def _is_valid_zip(path: Path) -> bool:
+    """Return True only if the file exists AND is a valid (complete) zip."""
+    if not path.exists() or path.stat().st_size < 22:   # 22 = min zip size
+        return False
+    try:
+        with zipfile.ZipFile(path, "r") as z:
+            bad = z.testzip()   # None means all good; returns first bad file name otherwise
+            return bad is None
+    except (zipfile.BadZipFile, OSError):
+        return False
+
+
+def download_file(url: str, dest: Path, desc: str = "",
+                  timeout: int = 120, max_retries: int = 5) -> Path:
+    """
+    Download with progress bar.
+    - Resumes where it left off using HTTP Range requests.
+    - Retries up to max_retries times with exponential back-off.
+    - Deletes the partial file if the server doesn't support resuming
+      (i.e. responds 200 instead of 206 when we send a Range header).
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
-    existing = dest.stat().st_size if dest.exists() else 0
-    headers  = {"Range": f"bytes={existing}-"} if existing else {}
 
-    r = requests.get(url, headers=headers, stream=True, timeout=60)
-    total = int(r.headers.get("content-length", 0)) + existing
+    for attempt in range(1, max_retries + 1):
+        try:
+            existing = dest.stat().st_size if dest.exists() else 0
+            headers  = {"Range": f"bytes={existing}-"} if existing else {}
 
-    mode = "ab" if existing else "wb"
-    with open(dest, mode) as f, tqdm(
-        total=total, initial=existing, unit="B",
-        unit_scale=True, desc=desc or dest.name
-    ) as bar:
-        for chunk in r.iter_content(chunk_size=8192):
-            if chunk:
-                f.write(chunk)
-                bar.update(len(chunk))
-    return dest
+            r = requests.get(url, headers=headers, stream=True,
+                             timeout=timeout)
+            r.raise_for_status()
+
+            # If server ignored our Range header and sent the full file again,
+            # start fresh to avoid corrupted concatenation.
+            if existing and r.status_code == 200:
+                print(f"  Server does not support resume — restarting download.")
+                dest.unlink(missing_ok=True)
+                existing = 0
+
+            content_length = int(r.headers.get("content-length", 0))
+            total = content_length + existing
+
+            mode = "ab" if existing else "wb"
+            with open(dest, mode) as f, tqdm(
+                total=total, initial=existing, unit="B",
+                unit_scale=True, desc=desc or dest.name
+            ) as bar:
+                for chunk in r.iter_content(chunk_size=65536):
+                    if chunk:
+                        f.write(chunk)
+                        bar.update(len(chunk))
+            return dest   # success
+
+        except (requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+                requests.exceptions.ChunkedEncodingError) as exc:
+            wait = 2 ** attempt
+            print(f"\n  Network error (attempt {attempt}/{max_retries}): {exc}")
+            if attempt < max_retries:
+                print(f"  Retrying in {wait}s …")
+                time.sleep(wait)
+            else:
+                raise RuntimeError(
+                    f"Download failed after {max_retries} attempts: {url}"
+                ) from exc
+
+    return dest   # unreachable, but satisfies type checkers
 
 
 def extract(archive: Path, dest: Path):
@@ -90,21 +139,44 @@ def assign_split(index: int, total: int) -> str:
 # -- Dataset downloaders ----------------------------------------------------
 
 def download_coco():
-    """COCO 2017 validation set — 5,000 real photos, 1GB, CC BY 4.0."""
+    """COCO 2017 validation set -- 5,000 real photos, ~800 MB, CC BY 4.0."""
     print("\n-- COCO 2017 val --------------------------------------")
     dest_dir = DATA_REAL / "coco_val"
     archive  = dest_dir / "val2017.zip"
 
-    if not archive.exists():
+    # Always validate the zip before trusting it.
+    if _is_valid_zip(archive):
+        print(f"Archive already downloaded and valid ({archive.stat().st_size // 1024**2} MB), skipping download.")
+    else:
+        if archive.exists():
+            size_mb = archive.stat().st_size // 1024**2
+            print(f"Existing archive is corrupt or incomplete ({size_mb} MB) — re-downloading.")
+            archive.unlink()
+
+        print("Downloading COCO 2017 val (~800 MB) — this takes several minutes.")
+        print("Will retry automatically on timeout.")
         download_file(
             "http://images.cocodataset.org/zips/val2017.zip",
             archive,
-            "COCO 2017 val"
+            "COCO 2017 val",
+            timeout=120,
+            max_retries=5,
         )
-    else:
-        print("Archive already downloaded, skipping.")
 
-    extract(archive, dest_dir)
+        # Validate after download
+        if not _is_valid_zip(archive):
+            archive.unlink(missing_ok=True)
+            raise RuntimeError(
+                "val2017.zip failed zip validation after download. "
+                "Try again — the COCO server may have dropped the connection."
+            )
+
+    # Only extract if the target folder doesn't already have images
+    val_dir = dest_dir / "val2017"
+    if val_dir.exists() and len(list(val_dir.glob("*.jpg"))) > 4000:
+        print(f"Already extracted ({len(list(val_dir.glob('*.jpg')))} images found).")
+    else:
+        extract(archive, dest_dir)
 
     images = list((dest_dir / "val2017").glob("*.jpg"))
     print(f"Found {len(images)} images")
@@ -115,7 +187,7 @@ def download_coco():
         if info["width"] < 256 or info["height"] < 256:
             continue  # skip tiny images
         rows.append({
-            "path":      str(img_path.relative_to(ROOT)),
+            "path":      img_path.relative_to(ROOT).as_posix(),
             "label":     "real",
             "source":    "coco_val",
             "generator": "none",
@@ -131,7 +203,7 @@ def download_coco():
 
 
 def download_div2k():
-    """DIV2K — 1,000 high-resolution real photos, CC Free research."""
+    """DIV2K -- 1,000 high-resolution real photos, CC Free research."""
     print("\n-- DIV2K ----------------------------------------------")
     dest_dir = DATA_REAL / "div2k"
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -143,10 +215,13 @@ def download_div2k():
 
     for url, desc in urls:
         archive = dest_dir / Path(url).name
-        if not archive.exists():
-            download_file(url, archive, desc)
+        if _is_valid_zip(archive):
+            print(f"{archive.name} already downloaded and valid, skipping.")
         else:
-            print(f"{archive.name} already downloaded.")
+            if archive.exists():
+                print(f"{archive.name} is corrupt — re-downloading.")
+                archive.unlink()
+            download_file(url, archive, desc, timeout=120, max_retries=5)
         extract(archive, dest_dir)
 
     images = list(dest_dir.rglob("*.png")) + list(dest_dir.rglob("*.jpg"))
@@ -156,7 +231,7 @@ def download_div2k():
     for i, img_path in enumerate(sorted(images)):
         info = get_image_info(img_path)
         rows.append({
-            "path":      str(img_path.relative_to(ROOT)),
+            "path":      img_path.relative_to(ROOT).as_posix(),
             "label":     "real",
             "source":    "div2k",
             "generator": "none",
@@ -173,12 +248,12 @@ def download_div2k():
 
 def download_raise1k():
     """
-    RAISE-1k — 1,000 raw uncompressed DSLR photos.
+    RAISE-1k -- 1,000 raw uncompressed DSLR photos.
     Direct download requires registration at http://loki.disi.unitn.it/RAISE/
     This script prints the instructions since it requires a form submission.
     """
     print("\n-- RAISE-1k -------------------------------------------")
-    print("RAISE requires a registration form — cannot be automated.")
+    print("RAISE requires a registration form -- cannot be automated.")
     print("Steps:")
     print("  1. Go to: http://loki.disi.unitn.it/RAISE/")
     print("  2. Fill the form to request download links")
@@ -190,14 +265,13 @@ def download_raise1k():
 
 def download_unsplash():
     """
-    Unsplash Lite — 25,000 professional photos.
+    Unsplash Lite -- 25,000 professional photos.
     Uses the Unsplash dataset GitHub release.
     """
     print("\n-- Unsplash Lite --------------------------------------")
     dest_dir = DATA_REAL / "unsplash"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    # Unsplash Lite dataset CSV (metadata only — images need individual fetch)
     csv_url = (
         "https://github.com/unsplash/datasets/releases/download/"
         "v1.2.0/lite-00000-of-00001.tsv"
@@ -209,7 +283,6 @@ def download_unsplash():
     else:
         print("Metadata already downloaded.")
 
-    # Parse and download images (first 5000 for starter set)
     print("Downloading images from Unsplash CDN (first 5,000)...")
     rows = []
     downloaded = 0
@@ -240,7 +313,7 @@ def download_unsplash():
                         img_path.unlink()
                         continue
                     rows.append({
-                        "path":      str(img_path.relative_to(ROOT)),
+                        "path":      img_path.relative_to(ROOT).as_posix(),
                         "label":     "real",
                         "source":    "unsplash",
                         "generator": "none",
