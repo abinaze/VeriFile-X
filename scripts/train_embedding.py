@@ -105,7 +105,9 @@ def load_manifest(limit: int = 0) -> Tuple[List[dict], List[dict]]:
                 continue
             w = int(row.get("width", 0))
             h = int(row.get("height", 0))
-            if w < 64 or h < 64:
+            # Minimum 16px — allows CIFAKE (32x32) and similar small datasets.
+            # 0x0 means the download script did not record dimensions; keep those too.
+            if (w > 0 and w < 16) or (h > 0 and h < 16):
                 continue
             all_rows.append(row)
 
