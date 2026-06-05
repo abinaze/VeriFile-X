@@ -24,7 +24,7 @@ SAMPLES_EACH = 5000
 def extract_embeddings(rows, device, model):
     embeddings = []
     for row in tqdm(rows, desc="Extracting embeddings"):
-        img_path = ROOT / row["path"].replace("\\", "/")
+        img_path = ROOT / Path(row["path"])
         try:
             img    = Image.open(img_path).convert("RGB")
             tensor = TRANSFORM(img).unsqueeze(0).to(device)
@@ -49,7 +49,7 @@ def main():
     real_rows, ai_rows = [], []
     with open(MANIFEST, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            p = ROOT / row["path"].replace("\\", "/")
+            p = ROOT / Path(row["path"])
             if not p.exists():
                 continue
             if row["label"] == "real" and row["split"] == "train":
