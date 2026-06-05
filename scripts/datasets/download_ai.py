@@ -3,7 +3,7 @@ Download AI-generated datasets.
 Run from repo root: python scripts/datasets/download_ai.py --dataset cifake
 
 Requires for Kaggle datasets:
-  1. Go to kaggle.com → Account → Create API Token
+  1. Go to kaggle.com -> Account -> Create API Token
   2. Save the downloaded kaggle.json to ~/.kaggle/kaggle.json
   3. chmod 600 ~/.kaggle/kaggle.json
 """
@@ -21,7 +21,7 @@ DATA_AI = ROOT / "data" / "ai"
 MANIFEST = ROOT / "data" / "manifest.csv"
 
 
-# ── Shared helpers (same as download_real.py) ──────────────────────────────
+# -- Shared helpers (same as download_real.py) ------------------------------
 
 def download_file(url: str, dest: Path, desc: str = "") -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -90,7 +90,7 @@ def kaggle_download(dataset_slug: str, dest_dir: Path):
     )
 
 
-# ── Dataset downloaders ────────────────────────────────────────────────────
+# -- Dataset downloaders ----------------------------------------------------
 
 def download_cifake():
     """
@@ -98,7 +98,7 @@ def download_cifake():
     We only use the FAKE split (60K AI images).
     License: CC BY 4.0
     """
-    print("\n── CIFAKE ─────────────────────────────────────────────")
+    print("\n-- CIFAKE ---------------------------------------------")
     dest_dir = DATA_AI / "cifake"
 
     kaggle_download(
@@ -140,7 +140,7 @@ def download_fake_real_faces():
     140K Real and Fake Faces — StyleGAN + ProGAN generated.
     License: CC0
     """
-    print("\n── Fake vs Real Faces ─────────────────────────────────")
+    print("\n-- Fake vs Real Faces ---------------------------------")
     dest_dir = DATA_AI / "stylegan_faces"
 
     kaggle_download(
@@ -190,7 +190,7 @@ def download_diffusiondb():
     Streams 10,000 images without downloading the full 1.6TB dataset.
     License: CC BY 4.0
     """
-    print("\n── DiffusionDB (streaming 10K) ────────────────────────")
+    print("\n-- DiffusionDB (streaming 10K) ------------------------")
     try:
         from datasets import load_dataset
     except ImportError:
@@ -245,7 +245,7 @@ def download_genimage_subset():
     Streams a 10K subset from HuggingFace.
     License: CC BY-NC
     """
-    print("\n── GenImage subset (10K) ──────────────────────────────")
+    print("\n-- GenImage subset (10K) ------------------------------")
     try:
         from datasets import load_dataset
     except ImportError:
@@ -293,7 +293,7 @@ def download_genimage_subset():
     print(f"GenImage done: {len(rows)} AI images added.")
 
 
-# ── Entry point ────────────────────────────────────────────────────────────
+# -- Entry point ------------------------------------------------------------
 
 DATASETS = {
     "cifake":       download_cifake,

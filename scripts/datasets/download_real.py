@@ -17,7 +17,7 @@ DATA_REAL = ROOT / "data" / "real"
 MANIFEST  = ROOT / "data" / "manifest.csv"
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────
+# -- Helpers ----------------------------------------------------------------
 
 def download_file(url: str, dest: Path, desc: str = "") -> Path:
     """Download with progress bar. Resumes if file partially downloaded."""
@@ -43,7 +43,7 @@ def download_file(url: str, dest: Path, desc: str = "") -> Path:
 def extract(archive: Path, dest: Path):
     """Extract zip or tar archive."""
     dest.mkdir(parents=True, exist_ok=True)
-    print(f"Extracting {archive.name} → {dest}")
+    print(f"Extracting {archive.name} -> {dest}")
     if archive.suffix == ".zip":
         with zipfile.ZipFile(archive) as z:
             z.extractall(dest)
@@ -87,11 +87,11 @@ def assign_split(index: int, total: int) -> str:
     return "test"
 
 
-# ── Dataset downloaders ────────────────────────────────────────────────────
+# -- Dataset downloaders ----------------------------------------------------
 
 def download_coco():
     """COCO 2017 validation set — 5,000 real photos, 1GB, CC BY 4.0."""
-    print("\n── COCO 2017 val ──────────────────────────────────────")
+    print("\n-- COCO 2017 val --------------------------------------")
     dest_dir = DATA_REAL / "coco_val"
     archive  = dest_dir / "val2017.zip"
 
@@ -132,7 +132,7 @@ def download_coco():
 
 def download_div2k():
     """DIV2K — 1,000 high-resolution real photos, CC Free research."""
-    print("\n── DIV2K ──────────────────────────────────────────────")
+    print("\n-- DIV2K ----------------------------------------------")
     dest_dir = DATA_REAL / "div2k"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -177,7 +177,7 @@ def download_raise1k():
     Direct download requires registration at http://loki.disi.unitn.it/RAISE/
     This script prints the instructions since it requires a form submission.
     """
-    print("\n── RAISE-1k ───────────────────────────────────────────")
+    print("\n-- RAISE-1k -------------------------------------------")
     print("RAISE requires a registration form — cannot be automated.")
     print("Steps:")
     print("  1. Go to: http://loki.disi.unitn.it/RAISE/")
@@ -193,7 +193,7 @@ def download_unsplash():
     Unsplash Lite — 25,000 professional photos.
     Uses the Unsplash dataset GitHub release.
     """
-    print("\n── Unsplash Lite ──────────────────────────────────────")
+    print("\n-- Unsplash Lite --------------------------------------")
     dest_dir = DATA_REAL / "unsplash"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -261,7 +261,7 @@ def download_unsplash():
     print(f"Unsplash done: {len(rows)} images added.")
 
 
-# ── Entry point ────────────────────────────────────────────────────────────
+# -- Entry point ------------------------------------------------------------
 
 DATASETS = {
     "coco":     download_coco,
