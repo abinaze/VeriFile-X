@@ -79,7 +79,7 @@ class ImageManifestDataset(Dataset):
         label = 1 if row["label"] == "ai" else 0
 
         # Fix Windows backslash paths
-        img_path = self.root / row["path"].replace("\\", "/")
+        img_path = self.root / Path(row["path"])
 
         try:
             img = Image.open(img_path).convert("RGB")
@@ -100,7 +100,7 @@ def load_manifest(limit: int = 0) -> Tuple[List[dict], List[dict]]:
     all_rows = []
     with open(MANIFEST_PATH, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            img_path = ROOT / row["path"].replace("\\", "/")
+            img_path = ROOT / Path(row["path"])
             if not img_path.exists():
                 continue
             w = int(row.get("width", 0))

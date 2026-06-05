@@ -120,7 +120,7 @@ def download_cifake():
         for i, img_path in enumerate(sorted(images)):
             info = get_image_info(img_path)
             rows.append({
-                "path":      str(img_path.relative_to(ROOT)),
+                "path":      img_path.relative_to(ROOT).as_posix(),
                 "label":     "ai",
                 "source":    "cifake",
                 "generator": "stable_diffusion_1.4",
@@ -169,7 +169,7 @@ def download_fake_real_faces():
             if info["width"] < 256:
                 continue
             rows.append({
-                "path":      str(img_path.relative_to(ROOT)),
+                "path":      img_path.relative_to(ROOT).as_posix(),
                 "label":     "ai",
                 "source":    "stylegan_faces",
                 "generator": "stylegan2",
@@ -221,7 +221,7 @@ def download_diffusiondb():
             img.convert("RGB").save(img_path, quality=90)
             w, h = img.size
             rows.append({
-                "path":      str(img_path.relative_to(ROOT)),
+                "path":      img_path.relative_to(ROOT).as_posix(),
                 "label":     "ai",
                 "source":    "diffusiondb",
                 "generator": "stable_diffusion_1.4",
@@ -276,7 +276,7 @@ def download_genimage_subset():
             img.convert("RGB").save(img_path, quality=90)
             w, h = img.size
             rows.append({
-                "path":      str(img_path.relative_to(ROOT)),
+                "path":      img_path.relative_to(ROOT).as_posix(),
                 "label":     "ai",
                 "source":    "genimage",
                 "generator": generator,
