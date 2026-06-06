@@ -102,15 +102,28 @@ def main():
     logger.info(f"Test AUC: {test_auc:.4f}  F1: {test_f1:.4f}  Acc: {test_acc:.4f}")
 
     logger.info("Computing SHAP values")
-    explainer        = shap.TreeExplainer(model)
-    shap_values      = explainer.shap_values(X_dev)
-    mean_shap        = np.abs(shap_values).mean(axis=0)
-    signal_importance = sorted(zip(feature_names, mean_shap.tolist()),
-                               key=lambda x: x[1], reverse=True)
-
-    logger.info("Top 10 signals by SHAP importance:")
-    for name, imp in signal_importance[:10]:
-        logger.info(f"  {name:<45} {imp:.4f}")
+    try:
+        # shap.Explainer handles XGBoost 2.x base_score format correctly
+        explainer   = shap.Explainer(model)
+        shap_values = explainer(X_dev).values
+        if shap_values.ndim == 3:
+            shap_values = shap_values[:, :, 1]   # binary: take class-1 slice
+        mean_shap        = np.abs(shap_values).mean(axis=0)
+        signal_importance = sorted(zip(feature_names, mean_shap.tolist()),
+                                   key=lambda x: x[1], reverse=True)
+        logger.info("Top 10 signals by SHAP importance:")
+        for name, imp in signal_importance[:10]:
+            logger.info(f"  {name:<45} {imp:.4f}")
+        shap_ok = True
+    except Exception as exc:
+        logger.warning(f"SHAP failed ({exc}) — falling back to XGBoost native importance")
+        native_imp = model.get_booster().get_score(importance_type="gain")
+        signal_importance = sorted(native_imp.items(), key=lambda x: x[1], reverse=True)
+        logger.info("Top 10 signals by gain importance:")
+        for name, imp in signal_importance[:10]:
+            logger.info(f"  {name:<45} {imp:.4f}")
+        explainer = None
+        shap_ok   = False
 
     MODEL_OUT.parent.mkdir(parents=True, exist_ok=True)
     with open(MODEL_OUT, "wb") as f:
@@ -134,6 +147,14 @@ def main():
     }
     with open(RESULTS_OUT, "w") as f:
         json.dump(results, f, indent=2)
+    if results["cv_auc_mean"] > 0.995:
+        logger.warning(
+            "CV AUC = 1.0 — likely data leakage. "
+            "CIFAKE images are 32x32 while COCO images are large JPEGs. "
+            "The model may be learning resolution/compression, not AI signals. "
+            "Consider adding more diverse datasets (ArtiFact, Defactify) with "
+            "matched resolutions before trusting these results in production."
+        )
     logger.info(f"Results saved to {RESULTS_OUT}")
 
 
