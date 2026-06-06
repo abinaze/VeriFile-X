@@ -14,8 +14,16 @@ _xgb_cache: dict = {}
 
 def _load_xgb():
     if "model" not in _xgb_cache and _XGB_MODEL_PATH.exists():
-        with open(_XGB_MODEL_PATH, "rb") as _f:
-            _xgb_cache.update(pickle.load(_f))
+        try:
+            with open(_XGB_MODEL_PATH, "rb") as _f:
+                _xgb_cache.update(pickle.load(_f))
+        except Exception as _e:
+            # Corrupt file or Git LFS pointer stub — log and skip gracefully
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                f"XGBoost model could not be loaded ({_e}). "
+                "Falling back to weighted sum ensemble."
+            )
     return (
         _xgb_cache.get("model"),
         _xgb_cache.get("feature_names"),
