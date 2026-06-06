@@ -43,7 +43,7 @@ def main():
     with open(FEATURES, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             if feature_names is None:
-                feature_names = [k for k in row if k not in ("label", "path")]
+                feature_names = [k for k in row if k not in ("label", "path", "source")]
             labels.append(int(row["label"]))
             rows.append([float(row[k]) for k in feature_names])
 
