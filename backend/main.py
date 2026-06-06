@@ -45,7 +45,49 @@ shared_limiter = limiter  # alias for explicit import
 async def lifespan(app: FastAPI):
     logger.info("VeriFile-X API starting up")
 
-    # Register HEIF/HEIC format support via pillow-heif.
+    # ── Download model files from HF Space repo if missing ────────────────
+    # On HuggingFace Spaces, Git LFS files are not materialised during the
+    # Docker build (COPY . . copies pointer stubs instead of real binaries).
+    # We fetch them at startup via the Hub HTTP API instead.
+    _ref = Path(__file__).parent.parent / "data" / "reference"
+    _ref.mkdir(parents=True, exist_ok=True)
+    _model_files = [
+        "own_embedding_model.pt",
+        "clip_database.pkl",
+        "own_centroids.pkl",
+        "ensemble_xgb.pkl",
+        "ensemble_results.json",
+    ]
+    _space_id = os.environ.get("SPACE_ID", "abinazebinoy/verifile-x-api")
+    _need_download = any(
+        not (_ref / f).exists() or (_ref / f).stat().st_size < 1000
+        for f in _model_files
+    )
+    if _need_download:
+        logger.info(f"Downloading model files from HuggingFace Space: {_space_id}")
+        try:
+            from huggingface_hub import hf_hub_download
+            for _fname in _model_files:
+                _dest = _ref / _fname
+                if _dest.exists() and _dest.stat().st_size > 1000:
+                    logger.info(f"  Already present: {_fname}")
+                    continue
+                try:
+                    _path = hf_hub_download(
+                        repo_id=_space_id,
+                        filename=f"data/reference/{_fname}",
+                        repo_type="space",
+                        local_dir=str(Path(__file__).parent.parent),
+                    )
+                    logger.info(f"  Downloaded: {_fname} ({Path(_path).stat().st_size // 1024} KB)")
+                except Exception as _e:
+                    logger.warning(f"  Could not download {_fname}: {_e}")
+        except ImportError:
+            logger.warning("huggingface_hub not installed — cannot auto-download model files")
+    else:
+        logger.info("All model files present on disk.")
+
+    # ── Register HEIF/HEIC format support via pillow-heif ─────────────────
     # Must be called before any Pillow image operations.
     # Falls back silently if pillow-heif is not installed.
     try:
