@@ -42,15 +42,18 @@ logs/
 venv/
 .venv/
 
-# Reference data (too large for git)
+# Reference data / trained models (too large for git -- use HuggingFace directly)
 data/reference/real/
 data/reference/ai/
-
-# But keep the database file (it's small)
-!data/reference/clip_database.pkl
+data/reference/*.pkl
+data/reference/*.pt
+data/reference/*.json
+data/reference/*.sha256
+data/reference/*.csv
+!data/reference/.gitkeep
 
 # Keep directory structure
-!data/reference/.gitkeep
+!data/**/.gitkeep
 
 # Development artifacts (never commit these)
 *.sh
@@ -76,18 +79,13 @@ data/ai/**/*.png
 # Dataset metadata files - not needed in git
 data/**/*.parquet
 data/**/*.tsv
-data/**/*.csv
 
-# Large manifest files - tracked by git-lfs or kept local only
+# Large manifest files - tracked locally only
 data/manifest_real.csv
 data/manifest_ai.csv
-data/manifest.csv
 data/real/**/*.zip
 data/ai/**/*.zip
 data/real/**/*.tar
 data/ai/**/*.tar
-data/reference/own_embedding_model.pt
-data/reference/own_centroids.pkl
-data/reference/ensemble_xgb.pkl
 *.zip
 *.tar.gz
