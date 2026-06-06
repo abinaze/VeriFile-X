@@ -45,11 +45,7 @@ venv/
 # Reference data / trained models (too large for git -- use HuggingFace directly)
 data/reference/real/
 data/reference/ai/
-data/reference/*.pkl
-data/reference/*.pt
-data/reference/*.json
 data/reference/*.sha256
-data/reference/*.csv
 !data/reference/.gitkeep
 
 # Keep directory structure
