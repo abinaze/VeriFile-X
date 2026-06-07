@@ -10,6 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 import os
+from pathlib import Path
 
 from backend.core.config import settings
 from backend.core.logger import setup_logger
