@@ -186,8 +186,8 @@ def download_fake_real_faces():
 
 def download_diffusiondb():
     """
-    DiffusionDB — Stable Diffusion 1.4/2.0 images from HuggingFace.
-    Streams 10,000 images without downloading the full 1.6TB dataset.
+    DiffusionDB -- Stable Diffusion images from HuggingFace.
+    Uses the large_random_1k Parquet subset (no loading script needed).
     License: CC BY 4.0
     """
     print("\n-- DiffusionDB (streaming 10K) ------------------------")
@@ -201,36 +201,62 @@ def download_diffusiondb():
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     LIMIT = 10_000
-    print(f"Streaming {LIMIT} images from HuggingFace (no full download)...")
+    print(f"Streaming {LIMIT} images from HuggingFace...")
 
-    ds = load_dataset(
-        "poloclub/diffusiondb",
-        "2m_first_1k",   # smallest subset to start
-        split="train",
-        streaming=True,
-        trust_remote_code=True,
-    )
+    # Use parquet-based subset -- no loading script, works with datasets>=2.x
+    try:
+        ds = load_dataset(
+            "poloclub/diffusiondb",
+            "large_random_1k",
+            split="train",
+            streaming=True,
+        )
+        print("  Loaded poloclub/diffusiondb large_random_1k")
+    except Exception as e:
+        print(f"  poloclub/diffusiondb failed ({e}), trying 2m_first_1k...")
+        try:
+            ds = load_dataset(
+                "poloclub/diffusiondb",
+                "2m_first_1k",
+                split="train",
+                streaming=True,
+            )
+        except Exception as e2:
+            print(f"  All DiffusionDB configs failed: {e2}")
+            print("  Skipping DiffusionDB.")
+            return
 
     rows = []
+    saved = 0
     for i, item in enumerate(tqdm(ds, total=LIMIT, desc="DiffusionDB")):
-        if i >= LIMIT:
+        if saved >= LIMIT:
             break
         try:
-            img      = item["image"]  # PIL Image
-            img_path = dest_dir / f"diffdb_{i:06d}.jpg"
+            img = item.get("image") or item.get("jpg")
+            if img is None:
+                continue
+            if not hasattr(img, "size"):
+                from PIL import Image as _PIL
+                import io
+                img = _PIL.open(io.BytesIO(img))
+            img_path = dest_dir / f"diffdb_{saved:06d}.jpg"
             img.convert("RGB").save(img_path, quality=90)
             w, h = img.size
+            if w < 256 or h < 256:
+                img_path.unlink(missing_ok=True)
+                continue
             rows.append({
                 "path":      img_path.relative_to(ROOT).as_posix(),
                 "label":     "ai",
                 "source":    "diffusiondb",
-                "generator": "stable_diffusion_1.4",
-                "split":     assign_split(i, LIMIT),
+                "generator": "stable_diffusion",
+                "split":     assign_split(saved, LIMIT),
                 "width":     w,
                 "height":    h,
                 "has_exif":  False,
                 "verified":  True,
             })
+            saved += 1
         except Exception as e:
             print(f"  Skipped item {i}: {e}")
             continue
@@ -241,8 +267,8 @@ def download_diffusiondb():
 
 def download_genimage_subset():
     """
-    GenImage — 8 generators including MJ, SDXL, DALL-E.
-    Streams a 10K subset from HuggingFace.
+    GenImage -- 8 generators including MJ, SDXL, DALL-E.
+    Streams a 10K subset from HuggingFace using Parquet files.
     License: CC BY-NC
     """
     print("\n-- GenImage subset (10K) ------------------------------")
@@ -253,39 +279,61 @@ def download_genimage_subset():
         sys.exit(1)
 
     LIMIT = 10_000
-    dest_dir = DATA_AI / "stable_diffusion"
+    dest_dir = DATA_AI / "genimage"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    ds = load_dataset(
-        "ImageNet-GenImage/GenImage",
-        split="train",
-        streaming=True,
-        trust_remote_code=True,
-    )
+    candidates = [
+        ("ImageNet-GenImage/GenImage", {"split": "train", "streaming": True}),
+        ("gneubig/genimage",           {"split": "train", "streaming": True}),
+    ]
+    ds = None
+    for repo, kwargs in candidates:
+        try:
+            ds = load_dataset(repo, **kwargs)
+            print(f"  Loaded from {repo}")
+            break
+        except Exception as e:
+            print(f"  {repo} failed: {e}")
+
+    if ds is None:
+        print("  All GenImage sources failed. Skipping.")
+        return
 
     rows = []
+    saved = 0
     for i, item in enumerate(tqdm(ds, total=LIMIT, desc="GenImage")):
-        if i >= LIMIT:
+        if saved >= LIMIT:
             break
-        if item.get("label") != 0:   # 0 = AI, 1 = real in GenImage
+        lbl = item.get("label", item.get("is_ai", 0))
+        if lbl not in (0, True, "ai"):
             continue
         try:
-            img       = item["image"]
-            generator = item.get("source", "unknown").lower().replace(" ", "_")
-            img_path  = dest_dir / f"genimage_{i:06d}.jpg"
+            img = item.get("image") or item.get("jpg")
+            if img is None:
+                continue
+            if not hasattr(img, "size"):
+                from PIL import Image as _PIL
+                import io
+                img = _PIL.open(io.BytesIO(img))
+            generator = str(item.get("source", item.get("generator", "unknown"))).lower().replace(" ", "_")
+            img_path  = dest_dir / f"genimage_{saved:06d}.jpg"
             img.convert("RGB").save(img_path, quality=90)
             w, h = img.size
+            if w < 256 or h < 256:
+                img_path.unlink(missing_ok=True)
+                continue
             rows.append({
                 "path":      img_path.relative_to(ROOT).as_posix(),
                 "label":     "ai",
                 "source":    "genimage",
                 "generator": generator,
-                "split":     assign_split(i, LIMIT),
+                "split":     assign_split(saved, LIMIT),
                 "width":     w,
                 "height":    h,
                 "has_exif":  False,
                 "verified":  True,
             })
+            saved += 1
         except Exception as e:
             print(f"  Skipped {i}: {e}")
 
@@ -293,32 +341,3 @@ def download_genimage_subset():
     print(f"GenImage done: {len(rows)} AI images added.")
 
 
-# -- Entry point ------------------------------------------------------------
-
-DATASETS = {
-    "cifake":       download_cifake,
-    "faces":        download_fake_real_faces,
-    "diffusiondb":  download_diffusiondb,
-    "genimage":     download_genimage_subset,
-    "all":          None,
-}
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download AI-generated datasets")
-    parser.add_argument(
-        "--dataset",
-        choices=list(DATASETS.keys()),
-        required=True,
-        help="Which dataset to download"
-    )
-    args = parser.parse_args()
-
-    if args.dataset == "all":
-        download_cifake()
-        download_fake_real_faces()
-        download_diffusiondb()
-        download_genimage_subset()
-    else:
-        DATASETS[args.dataset]()
-
-    print("\nDone. Check data/manifest.csv")
