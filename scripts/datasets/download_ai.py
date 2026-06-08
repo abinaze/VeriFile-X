@@ -186,80 +186,61 @@ def download_fake_real_faces():
 
 def download_diffusiondb():
     """
-    DiffusionDB -- Stable Diffusion images from HuggingFace.
-    Uses the large_random_1k Parquet subset (no loading script needed).
-    License: CC BY 4.0
+    DiffusionDB -- downloads a 1K zip directly from HuggingFace file storage.
+    Uses the part-000001.zip which contains 1000 SD 1.4 images at full resolution.
+    No loading script needed -- direct HTTP download.
+    License: CC0 1.0
     """
-    print("\n-- DiffusionDB (streaming 10K) ------------------------")
-    try:
-        from datasets import load_dataset
-    except ImportError:
-        print("Install: pip install datasets")
-        sys.exit(1)
+    print("\n-- DiffusionDB (direct zip download) -----------------")
+    import zipfile, io, requests as _req
 
     dest_dir = DATA_AI / "stable_diffusion"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    LIMIT = 10_000
-    print(f"Streaming {LIMIT} images from HuggingFace...")
+    # Each zip has 1000 images. Download a few zips to get ~5000 images.
+    base_url = "https://huggingface.co/datasets/poloclub/diffusiondb/resolve/main/images"
+    zip_ids  = [1, 2, 3, 4, 5]   # part-000001.zip ... part-000005.zip
 
-    # Use parquet-based subset -- no loading script, works with datasets>=2.x
-    try:
-        ds = load_dataset(
-            "poloclub/diffusiondb",
-            "large_random_1k",
-            split="train",
-            streaming=True,
-        )
-        print("  Loaded poloclub/diffusiondb large_random_1k")
-    except Exception as e:
-        print(f"  poloclub/diffusiondb failed ({e}), trying 2m_first_1k...")
-        try:
-            ds = load_dataset(
-                "poloclub/diffusiondb",
-                "2m_first_1k",
-                split="train",
-                streaming=True,
-            )
-        except Exception as e2:
-            print(f"  All DiffusionDB configs failed: {e2}")
-            print("  Skipping DiffusionDB.")
-            return
-
-    rows = []
+    rows  = []
     saved = 0
-    for i, item in enumerate(tqdm(ds, total=LIMIT, desc="DiffusionDB")):
-        if saved >= LIMIT:
-            break
+    for zip_id in zip_ids:
+        fname  = f"part-{zip_id:06d}.zip"
+        url    = f"{base_url}/{fname}"
+        print(f"  Downloading {fname}...")
         try:
-            img = item.get("image") or item.get("jpg")
-            if img is None:
-                continue
-            if not hasattr(img, "size"):
-                from PIL import Image as _PIL
-                import io
-                img = _PIL.open(io.BytesIO(img))
-            img_path = dest_dir / f"diffdb_{saved:06d}.jpg"
-            img.convert("RGB").save(img_path, quality=90)
-            w, h = img.size
-            if w < 256 or h < 256:
-                img_path.unlink(missing_ok=True)
-                continue
-            rows.append({
-                "path":      img_path.relative_to(ROOT).as_posix(),
-                "label":     "ai",
-                "source":    "diffusiondb",
-                "generator": "stable_diffusion",
-                "split":     assign_split(saved, LIMIT),
-                "width":     w,
-                "height":    h,
-                "has_exif":  False,
-                "verified":  True,
-            })
-            saved += 1
+            r = _req.get(url, timeout=120, stream=True)
+            r.raise_for_status()
+            data = b"".join(r.iter_content(65536))
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                for name in z.namelist():
+                    if not name.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                        continue
+                    try:
+                        from PIL import Image as _PIL
+                        img_bytes = z.read(name)
+                        img       = _PIL.open(io.BytesIO(img_bytes)).convert("RGB")
+                        w, h      = img.size
+                        if w < 256 or h < 256:
+                            continue
+                        out_path = dest_dir / f"diffdb_{saved:06d}.jpg"
+                        img.save(out_path, quality=90)
+                        rows.append({
+                            "path":      out_path.relative_to(ROOT).as_posix(),
+                            "label":     "ai",
+                            "source":    "diffusiondb",
+                            "generator": "stable_diffusion_1.4",
+                            "split":     assign_split(saved, 5000),
+                            "width":     w,
+                            "height":    h,
+                            "has_exif":  False,
+                            "verified":  True,
+                        })
+                        saved += 1
+                    except Exception as e:
+                        print(f"    Skipped {name}: {e}")
+            print(f"    {saved} images so far")
         except Exception as e:
-            print(f"  Skipped item {i}: {e}")
-            continue
+            print(f"  Failed {fname}: {e} -- skipping")
 
     add_to_manifest(rows)
     print(f"DiffusionDB done: {len(rows)} images added.")
@@ -267,25 +248,28 @@ def download_diffusiondb():
 
 def download_genimage_subset():
     """
-    GenImage -- 8 generators including MJ, SDXL, DALL-E.
-    Streams a 10K subset from HuggingFace using Parquet files.
-    License: CC BY-NC
+    Defactify MS-COCOAI dataset -- real + AI images at matched resolutions.
+    Uses SD3, SD2.1, SDXL, DALL-E 3, MidJourney v6 generators.
+    Available on HuggingFace as Parquet files (no loading script).
+    License: research use
     """
-    print("\n-- GenImage subset (10K) ------------------------------")
+    print("\n-- Defactify MS-COCOAI (AI images, full resolution) --")
     try:
         from datasets import load_dataset
     except ImportError:
         print("Install: pip install datasets")
         sys.exit(1)
 
-    LIMIT = 10_000
-    dest_dir = DATA_AI / "genimage"
+    LIMIT    = 5000
+    dest_dir = DATA_AI / "defactify"
     dest_dir.mkdir(parents=True, exist_ok=True)
 
+    # Try Defactify / MS-COCOAI first, then CortexLM/midjourney-v6 as fallback
     candidates = [
-        ("ImageNet-GenImage/GenImage", {"split": "train", "streaming": True}),
-        ("gneubig/genimage",           {"split": "train", "streaming": True}),
+        ("Rajarshi-Roy-research/Defactify_Image_Dataset", {"split": "train", "streaming": True}),
+        ("CortexLM/midjourney-v6",                        {"split": "train", "streaming": True}),
     ]
+
     ds = None
     for repo, kwargs in candidates:
         try:
@@ -296,27 +280,29 @@ def download_genimage_subset():
             print(f"  {repo} failed: {e}")
 
     if ds is None:
-        print("  All GenImage sources failed. Skipping.")
+        print("  All sources failed. Skipping genimage/defactify step.")
         return
 
-    rows = []
+    rows  = []
     saved = 0
-    for i, item in enumerate(tqdm(ds, total=LIMIT, desc="GenImage")):
+    from tqdm import tqdm as _tqdm
+    for i, item in enumerate(_tqdm(ds, total=LIMIT, desc="Defactify")):
         if saved >= LIMIT:
             break
-        lbl = item.get("label", item.get("is_ai", 0))
-        if lbl not in (0, True, "ai"):
-            continue
         try:
-            img = item.get("image") or item.get("jpg")
+            # Defactify labels: 'real' or 'fake'/'ai'. Keep only AI images.
+            lbl = str(item.get("label", item.get("is_ai", "ai"))).lower()
+            if lbl in ("real", "1", "human"):
+                continue
+            img = item.get("image") or item.get("jpg") or item.get("img")
             if img is None:
                 continue
             if not hasattr(img, "size"):
                 from PIL import Image as _PIL
                 import io
                 img = _PIL.open(io.BytesIO(img))
-            generator = str(item.get("source", item.get("generator", "unknown"))).lower().replace(" ", "_")
-            img_path  = dest_dir / f"genimage_{saved:06d}.jpg"
+            generator = str(item.get("generator", item.get("source", "unknown"))).lower().replace(" ", "_")
+            img_path  = dest_dir / f"defactify_{saved:06d}.jpg"
             img.convert("RGB").save(img_path, quality=90)
             w, h = img.size
             if w < 256 or h < 256:
@@ -325,7 +311,7 @@ def download_genimage_subset():
             rows.append({
                 "path":      img_path.relative_to(ROOT).as_posix(),
                 "label":     "ai",
-                "source":    "genimage",
+                "source":    "defactify",
                 "generator": generator,
                 "split":     assign_split(saved, LIMIT),
                 "width":     w,
@@ -338,34 +324,6 @@ def download_genimage_subset():
             print(f"  Skipped {i}: {e}")
 
     add_to_manifest(rows)
-    print(f"GenImage done: {len(rows)} AI images added.")
+    print(f"Defactify done: {len(rows)} AI images added.")
 
 
-DATASETS = {
-    "cifake":       download_cifake,
-    "faces":        download_fake_real_faces,
-    "diffusiondb":  download_diffusiondb,
-    "genimage":     download_genimage_subset,
-    "all":          None,
-}
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Download AI-generated datasets")
-    parser.add_argument(
-        "--dataset",
-        choices=list(DATASETS.keys()),
-        required=True,
-        help="Which dataset to download"
-    )
-    args = parser.parse_args()
-
-    if args.dataset == "all":
-        download_cifake()
-        download_fake_real_faces()
-        download_diffusiondb()
-        download_genimage_subset()
-    else:
-        DATASETS[args.dataset]()
-
-    print("\nDone. Check data/manifest.csv")
