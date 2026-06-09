@@ -356,3 +356,32 @@ if __name__ == "__main__":
         DATASETS[args.dataset]()
 
     print("\nDone. Check data/manifest.csv")
+
+DATASETS = {
+    "cifake":       download_cifake,
+    "faces":        download_fake_real_faces,
+    "diffusiondb":  download_diffusiondb,
+    "genimage":     download_genimage_subset,
+    "all":          None,
+}
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Download AI-generated datasets")
+    parser.add_argument(
+        "--dataset",
+        choices=list(DATASETS.keys()),
+        required=True,
+        help="Which dataset to download"
+    )
+    args = parser.parse_args()
+
+    if args.dataset == "all":
+        download_cifake()
+        download_fake_real_faces()
+        download_diffusiondb()
+        download_genimage_subset()
+    else:
+        DATASETS[args.dataset]()
+
+    print("\nDone. Check data/manifest.csv")
