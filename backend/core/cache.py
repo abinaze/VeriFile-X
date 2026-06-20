@@ -11,6 +11,7 @@ Privacy note:
 - Results contain no personal data
 - Cache cleared on server restart (no persistence)
 """
+import copy
 import hashlib
 import threading
 from typing import Dict, Optional, Any, Union
@@ -75,7 +76,7 @@ class ForensicsCache:
                 f"(age={age.seconds}s, cache_size={len(self._cache)})"
             )
 
-            result = entry["report"].copy()
+            result = copy.deepcopy(entry["report"])
             result["cache_info"] = {
                 "cached":      True,
                 "age_seconds": age.seconds,
