@@ -126,7 +126,7 @@ class DIREDetector:
             image_bytes: Raw image bytes
 
         Returns:
-            Preprocessed tensor (1, 3, 512, 512)
+            Pixel-space tensor (1, 3, 512, 512), values in [-1, 1].
         """
         from io import BytesIO
 
@@ -145,41 +145,68 @@ class DIREDetector:
 
         return img_tensor.to(self.device)
 
-    def _add_noise(self, image: torch.Tensor, timestep: int = 50) -> torch.Tensor:
+    def _encode_to_latent(self, pixels: torch.Tensor) -> torch.Tensor:
         """
-        Add noise to image (forward diffusion).
+        Encode a pixel-space tensor (1, 3, 512, 512) into the VAE latent
+        space (1, 4, 64, 64) that the UNet expects.
+
+        The 0.18215 factor is SD's VAE scaling constant — it brings the
+        raw VAE posterior to approximately unit variance, matching the
+        scale the UNet was trained on.
+        """
+        with torch.no_grad():
+            latent_dist = self.pipe.vae.encode(
+                pixels.to(self.pipe.vae.dtype)
+            ).latent_dist
+            latents = latent_dist.sample() * 0.18215
+        return latents.to(self.device)
+
+    def _decode_from_latent(self, latents: torch.Tensor) -> torch.Tensor:
+        """
+        Decode a VAE latent (1, 4, 64, 64) back to pixel space
+        (1, 3, 512, 512), values in [-1, 1].
+        """
+        with torch.no_grad():
+            pixels = self.pipe.vae.decode(
+                latents.to(self.pipe.vae.dtype) / 0.18215
+            ).sample
+        return pixels.to(self.device)
+
+    def _add_noise(self, image: torch.Tensor, timestep=50) -> torch.Tensor:
+        """
+        Add noise to a latent (forward diffusion).
 
         Args:
-            image: Clean image tensor
-            timestep: Noise level (0-999, higher = more noise)
+            image:     Clean latent tensor (1, 4, 64, 64).
+            timestep:  Scalar timestep value or tensor.  Must equal the
+                       first timestep in the reverse schedule so that the
+                       noise level exactly matches where _denoise starts.
 
         Returns:
-            Noised image tensor
+            Noised latent tensor.
         """
-        # Get noise schedule
         noise = torch.randn_like(image)
-
-        # Apply forward diffusion
-        timesteps = torch.tensor([timestep], device=self.device)
-        noisy_image = self.scheduler.add_noise(image, noise, timesteps)
-
+        ts = timestep if torch.is_tensor(timestep) else torch.tensor([timestep], device=self.device)
+        noisy_image = self.scheduler.add_noise(image, noise, ts)
         return noisy_image
 
     def _denoise(self, noisy_image: torch.Tensor, steps: int = 20) -> torch.Tensor:
         """
-        Denoise image (reverse diffusion).
+        Denoise a latent (reverse diffusion).
 
         Args:
-            noisy_image: Noised image tensor
-            steps: Number of denoising steps (more = better quality, slower)
+            noisy_image: Noised latent tensor (1, 4, 64, 64).
+            steps:       Number of denoising steps.
+
+        Note: self.scheduler.set_timesteps(steps) must be called by detect()
+        BEFORE _add_noise so that the noise level and the first denoising
+        timestep are aligned. Calling set_timesteps here (after noising) would
+        produce a timestep mismatch and garbage reconstructions.
 
         Returns:
-            Reconstructed image tensor
+            Reconstructed latent tensor.
         """
-        # Set timesteps for denoising
-        self.scheduler.set_timesteps(steps)
-
-        # Start from noisy image
+        # Start from noisy latent
         latent = noisy_image
 
         # Iterative denoising
@@ -236,21 +263,33 @@ class DIREDetector:
 
             logger.info(f"Running DIRE detection on {filename}")
 
-            # Preprocess
-            image = self._preprocess_image(image_bytes)
+            # 1. Preprocess to pixel space (1, 3, 512, 512), values in [-1, 1]
+            pixels = self._preprocess_image(image_bytes)
 
-            # Forward diffusion — noise latents at scheduler start timestep
-            # (timestep arg is now ignored; _add_noise uses scheduler.timesteps[0])
-            noisy_latents = self._add_noise(image, timestep=50)
+            # 2. Encode pixels → VAE latent (1, 4, 64, 64).
+            #    The UNet operates on latents, not on raw pixel tensors.
+            #    (Previous code passed pixel tensors to vae.decode() — wrong shape.)
+            latents = self._encode_to_latent(pixels)
 
-            # Reverse diffusion — returns pixel-space image after VAE decode
-            reconstructed = self._denoise(noisy_latents, steps=20)
+            # 3. Set up the reverse-diffusion schedule BEFORE noising so
+            #    _add_noise can use the correct start timestep. Calling
+            #    set_timesteps after noising would misalign noise level and
+            #    denoising loop start.
+            denoise_steps = 20
+            self.scheduler.set_timesteps(denoise_steps)
+            start_timestep = self.scheduler.timesteps[0]
 
-            # Compute reconstruction error in pixel space
-            # We need to decode the original latents to pixel space for fair comparison
-            with __import__('torch').no_grad():
-                orig_pixels = self.pipe.vae.decode(image / 0.18215).sample
-            error = self._compute_reconstruction_error(orig_pixels, reconstructed)
+            # 4. Forward diffusion — noise the latents at the schedule's
+            #    start timestep so _denoise can fully reconstruct them.
+            noisy_latents = self._add_noise(latents, timestep=start_timestep)
+
+            # 5. Reverse diffusion — iteratively denoise in latent space.
+            reconstructed_latents = self._denoise(noisy_latents, steps=denoise_steps)
+
+            # 6. Decode both original and reconstructed latents to pixel space
+            #    for a like-for-like MSE comparison.
+            reconstructed_pixels = self._decode_from_latent(reconstructed_latents)
+            error = self._compute_reconstruction_error(pixels, reconstructed_pixels)
 
             # Convert error to AI probability score
             # Lower error = better reconstruction = more likely AI
