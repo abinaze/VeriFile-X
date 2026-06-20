@@ -87,3 +87,4 @@ data/ai/**/*.tar
 *.tar.gz
 data/training_log.txt
 data/training_log.txt
+data/training_log.txt

@@ -3,13 +3,13 @@
 # Use this on Linux: pip install -r requirements-linux.txt
 
 # Core Framework
-fastapi==0.115.0
+fastapi==0.115.14
 
 # Transitive dependencies pinned to close Dependabot CVE alerts
 # (#137 Pygments ReDoS, #157/#158 idna bypass, #162/#163 Starlette DoS).
-# These are resolved as transitive deps of fastapi/starlette but must be
-# pinned explicitly so pip's resolver selects patched versions.
-starlette>=0.46.2
+# starlette>=0.46.2 is NOT pinned here — fastapi>=0.115.14 already pulls
+# starlette>=0.40.0,<0.47.0 which includes the patched 0.46.x range.
+# Explicit starlette pin would conflict with fastapi's own upper bound.
 idna>=3.7
 Pygments>=2.18.0
 uvicorn[standard]==0.27.0
