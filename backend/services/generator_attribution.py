@@ -11,7 +11,18 @@ Generators:
   sdxl       - Stable Diffusion XL / Turbo
   midjourney - Midjourney v4 / v5 / v6
   real       - Authentic photograph
+  gpt4o      - GPT-4o native image generation (OpenAI, 2024+)
+  flux       - Flux.1-dev / Flux.1-schnell (Black Forest Labs, 2024+)
+  imagen3    - Imagen 3 (Google DeepMind, 2024+)
+  ideogram   - Ideogram 1.0 / 2.0 (2024+)
+  recraft    - Recraft V3 (2024+)
   unknown    - Cannot determine with sufficient confidence
+
+Note on 2024+ generators (gpt4o, flux, imagen3, ideogram, recraft):
+  Rule-based heuristics below are derived from published frequency-analysis
+  characteristics and have NOT yet been validated against a labeled benchmark
+  for this project. Treat attributions to these generators as provisional
+  until the XGBoost attribution model is retrained on samples that include them.
 
 Method:
   1. Extract DCT block energy distribution (8x8 blocks)
@@ -39,10 +50,19 @@ _GENERATOR_PROFILES = {
     "sd14":       {"hf_low": 0.01, "hf_high": 0.08, "checker_high": False, "noise_low": True},
     "sdxl":       {"hf_low": 0.02, "hf_high": 0.12, "checker_high": False, "noise_low": False},
     "midjourney": {"hf_low": 0.04, "hf_high": 0.18, "checker_high": False, "noise_low": False},
+    # 2024+ generators (profiles based on published frequency characteristics)
+    "gpt4o":      {"hf_low": 0.02, "hf_high": 0.10, "checker_high": False, "noise_low": True},
+    "flux":       {"hf_low": 0.07, "hf_high": 0.20, "checker_high": False, "noise_low": True},
+    "imagen3":    {"hf_low": 0.05, "hf_high": 0.16, "checker_high": False, "noise_low": False},
+    "ideogram":   {"hf_low": 0.05, "hf_high": 0.17, "checker_high": False, "noise_low": False},
+    "recraft":    {"hf_low": 0.01, "hf_high": 0.07, "checker_high": False, "noise_low": True},
     "real":       {"hf_low": 0.08, "hf_high": 0.35, "checker_high": False, "noise_low": False},
 }
 
-_LABELS = ["stylegan", "dalle3", "sd14", "sdxl", "midjourney", "real"]
+_LABELS = [
+    "stylegan", "dalle3", "sd14", "sdxl", "midjourney",
+    "gpt4o", "flux", "imagen3", "ideogram", "recraft", "real",
+]
 
 _ATTRIBUTION_MODEL_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "attribution_xgb.pkl"
 
@@ -143,6 +163,7 @@ def _rule_based_attribution(feats: Dict[str, float]) -> Dict[str, float]:
     """
     scores  = {g: 0.0 for g in _LABELS}
     hf      = feats["mean_hf"]
+    std_hf  = feats["std_hf"]
     checker = feats["checker_ratio"]
     noise   = feats["noise_std"]
     corr    = feats["colour_corr"]
@@ -186,7 +207,50 @@ def _rule_based_attribution(feats: Dict[str, float]) -> Dict[str, float]:
     if noise > 5.0:
         scores["midjourney"] += 0.20
 
-    # Real photo: high HF, high noise, natural slope
+    # GPT-4o: autoregressive image tokenizer — smooth, low noise, low HF,
+    # strong colour-channel correlation, no checkerboard.
+    if 0.02 < hf < 0.10 and checker < 0.15:
+        scores["gpt4o"] += 0.30
+    if noise < 3.5:
+        scores["gpt4o"] += 0.30
+    if corr > 0.90:
+        scores["gpt4o"] += 0.20
+
+    # Flux: flow-matching diffusion for photorealism — high HF approaching
+    # real photos, no checkerboard, lower noise than genuine camera images.
+    if 0.07 < hf < 0.20 and checker < 0.15:
+        scores["flux"] += 0.30
+    if noise < 5.0 and hf > 0.07:
+        scores["flux"] += 0.20
+    if -2.0 < slope < -1.0:
+        scores["flux"] += 0.25
+
+    # Imagen 3: diffusion, high-frequency detail, smooth colour fields.
+    if 0.05 < hf < 0.16 and checker < 0.20:
+        scores["imagen3"] += 0.30
+    if 3.5 <= noise <= 6.0:
+        scores["imagen3"] += 0.25
+    if corr > 0.85:
+        scores["imagen3"] += 0.15
+
+    # Ideogram: tuned for crisp text/graphics — sharper edges, moderate HF.
+    if 0.05 < hf < 0.17 and checker < 0.20:
+        scores["ideogram"] += 0.25
+    if std_hf > 0.05:
+        scores["ideogram"] += 0.25
+    if noise > 4.0:
+        scores["ideogram"] += 0.15
+
+    # Recraft: vector/illustration-influenced diffusion — very smooth
+    # gradients, very low HF, very low noise, strong colour correlation.
+    if hf < 0.07:
+        scores["recraft"] += 0.30
+    if noise < 3.0:
+        scores["recraft"] += 0.30
+    if corr > 0.92:
+        scores["recraft"] += 0.20
+
+    # Real photo: high HF, high noise, natural 1/f slope
     if hf > 0.10:
         scores["real"] += 0.40
     if noise > 6.0:

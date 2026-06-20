@@ -8,7 +8,11 @@ from PIL import Image
 from io import BytesIO
 
 
-_VALID_GENERATORS = {"stylegan", "dalle3", "sd14", "sdxl", "midjourney", "real", "unknown"}
+_VALID_GENERATORS = {
+    "stylegan", "dalle3", "sd14", "sdxl", "midjourney",
+    "gpt4o", "flux", "imagen3", "ideogram", "recraft",
+    "real", "unknown",
+}
 
 
 def _make_image(width: int = 128, height: int = 128) -> bytes:
@@ -35,7 +39,10 @@ def test_attribution_confidence_in_range():
 def test_attribution_all_scores_present():
     from backend.services.generator_attribution import attribute_generator
     result = attribute_generator(_make_image(), "test.jpg")
-    for g in ["stylegan", "dalle3", "sd14", "sdxl", "midjourney", "real"]:
+    for g in [
+        "stylegan", "dalle3", "sd14", "sdxl", "midjourney",
+        "gpt4o", "flux", "imagen3", "ideogram", "recraft", "real",
+    ]:
         assert g in result["all_scores"]
         assert 0.0 <= result["all_scores"][g] <= 1.0
 

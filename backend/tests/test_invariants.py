@@ -81,7 +81,9 @@ def test_noise_image_attribution_valid():
     from backend.services.generator_attribution import attribute_generator
     result = attribute_generator(_make_noise_image(), "noise.jpg")
     assert result["predicted_generator"] in {
-        "stylegan", "dalle3", "sd14", "sdxl", "midjourney", "real", "unknown"
+        "stylegan", "dalle3", "sd14", "sdxl", "midjourney",
+        "gpt4o", "flux", "imagen3", "ideogram", "recraft",
+        "real", "unknown",
     }
     assert 0.0 <= result["confidence"] <= 1.0
 
