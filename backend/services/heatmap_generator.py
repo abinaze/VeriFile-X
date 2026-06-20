@@ -20,7 +20,7 @@ from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
-_MODEL_PATH = Path("data/reference/own_embedding_model.pt")
+_MODEL_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "own_embedding_model.pt"
 
 
 def _neutral_heatmap(image_bytes: bytes) -> np.ndarray:
