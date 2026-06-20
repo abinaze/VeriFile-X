@@ -1,35 +1,26 @@
 """
-Platt Scaling Confidence Calibration — Phase 25.
+Platt Scaling Confidence Calibration.
 
-Replaces the hand-tuned one-line calibrate() stub in
-advanced_ensemble_detector.py with a proper Platt scaling layer.
-
-Algorithm
----------
 P(y=1 | f) = sigmoid(A * f + B)
 
-where A and B are fitted by maximum likelihood on a labeled holdout set.
+Parameters are loaded once at module import and cached in memory.
+Previously _load_params() was called on every calibrate() invocation,
+causing 30 unnecessary file reads per image analysis (one per signal).
 
-If no fitted parameters exist (first run / missing calibration file),
-the module falls back to a sensible default (A = -1.0, B = 0.5) which
-approximates the old hand-tuned curve without its discontinuities.
+If no fitted parameters exist the module falls back to sensible defaults
+(A = 5.0, B = -2.5) which approximate the prior hand-tuned curve.
 
 Wilson score intervals
 ----------------------
-For a given calibrated probability p, the Wilson score 90% interval is:
-
+For a calibrated probability p:
   centre = (p + z²/2n) / (1 + z²/n)
   half_w = z * sqrt(p(1-p)/n + z²/4n²) / (1 + z²/n)
-
-where z = 1.645 (90% two-sided) and n = effective sample count from the
-signal confidence weights.  This gives honest, coverage-guaranteed bounds
-unlike the hand-coded ±0.10 offsets in the old stub.
+where z = 1.645 (90% two-sided) and n = sum of signal confidences.
 
 Persistence
 -----------
-Calibration parameters saved to data/reference/platt_params.json.
-If the file is absent the module uses the default parameters — safe to
-deploy without re-training.
+Parameters saved to data/reference/platt_params.json.
+Absent file → default parameters. Safe to deploy without retraining.
 """
 
 import json
@@ -44,14 +35,17 @@ logger = setup_logger(__name__)
 
 _PARAMS_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "platt_params.json"
 
-# Default parameters: sigmoid(A*f + B) must be monotonically increasing in f.
-# A > 0 ensures higher raw score → higher calibrated probability.
-# A=5.0, B=-2.5 gives: calibrate(0)≈0.08, calibrate(0.5)=0.50, calibrate(1)≈0.92
-_DEFAULT_A =  5.0
+# Default parameters: sigmoid(A*f + B) is monotonically increasing in f.
+# calibrate(0)≈0.08  calibrate(0.5)=0.50  calibrate(1)≈0.92
+_DEFAULT_A = 5.0
 _DEFAULT_B = -2.5
 
 # Wilson score z-value for 90% two-sided interval
-_WILSON_Z  = 1.645
+_WILSON_Z = 1.645
+
+# ── Module-level param cache — loaded once, never re-read from disk ────────
+_cached_A: Optional[float] = None
+_cached_B: Optional[float] = None
 
 
 def _sigmoid(x: float) -> float:
@@ -63,35 +57,50 @@ def _sigmoid(x: float) -> float:
 
 
 def _load_params() -> Tuple[float, float]:
-    """Load A, B from file or return defaults."""
+    """
+    Return cached (A, B). Load from disk on first call, then cache in
+    module-level variables so subsequent calls are pure memory reads.
+    """
+    global _cached_A, _cached_B
+    if _cached_A is not None and _cached_B is not None:
+        return _cached_A, _cached_B
     try:
         if _PARAMS_PATH.exists():
             data = json.loads(_PARAMS_PATH.read_text(encoding="utf-8"))
-            return float(data["A"]), float(data["B"])
+            _cached_A = float(data["A"])
+            _cached_B = float(data["B"])
+            logger.info("Loaded Platt params A=%.4f B=%.4f from %s", _cached_A, _cached_B, _PARAMS_PATH)
+            return _cached_A, _cached_B
     except Exception as exc:
         logger.warning("Could not load Platt params: %s — using defaults", exc)
-    return _DEFAULT_A, _DEFAULT_B
+    _cached_A, _cached_B = _DEFAULT_A, _DEFAULT_B
+    return _cached_A, _cached_B
+
+
+def reload_params() -> Tuple[float, float]:
+    """
+    Force a re-read from disk (call after save_params() or after
+    replacing platt_params.json without restarting the process).
+    """
+    global _cached_A, _cached_B
+    _cached_A = None
+    _cached_B = None
+    return _load_params()
 
 
 def save_params(A: float, B: float) -> None:
-    """Persist fitted Platt parameters to disk."""
+    """Persist fitted Platt parameters to disk and refresh in-memory cache."""
+    global _cached_A, _cached_B
     _PARAMS_PATH.parent.mkdir(parents=True, exist_ok=True)
     _PARAMS_PATH.write_text(
         json.dumps({"A": A, "B": B}, indent=2), encoding="utf-8"
     )
+    _cached_A, _cached_B = A, B
     logger.info("Saved Platt params A=%.4f B=%.4f to %s", A, B, _PARAMS_PATH)
 
 
 def calibrate(raw_score: float) -> float:
-    """
-    Apply Platt scaling to a raw ensemble score.
-
-    Returns a calibrated probability in [0, 1].
-    Replaces the old hand-coded stub:
-        adjusted = score - 0.02
-        if adjusted > 0.65: boost ...
-        elif adjusted < 0.35: compress ...
-    """
+    """Apply Platt scaling to a raw ensemble score → calibrated probability [0, 1]."""
     A, B = _load_params()
     return _sigmoid(A * raw_score + B)
 
@@ -108,22 +117,14 @@ def calibrate_with_interval(
         signals:   List of signal dicts with 'confidence' for effective n.
 
     Returns:
-        {
-          "calibrated": float,
-          "interval_90": [lower, upper],
-          "A": float, "B": float,
-        }
+        {"calibrated": float, "interval_90": [lower, upper], "A": float, "B": float}
     """
     A, B = _load_params()
     p = _sigmoid(A * raw_score + B)
 
-    # Effective sample count: sum of signal confidences (proxy for n)
-    if signals:
-        n_eff = max(1.0, sum(s.get("confidence", 0.0) for s in signals))
-    else:
-        n_eff = 10.0  # conservative default
+    n_eff = max(1.0, sum(s.get("confidence", 0.0) for s in signals)) if signals else 10.0
 
-    z  = _WILSON_Z
+    z = _WILSON_Z
     z2 = z * z
     centre = (p + z2 / (2 * n_eff)) / (1 + z2 / n_eff)
     half_w = (z * math.sqrt(p * (1 - p) / n_eff + z2 / (4 * n_eff * n_eff))) / (
@@ -160,22 +161,18 @@ def fit(
         (A, B) — also persisted to data/reference/platt_params.json.
     """
     scores = np.asarray(raw_scores, dtype=np.float64)
-    y      = np.asarray(labels,     dtype=np.float64)
+    y = np.asarray(labels, dtype=np.float64)
 
-    # Initialize near identity transform
     A = float(_DEFAULT_A)
     B = float(_DEFAULT_B)
 
     for _ in range(max_iter):
         logits = A * scores + B
-        probs  = 1.0 / (1.0 + np.exp(-np.clip(logits, -50, 50)))
-        probs  = np.clip(probs, 1e-7, 1 - 1e-7)
-
-        # Gradients of negative log-likelihood
-        error  = probs - y
-        dA     = float(np.mean(error * scores))
-        dB     = float(np.mean(error))
-
+        probs = 1.0 / (1.0 + np.exp(-np.clip(logits, -50, 50)))
+        probs = np.clip(probs, 1e-7, 1 - 1e-7)
+        error = probs - y
+        dA = float(np.mean(error * scores))
+        dB = float(np.mean(error))
         A -= lr * dA
         B -= lr * dB
 
