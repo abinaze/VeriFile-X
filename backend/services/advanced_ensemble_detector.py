@@ -82,18 +82,47 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         base_report = super().detect()
 
         # Deep-learning and forensic signals
-        dire_result     = self.dire_detector.detect(self.image_bytes, self.filename)
-        clip_result     = self.clip_detector.detect(self.image_bytes, self.filename)
-        own_result      = self.own_detector.detect(self.image_bytes, self.filename)
-        prnu_result     = detect_prnu(self.image_bytes, self.filename)
-        ela_result      = detect_ela(self.image_bytes, self.filename)
-        metadata_result = analyze_metadata(self.image_bytes, self.filename)
+        dire_result       = self.dire_detector.detect(self.image_bytes, self.filename)
+        clip_result       = self.clip_detector.detect(self.image_bytes, self.filename)
+        own_result        = self.own_detector.detect(self.image_bytes, self.filename)
+        prnu_result       = detect_prnu(self.image_bytes, self.filename)
+        ela_result        = detect_ela(self.image_bytes, self.filename)
+        metadata_result   = analyze_metadata(self.image_bytes, self.filename)
         dct_result        = detect_dct_artifacts(self.image_bytes, self.filename)
-        jpeg_ghost_result   = detect_jpeg_ghost(self.image_bytes, self.filename)
-        noise_map_result    = detect_noise_map(self.image_bytes, self.filename)
-        noiseprint_result   = detect_noiseprint(self.image_bytes, self.filename)
-        cfa_result          = detect_cfa_artifacts(self.image_bytes, self.filename)
+        jpeg_ghost_result = detect_jpeg_ghost(self.image_bytes, self.filename)
+        noise_map_result  = detect_noise_map(self.image_bytes, self.filename)
+        noiseprint_result = detect_noiseprint(self.image_bytes, self.filename)
+        cfa_result        = detect_cfa_artifacts(self.image_bytes, self.filename)
 
+        return self.combine_signals(
+            base_report, dire_result, clip_result, own_result, prnu_result,
+            ela_result, metadata_result, dct_result, jpeg_ghost_result,
+            noise_map_result, noiseprint_result, cfa_result,
+        )
+
+    def combine_signals(
+        self,
+        base_report:       Dict[str, Any],
+        dire_result:       Dict[str, Any],
+        clip_result:       Dict[str, Any],
+        own_result:        Dict[str, Any],
+        prnu_result:       Dict[str, Any],
+        ela_result:        Dict[str, Any],
+        metadata_result:   Dict[str, Any],
+        dct_result:        Dict[str, Any],
+        jpeg_ghost_result: Dict[str, Any],
+        noise_map_result:  Dict[str, Any],
+        noiseprint_result: Dict[str, Any],
+        cfa_result:        Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Combine pre-computed signal results into the final ensemble report.
+
+        Extracted from detect() so callers that have already run each
+        detector individually (e.g. the SSE streaming analyser) can reuse
+        the exact same scoring / calibration / classification logic without
+        executing any detector a second time.
+        """
         # Combine all 30 signals
         all_signals = base_report["all_signals"] + [
             dire_result, clip_result, own_result, prnu_result,
