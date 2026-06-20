@@ -917,6 +917,50 @@ footer {
     .how-grid { grid-template-columns: 1fr; }
     .theme-btn { font-size: 11px; padding: 5px 10px; }
 }
+
+.error-banner {
+    max-width: 680px;
+    margin: 0 auto 16px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #ef4444;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.error-banner.active { display: flex; }
+
+.error-banner-close {
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+.result-thumbnail-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.result-thumbnail {
+    max-width: 220px;
+    max-height: 220px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+    object-fit: contain;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -950,7 +994,7 @@ footer {
         <div class="hero-text-col">
             <div class="hero-badge">DIRE + CLIP + Statistical Analysis</div>
             <h1>Unmask AI Content with Confidence</h1>
-            <p>VeriFile-X is an advanced AI image verification platform that analyses any image using 26 independent forensic signals. Instantly determine whether an image is AI-generated or authentic — with cryptographic hashes, EXIF forensics, generator attribution, platform detection, and a downloadable evidence report.</p>
+            <p>VeriFile-X is an advanced AI image verification platform that analyses any image using 30 independent forensic signals. Instantly determine whether an image is AI-generated or authentic — with cryptographic hashes, EXIF forensics, generator attribution, platform detection, and a downloadable evidence report.</p>
             <a class="hero-cta" href="#upload-section">
                 Start Analysis
                 <svg class="hero-cta-arrow" viewBox="0 0 20 20">
@@ -965,7 +1009,7 @@ footer {
 <div class="stats-bar">
     <div class="stats-inner">
         <div class="stat-item">
-            <div class="stat-number">26</div>
+            <div class="stat-number">30</div>
             <div class="stat-label">Detection Signals</div>
         </div>
         <div class="stat-item">
@@ -980,7 +1024,7 @@ footer {
 </div>
 
 <!-- WHY VERIFILE-X -->
-<section class="section">
+<section class="section" id="features">
     <div class="section-header">
         <div class="section-label">Capabilities</div>
         <h2 class="section-title">Why VeriFile-X</h2>
@@ -996,7 +1040,7 @@ footer {
                 </svg>
             </div>
             <h3>AI Detection</h3>
-            <p>Detect AI-generated content using 26 independent signals spanning deep learning, frequency analysis, EXIF forensics, and statistical modelling. Each signal explains its reasoning.</p>
+            <p>Detect AI-generated content using 30 independent signals spanning deep learning, frequency analysis, EXIF forensics, and statistical modelling. Each signal explains its reasoning.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">
@@ -1033,12 +1077,12 @@ footer {
         <div class="how-card">
             <div class="how-step">01</div>
             <h4>Upload Image</h4>
-            <p>Drag and drop or select a JPEG, PNG, or WebP file up to 10 MB.</p>
+            <p>Drag and drop or select a JPEG, PNG, WebP, TIFF, or HEIC file up to 10 MB.</p>
         </div>
         <div class="how-card">
             <div class="how-step">02</div>
             <h4>Forensic Analysis</h4>
-            <p>26 detection signals run in parallel across 8 independent methods.</p>
+            <p>30 detection signals run in parallel across 8 independent methods.</p>
         </div>
         <div class="how-card">
             <div class="how-step">03</div>
@@ -1062,6 +1106,10 @@ footer {
         <h2 class="section-title">Analyse an Image</h2>
         <p class="section-sub" style="margin-top:12px;">Drop any image below. Results appear within seconds.</p>
     </div>
+    <div class="error-banner" id="errorBanner">
+        <span id="errorBannerText"></span>
+        <button class="error-banner-close" onclick="hideError()" aria-label="Dismiss">&times;</button>
+    </div>
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
         <svg class="upload-zone-icon" viewBox="0 0 52 52">
             <path d="M26 36V16M16 26l10-10 10 10"/>
@@ -1069,7 +1117,7 @@ footer {
             <path d="M14 40h24"/>
         </svg>
         <h2>Drop image here or click to upload</h2>
-        <p>JPEG, PNG, WebP &bull; Max 10 MB</p>
+        <p>JPEG, PNG, WebP, TIFF, HEIC &bull; Max 10 MB</p>
         <button class="btn-upload" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
             Select Image
         </button>
@@ -1080,12 +1128,16 @@ footer {
 <!-- LOADING -->
 <div class="loading" id="loading">
     <div class="spinner"></div>
-    <h3>Analysing with 26 signals</h3>
+    <h3>Analysing with 30 signals</h3>
     <p>Running DIRE reconstruction, CLIP embeddings, and statistical analysis</p>
 </div>
 
 <!-- RESULTS -->
 <div class="results" id="results">
+
+    <div class="result-thumbnail-wrap" id="resultThumbnailWrap" style="display:none;">
+        <img id="resultThumbnail" class="result-thumbnail" alt="Analysed image preview" />
+    </div>
 
     <div class="verdict-card">
         <div class="verdict-card-label">AI Generation Probability</div>
@@ -1152,40 +1204,40 @@ footer {
     <div class="footer-inner">
         <div class="footer-brand">
             <h3>VeriFile-X</h3>
-            <p>Advanced AI image verification platform. 26 forensic signals. Cryptographic evidence reports. Built for accuracy, transparency, and trust.</p>
+            <p>Advanced AI image verification platform. 30 forensic signals. Cryptographic evidence reports. Built for accuracy, transparency, and trust.</p>
         </div>
         <div class="footer-col">
             <h4>Product</h4>
             <ul>
-                <li><a href="#">Image Analysis</a></li>
-                <li><a href="#">PDF Reports</a></li>
-                <li><a href="#">Detection Signals</a></li>
-                <li><a href="#">API Access</a></li>
+                <li><a href="#upload-section">Image Analysis</a></li>
+                <li><a href="#upload-section">PDF Reports</a></li>
+                <li><a href="#features">Detection Signals</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X#api" target="_blank" rel="noopener">API Access</a></li>
             </ul>
         </div>
         <div class="footer-col">
             <h4>Technology</h4>
             <ul>
-                <li><a href="#">DIRE Detection</a></li>
-                <li><a href="#">CLIP Embeddings</a></li>
-                <li><a href="#">Statistical Analysis</a></li>
-                <li><a href="#">EXIF Forensics</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X/blob/main/backend/services/dire_detector.py" target="_blank" rel="noopener">DIRE Detection</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X/blob/main/backend/services/clip_detector.py" target="_blank" rel="noopener">CLIP Embeddings</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X/blob/main/backend/services/statistical_detector.py" target="_blank" rel="noopener">Statistical Analysis</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X/blob/main/backend/services/metadata_forensics.py" target="_blank" rel="noopener">EXIF Forensics</a></li>
             </ul>
         </div>
         <div class="footer-col">
             <h4>Resources</h4>
             <ul>
-                <li><a href="#">Documentation</a></li>
-                <li><a href="#">GitHub</a></li>
-                <li><a href="#">Security Policy</a></li>
-                <li><a href="#">Contributing</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X#readme" target="_blank" rel="noopener">Documentation</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X" target="_blank" rel="noopener">GitHub</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X/blob/main/SECURITY.md" target="_blank" rel="noopener">Security Policy</a></li>
+                <li><a href="https://github.com/abinaze/VeriFile-X/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
             </ul>
         </div>
     </div>
     <div class="footer-bottom">
         <span>© 2026 VeriFile-X — Built for Trust &amp; Transparency</span>
         <div class="footer-badges">
-            <span class="footer-badge">26 Signals</span>
+            <span class="footer-badge">30 Signals</span>
             <span class="footer-badge">Privacy First</span>
             <span class="footer-badge">Open Source</span>
         </div>
@@ -1302,6 +1354,17 @@ const API_URL = window.location.hostname.includes('github.io') || window.locatio
 const fileInput  = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
 const loading    = document.getElementById('loading');
+
+function showError(message) {
+    const banner = document.getElementById('errorBanner');
+    const text   = document.getElementById('errorBannerText');
+    text.textContent = message;
+    banner.classList.add('active');
+}
+
+function hideError() {
+    document.getElementById('errorBanner').classList.remove('active');
+}
 const results    = document.getElementById('results');
 
 uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
@@ -1325,10 +1388,11 @@ function resetUI() {
 }
 
 async function analyzeFile(file) {
+    hideError();
     // Validate BEFORE any UI changes — prevents flicker of broken loading state
-    if (file.size > 10 * 1024 * 1024) { alert('File too large. Maximum 10MB.'); return; }
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/tiff'];
-    if (!allowed.includes(file.type)) { alert('Unsupported format. Use JPEG, PNG, WebP, or TIFF.'); return; }
+    if (file.size > 10 * 1024 * 1024) { showError('File too large. Maximum 10MB.'); return; }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/tiff', 'image/heic', 'image/heif'];
+    if (!allowed.includes(file.type)) { showError('Unsupported format. Use JPEG, PNG, WebP, TIFF, or HEIC.'); return; }
 
     uploadZone.style.display = 'none';
     loading.classList.add('active');
@@ -1338,7 +1402,10 @@ async function analyzeFile(file) {
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        // 90s timeout — DIRE (Stable Diffusion reconstruction) on CPU can take
+        // 60-120s; the previous 30s timeout aborted the request before DIRE
+        // finished, making slow-but-successful analyses look like failures.
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
         const response = await fetch(`${API_URL}/api/v1/analyze/image`, {
             signal: controller.signal, method: 'POST', body: formData
         });
@@ -1349,6 +1416,19 @@ async function analyzeFile(file) {
         }
         const data = await response.json();
         window._lastReport = data;
+        // Generate a thumbnail of the uploaded image once, reused by both
+        // the results view and the PDF export (fixes #14/#15 — previously
+        // there was no visual confirmation of which image was analysed).
+        try {
+            window._lastThumbnail = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        } catch {
+            window._lastThumbnail = null;
+        }
         renderResults(data);
         loading.classList.remove('active');
         results.classList.add('active');
@@ -1356,9 +1436,9 @@ async function analyzeFile(file) {
         loading.classList.remove('active');
         uploadZone.style.display = 'block';
         if (error.name === 'AbortError') {
-            alert('Analysis timed out (30s). Please try again.');
+            showError('Analysis timed out (90s). Please try again.');
         } else {
-            alert('Analysis failed: ' + error.message);
+            showError('Analysis failed: ' + error.message);
         }
     }
 }
@@ -1366,6 +1446,17 @@ async function analyzeFile(file) {
 function renderResults(data) {
     const ai   = data.ai_detection;
     const prob = Math.round(ai.ai_probability * 100);
+
+    // Show a preview of the analysed image so users can confirm which
+    // file the results below correspond to (fix #15).
+    const thumbWrap = document.getElementById('resultThumbnailWrap');
+    const thumbImg  = document.getElementById('resultThumbnail');
+    if (window._lastThumbnail) {
+        thumbImg.src = window._lastThumbnail;
+        thumbWrap.style.display = 'flex';
+    } else {
+        thumbWrap.style.display = 'none';
+    }
 
     const probEl = document.getElementById('aiProb');
     document.getElementById('evidenceId').textContent = 'Evidence ID: ' + (data.evidence_id || 'N/A');
@@ -1438,29 +1529,46 @@ function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const doc  = new jsPDF();
     const data = window._lastReport;
-    if (!data) { alert('No report to download'); return; }
+    if (!data) { showError('No report to download'); return; }
 
     const ai   = data.ai_detection;
     const prob = Math.round(ai.ai_probability * 100);
     const ts   = data.metadata.analysis_timestamp;
 
+    // Header bar
     doc.setFillColor(10, 22, 40);
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    // Guard against missing fields
-        const safeGet = (obj, path, fallback = 'N/A') => {
-            try {
-                return path.split('.').reduce((o, k) => o[k], obj) ?? fallback;
-            } catch { return fallback; }
-        };
-        doc.text('VeriFile-X Forensic Analysis Report', 105, 14, { align: 'center' });
+    const safeGet = (obj, path, fallback = 'N/A') => {
+        try {
+            return path.split('.').reduce((o, k) => o[k], obj) ?? fallback;
+        } catch { return fallback; }
+    };
+    doc.text('VeriFile-X Forensic Analysis Report', 105, 14, { align: 'center' });
     doc.setFontSize(9);
-    doc.text('AI-Generated Image Detection Platform v6.6.0', 105, 22, { align: 'center' });
+    doc.text('AI-Generated Image Detection Platform v' + (data.metadata.analyzer_version || 'unknown'), 105, 22, { align: 'center' });
 
     doc.setTextColor(0, 0, 0);
     let y = 38;
+
+    // Thumbnail: add the analysed image at top-right of the first page.
+    // This lets the reader immediately confirm which image the report covers
+    // without having to cross-reference by filename alone (fix #14).
+    if (window._lastThumbnail) {
+        try {
+            // Detect format from data-URL header
+            const fmt = window._lastThumbnail.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            // Place thumbnail at top-right: x=150, y=33, 46×34 mm
+            doc.addImage(window._lastThumbnail, fmt, 150, 33, 46, 34);
+            // Reserve space on left side only — thumbnail lives on the right
+            doc.setFontSize(9);
+        } catch (e) {
+            // If thumbnail embedding fails (e.g. CORS/HEIC), silently skip it
+            console.warn('PDF thumbnail embedding failed:', e);
+        }
+    }
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
@@ -1472,7 +1580,8 @@ function downloadPDF() {
     doc.setFont('helvetica', 'normal');
     doc.text('Analysis Timestamp: ' + ts, 14, y + 12);
     doc.text('File: ' + data.file_info.filename + '  |  ' + data.file_info.width + 'x' + data.file_info.height + 'px  |  ' + (data.file_info.file_size_bytes / 1024).toFixed(1) + ' KB', 14, y + 19);
-    y += 30;
+    // If thumbnail present, shift y down past it (thumbnail bottom = 33+34 = 67mm)
+    y = window._lastThumbnail ? Math.max(y + 30, 72) : y + 30;
 
     const verdictColor = prob >= 70 ? [220, 38, 38] : prob >= 40 ? [234, 88, 12] : [16, 185, 129];
     doc.setFillColor(...verdictColor);

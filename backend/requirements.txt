@@ -1,5 +1,13 @@
 # Core Framework
 fastapi==0.115.0
+
+# Transitive dependencies pinned to close Dependabot CVE alerts
+# (#137 Pygments ReDoS, #157/#158 idna bypass, #162/#163 Starlette DoS).
+# These are resolved as transitive deps of fastapi/starlette but must be
+# pinned explicitly so pip's resolver selects patched versions.
+starlette>=0.46.2
+idna>=3.7
+Pygments>=2.18.0
 uvicorn[standard]==0.27.0
 
 # Configuration Management
