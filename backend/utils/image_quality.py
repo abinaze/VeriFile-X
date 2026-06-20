@@ -25,11 +25,26 @@ RECOMMENDED_MIN_HEIGHT = 256
 
 def assess_image_quality(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
     from PIL import Image
+    # Guard against decompression bombs (e.g. 1KB PNG → 4GB bitmap).
+    # We set a generous but finite limit; forensic analysis does not
+    # need images larger than ~50 MP.
+    Image.MAX_IMAGE_PIXELS = 50_000_000
     warnings = []
 
     try:
         img          = Image.open(BytesIO(image_bytes))
         width, height = img.size
+
+        # Explicit upper-bound check (belt + suspenders alongside MAX_IMAGE_PIXELS)
+        if width > 10_000 or height > 10_000:
+            return {
+                "tier": "unsuitable", "suitable": False,
+                "width": width, "height": height, "pixel_count": width * height,
+                "format": img.format or "unknown", "mode": img.mode,
+                "warnings": [f"Image too large ({width}x{height}). Maximum: 10000x10000"],
+                "confidence_cap": 0.0,
+                "reason": f"Image dimensions {width}x{height} exceed the 10000×10000 analysis limit.",
+            }
         fmt          = img.format or "unknown"
         mode         = img.mode
         pixels       = width * height
