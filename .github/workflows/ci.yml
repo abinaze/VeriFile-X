@@ -50,19 +50,19 @@ jobs:
     - name: Lint with flake8
       run: |
         pip install flake8
-        flake8 backend/ --max-line-length=120 --exclude=backend/tests/,backend/__pycache__ || true
+        flake8 backend/ --max-line-length=120 --exclude=backend/tests/,backend/__pycache__
       continue-on-error: true
 
     - name: Type check with mypy
       run: |
         pip install mypy
-        mypy backend/ --config-file=mypy.ini || true
+        mypy backend/ --config-file=mypy.ini
       continue-on-error: true
 
     - name: Security audit with pip-audit
       run: |
         pip install pip-audit
-        pip-audit || true
+        pip-audit
       continue-on-error: true
 
     - name: Set PYTHONPATH
