@@ -84,7 +84,10 @@ jobs:
     - name: Coverage summary
       run: |
         python -c "
-        import xml.etree.ElementTree as ET
+        import os, xml.etree.ElementTree as ET
+        if not os.path.exists('coverage.xml'):
+            print('coverage.xml not found — tests likely failed or coverage was not collected')
+            exit(0)
         tree = ET.parse('coverage.xml')
         root = tree.getroot()
         rate = float(root.attrib.get('line-rate', 0)) * 100
