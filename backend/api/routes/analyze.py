@@ -16,6 +16,7 @@ from backend.core.logger import setup_logger
 from backend.core.cache import forensics_cache
 from backend.services.metrics_collector import record_analysis
 from backend.core.audit_log import log_analysis
+from backend.core.config import settings
 
 logger = setup_logger(__name__)
 
@@ -30,8 +31,11 @@ router = APIRouter(
 # Allowed MIME types for analysis endpoint
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/tiff", "image/heic", "image/heif"}
 
-# Max file size: 10MB for analysis (CPU-intensive operation)
-MAX_ANALYSIS_SIZE_BYTES = 10 * 1024 * 1024
+# Max file size for analysis (CPU-intensive operation). Previously hardcoded
+# to 10MB independently of settings.MAX_ANALYSIS_SIZE_MB, so changing the
+# config value had no effect on the actual enforced limit. Now derived from
+# settings so there is a single source of truth.
+MAX_ANALYSIS_SIZE_BYTES = settings.MAX_ANALYSIS_SIZE_MB * 1024 * 1024
 
 
 @router.post(
@@ -105,9 +109,10 @@ async def analyze_image(
             from PIL import Image as _PIL_img, ImageOps as _EXIF_ops
             from io import BytesIO as _BytesIO_exif
             _img_exif = _PIL_img.open(_BytesIO_exif(file_bytes))
-            _img_exif = _EXIF_ops.exif_transpose(_img_exif)
-            _buf_exif = _BytesIO_exif()
-            _img_exif.save(_buf_exif, format=_img_exif.format or "PNG")
+            _orig_fmt  = _img_exif.format or "JPEG"  # preserve before exif_transpose clears .format
+            _img_exif  = _EXIF_ops.exif_transpose(_img_exif)
+            _buf_exif  = _BytesIO_exif()
+            _img_exif.save(_buf_exif, format=_orig_fmt)
             file_bytes = _buf_exif.getvalue()
         except Exception:
             pass  # Proceed with original bytes if EXIF correction fails
@@ -555,7 +560,9 @@ async def analyze_batch(
     "/segment",
     summary="Segment-level AI detection — per-tile probability grid",
 )
+@limiter.limit("3/minute")
 async def analyze_segment(
+    request: Request,
     file: UploadFile = File(...),
 ):
     """
@@ -565,10 +572,13 @@ async def analyze_segment(
     """
     try:
         image_bytes = await file.read()
-        from backend.utils.validators import validate_file
+        from backend.utils.validators import validate_file, FileValidationError as _FVE
         validate_file(image_bytes, file.filename or "upload")
-    except Exception as exc:
+    except _FVE as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    except Exception:
+        logger.exception("Unexpected error validating /segment upload")
+        raise HTTPException(status_code=422, detail="Invalid or unreadable image file")
 
     from backend.services.segment_detector import detect_segments
     result = detect_segments(image_bytes, file.filename or "upload")
