@@ -313,17 +313,19 @@ def detect_noise_map(image_bytes: bytes, filename: str = "unknown") -> Dict[str,
             )
 
         return {
-            "signal_name": "Noise Map Analysis",
-            "score": round(ai_score, 4),
-            "confidence": round(confidence, 4),
-            "explanation": explanation,
-            "method": "noise_map",
+            "signal_name":    "Noise Map Analysis",
+            "score":          round(ai_score, 4),
+            "confidence":     round(confidence, 4),
+            "explanation":    explanation,
+            "method":         "noise_map",
+            "raw_value":      round(ai_score, 4),
+            "expected_range": "0.0–0.4 real camera; > 0.6 AI synthetic",
             "sub_signals": {
                 "luminance_noise_corr": round(lum_corr, 4),
-                "freq_slope": round(slope, 4),
-                "zero_var_frac": round(zero_var_frac, 4),
-                "kurtosis": round(kurtosis, 4),
-                "regularity": round(regularity, 4),
+                "freq_slope":           round(slope, 4),
+                "zero_var_frac":        round(zero_var_frac, 4),
+                "kurtosis":             round(kurtosis, 4),
+                "regularity":           round(regularity, 4),
             },
         }
 
