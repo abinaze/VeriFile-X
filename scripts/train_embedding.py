@@ -41,15 +41,21 @@ ROOT          = Path(__file__).parents[1]
 MANIFEST_PATH = ROOT / "data" / "manifest.csv"
 
 # ── Image transform ────────────────────────────────────────────────────────
+# Forensic-safe augmentations (audit fix #22):
+# - RandomGrayscale REMOVED — discards chroma-channel noise that is itself an
+#   AI-generation signal.
+# - RandomAffine REMOVED — destroys CFA pixel-grid alignment and compression
+#   artifacts that several detectors rely on.
+# - GaussianBlur probability reduced from 0.15 to 0.03 — blurring removes the
+#   high-frequency noise/PRNU texture the model needs to distinguish real camera
+#   images from synthetic ones.
 TRAIN_TRANSFORM = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.RandomHorizontalFlip(),
-    transforms.RandomApply([transforms.GaussianBlur(3)], p=0.15),
+    transforms.RandomApply([transforms.GaussianBlur(3)], p=0.03),
     transforms.RandomApply([
         transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.3, hue=0.1)
     ], p=0.5),
-    transforms.RandomGrayscale(p=0.1),
-    transforms.RandomApply([transforms.RandomAffine(degrees=10, translate=(0.05, 0.05))], p=0.2),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
@@ -85,9 +91,27 @@ class ImageManifestDataset(Dataset):
             img = Image.open(img_path).convert("RGB")
             return self.transform(img), torch.tensor(label, dtype=torch.float32)
         except Exception:
-            # Return black image on failure — rare corrupt file
-            blank = torch.zeros(3, 224, 224)
-            return blank, torch.tensor(label, dtype=torch.float32)
+            # Skip corrupt/unreadable files entirely instead of substituting a
+            # black image. A black tensor with the original label teaches the
+            # network that pure-black input can belong to either class, adding
+            # noise to every batch that happens to contain a corrupt file.
+            # collate_skip_none (below) filters out these None returns.
+            logger.warning("Skipping corrupt/unreadable image: %s", img_path)
+            return None
+
+
+def collate_skip_none(batch):
+    """
+    DataLoader collate_fn that filters out None entries produced by
+    ImageManifestDataset.__getitem__ for corrupt/unreadable files.
+    Without this, a single corrupt file crashes the entire epoch.
+    """
+    batch = [item for item in batch if item is not None]
+    if not batch:
+        # Extremely rare (entire batch of corrupt files) — return empty tensors
+        # so the training loop's skip-on-empty-batch guard handles it cleanly.
+        return torch.zeros(0, 3, 224, 224), torch.zeros(0)
+    return torch.utils.data.default_collate(batch)
 
 
 # ── Load manifest ──────────────────────────────────────────────────────────
@@ -161,10 +185,12 @@ def train(args):
     train_loader = DataLoader(
         train_ds, batch_size=args.batch,
         shuffle=True, num_workers=0, pin_memory=False,
+        collate_fn=collate_skip_none,
     )
     val_loader = DataLoader(
         val_ds, batch_size=args.batch,
         shuffle=False, num_workers=0,
+        collate_fn=collate_skip_none,
     )
 
     logger.info(f"Train batches: {len(train_loader)} "
@@ -193,6 +219,8 @@ def train(args):
         t0 = time.time()
 
         for batch_idx, (images, labels) in enumerate(train_loader):
+            if images.size(0) == 0:
+                continue  # all-corrupt batch — skip
             images = images.to(device)
             labels = labels.to(device).unsqueeze(1)
 
@@ -223,6 +251,8 @@ def train(args):
 
         with torch.no_grad():
             for images, labels in val_loader:
+                if images.size(0) == 0:
+                    continue
                 images = images.to(device)
                 labels = labels.to(device).unsqueeze(1)
                 _, probs = model(images)
