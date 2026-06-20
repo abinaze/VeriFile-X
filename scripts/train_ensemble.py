@@ -29,7 +29,7 @@ RESULTS_OUT = ROOT / "data" / "reference" / "ensemble_results.json"
 def main():
     import xgboost as xgb
     import shap
-    from sklearn.model_selection import StratifiedKFold, cross_validate, train_test_split
+    from sklearn.model_selection import StratifiedKFold, GroupKFold, cross_validate, train_test_split
     from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 
     parser = argparse.ArgumentParser()
@@ -38,7 +38,7 @@ def main():
     args = parser.parse_args()
 
     logger.info("Loading feature matrix")
-    rows, labels, feature_names = [], [], None
+    rows, labels, sources, feature_names = [], [], [], None
 
     with open(FEATURES, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
@@ -46,6 +46,7 @@ def main():
                 feature_names = [k for k in row if k not in ("label", "path", "source")]
             labels.append(int(row["label"]))
             rows.append([float(row[k]) for k in feature_names])
+            sources.append(row.get("source", "unknown"))
 
     X = np.array(rows)
     y = np.array(labels)
@@ -69,7 +70,22 @@ def main():
     )
 
     logger.info("Cross-validating (5-fold stratified)")
-    cv     = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    sources_arr = np.array(sources)
+    unique_sources = np.unique(sources_arr)
+    if len(unique_sources) > 1:
+        cv = GroupKFold(n_splits=5)
+        cv_groups = sources_arr
+        cv_method = "GroupKFold"
+        logger.info(
+            "Using GroupKFold by source (%d unique sources: %s) to prevent "
+            "generator-family leakage from inflating CV scores.",
+            len(unique_sources), list(unique_sources)[:10],
+        )
+    else:
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        cv_groups = None
+        cv_method = "StratifiedKFold"
+        logger.info("Only one source present — falling back to StratifiedKFold.")
     scores = cross_validate(cv_model, X_dev, y_dev, cv=cv,
                             scoring=["roc_auc", "f1"], return_train_score=True)
     auc_cv = scores["test_roc_auc"].mean()
