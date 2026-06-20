@@ -4,12 +4,26 @@ Server-Sent Events (SSE) streaming analysis.
 Runs the 30-signal forensic pipeline and streams each signal result
 to the client as it completes, enabling a real-time waterfall UI.
 
-Protocol:
-  Each event is JSON with type:
-    "started"   - analysis begun, metadata
-    "signal"    - one signal result (name, score, confidence)
-    "summary"   - final verdict and full report
-    "error"     - analysis failed
+KEY FIX: Each of the 30 signals is computed EXACTLY ONCE.
+Previously the SSE path ran all 30 signals twice:
+  1. Individual detector calls streamed to the UI (28 signals)
+  2. generate_forensic_report() called at the end — which internally
+     called AdvancedEnsembleDetector.detect() again, re-running all 30.
+DIRE and OwnEmbedding were also missing from the individual events.
+
+New architecture:
+  1. Stream 19 statistical signals via super().detect() on the parent class
+  2. Stream DIRE, CLIP, OwnEmbedding individually
+  3. Stream 8 forensic signals individually
+  4. Call combine_signals() ONCE on the already-computed results
+  5. Emit the summary event — total detector executions: 30
+
+Protocol (each event is JSON):
+  started   - analysis begun
+  quality   - image quality gate result
+  signal    - one signal result (name, score, confidence, explanation)
+  summary   - final verdict and full report
+  error     - analysis failed
 """
 import json
 import asyncio
@@ -21,24 +35,31 @@ logger = logging.getLogger(__name__)
 
 async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[str, None]:
     """
-    Yield SSE-formatted events as each detection signal completes.
-    Compatible with EventSource in the browser.
+    Yield SSE-formatted strings as each detection signal completes.
+    Compatible with EventSource / fetch-with-ReadableStream in the browser.
     """
 
     def _sse(event_type: str, data: dict) -> str:
         payload = json.dumps({"type": event_type, **data}, default=str)
         return f"data: {payload}\n\n"
 
+    def _signal_event(sig: dict) -> str:
+        return _sse("signal", {
+            "signal_name": sig.get("signal_name", "unknown"),
+            "score":       round(float(sig.get("score", 0.5)), 4),
+            "confidence":  round(float(sig.get("confidence", 0.0)), 4),
+            "explanation": sig.get("explanation", ""),
+            "suspicious":  float(sig.get("score", 0.5)) > 0.5,
+        })
+
     yield _sse("started", {
-        "filename": filename,
+        "filename":  filename,
         "file_size": len(image_bytes),
-        "message": "Analysis started — running 30 signals",
+        "message":   "Analysis started — running 30 signals",
     })
 
     try:
         from backend.utils.image_quality import assess_image_quality
-
-        # Quality gate
         quality = assess_image_quality(image_bytes, filename)
         if not quality["suitable"]:
             yield _sse("error", {
@@ -50,94 +71,174 @@ async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[s
         yield _sse("quality", {"quality": quality})
         await asyncio.sleep(0)
 
-        # ── Statistical signals (run as blocking in thread) ──────────────────
+        from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
+        detector = AdvancedEnsembleDetector(image_bytes, filename)
         loop = asyncio.get_event_loop()
 
-        def _run_statistical():
-            from backend.services.statistical_detector import StatisticalDetector
-            det = StatisticalDetector(image_bytes, filename)
-            return det.detect()
+        try:
+            # ── 19 statistical signals ─────────────────────────────────────
+            def _run_statistical():
+                # Call the grandparent detect() — StatisticalDetector.detect()
+                # — which runs only the 19 statistical signals without
+                # invoking AdvancedEnsembleDetector.detect() recursively.
+                return super(AdvancedEnsembleDetector, detector).detect()
 
-        stat_report = await loop.run_in_executor(None, _run_statistical)
-        for sig in stat_report.get("all_signals", []):
-            yield _sse("signal", {
-                "signal_name": sig["signal_name"],
-                "score":       round(sig["score"], 4),
-                "confidence":  round(sig["confidence"], 4),
-                "explanation": sig.get("explanation", ""),
-                "suspicious":  sig["score"] > 0.5,
-            })
+            base_report = await loop.run_in_executor(None, _run_statistical)
+            for sig in base_report.get("all_signals", []):
+                yield _signal_event(sig)
+                await asyncio.sleep(0)
+
+            # ── DIRE (stream individually — was missing before) ────────────
+            def _run_dire():
+                return detector.dire_detector.detect(image_bytes, filename)
+
+            dire_result = await loop.run_in_executor(None, _run_dire)
+            yield _signal_event(dire_result)
             await asyncio.sleep(0)
 
-        # ── Deep learning signals ────────────────────────────────────────────
-        def _run_extra():
-            from backend.services.prnu_detector import detect_prnu
-            from backend.services.ela_detector import detect_ela
-            from backend.services.metadata_forensics import analyze_metadata
-            from backend.services.dct_frequency_detector import detect_dct_artifacts
-            from backend.services.jpeg_ghost_detector import detect_jpeg_ghost
-            from backend.services.noise_map_detector import detect_noise_map
-            from backend.services.noiseprint_detector import detect_noiseprint
-            from backend.services.cfa_detector import detect_cfa_artifacts
-            return [
-                detect_prnu(image_bytes, filename),
-                detect_ela(image_bytes, filename),
-                analyze_metadata(image_bytes, filename),
-                detect_dct_artifacts(image_bytes, filename),
-                detect_jpeg_ghost(image_bytes, filename),
-                detect_noise_map(image_bytes, filename),
-                detect_noiseprint(image_bytes, filename),
-                detect_cfa_artifacts(image_bytes, filename),
-            ]
+            # ── CLIP ──────────────────────────────────────────────────────
+            def _run_clip():
+                return detector.clip_detector.detect(image_bytes, filename)
 
-        extra_signals = await loop.run_in_executor(None, _run_extra)
-        for sig in extra_signals:
-            yield _sse("signal", {
-                "signal_name": sig["signal_name"],
-                "score":       round(sig["score"], 4),
-                "confidence":  round(sig["confidence"], 4),
-                "explanation": sig.get("explanation", ""),
-                "suspicious":  sig["score"] > 0.5,
-            })
+            clip_result = await loop.run_in_executor(None, _run_clip)
+            yield _signal_event(clip_result)
             await asyncio.sleep(0)
 
-        # ── CLIP signal ──────────────────────────────────────────────────────
-        def _run_clip():
-            from backend.services.clip_detector import CLIPDetector
-            det = CLIPDetector()
-            return det.detect(image_bytes, filename)
+            # ── OwnEmbedding (stream individually — was missing before) ───
+            def _run_own():
+                return detector.own_detector.detect(image_bytes, filename)
 
-        clip_sig = await loop.run_in_executor(None, _run_clip)
-        yield _sse("signal", {
-            "signal_name": clip_sig["signal_name"],
-            "score":       round(clip_sig["score"], 4),
-            "confidence":  round(clip_sig["confidence"], 4),
-            "explanation": clip_sig.get("explanation", ""),
-            "suspicious":  clip_sig["score"] > 0.5,
-        })
-        await asyncio.sleep(0)
+            own_result = await loop.run_in_executor(None, _run_own)
+            yield _signal_event(own_result)
+            await asyncio.sleep(0)
 
-        # ── Full report for final summary ────────────────────────────────────
-        def _full_report():
-            from backend.services.image_forensics import ImageForensics
-            return ImageForensics(image_bytes, filename).generate_forensic_report()
+            # ── 8 forensic signals ─────────────────────────────────────────
+            def _run_forensic_extras():
+                from backend.services.prnu_detector       import detect_prnu
+                from backend.services.ela_detector        import detect_ela
+                from backend.services.metadata_forensics  import analyze_metadata
+                from backend.services.dct_frequency_detector import detect_dct_artifacts
+                from backend.services.jpeg_ghost_detector import detect_jpeg_ghost
+                from backend.services.noise_map_detector  import detect_noise_map
+                from backend.services.noiseprint_detector import detect_noiseprint
+                from backend.services.cfa_detector        import detect_cfa_artifacts
+                return (
+                    detect_prnu(image_bytes, filename),
+                    detect_ela(image_bytes, filename),
+                    analyze_metadata(image_bytes, filename),
+                    detect_dct_artifacts(image_bytes, filename),
+                    detect_jpeg_ghost(image_bytes, filename),
+                    detect_noise_map(image_bytes, filename),
+                    detect_noiseprint(image_bytes, filename),
+                    detect_cfa_artifacts(image_bytes, filename),
+                )
 
-        report = await loop.run_in_executor(None, _full_report)
+            (
+                prnu_result, ela_result, metadata_result, dct_result,
+                jpeg_ghost_result, noise_map_result, noiseprint_result,
+                cfa_result,
+            ) = await loop.run_in_executor(None, _run_forensic_extras)
 
+            for sig in (
+                prnu_result, ela_result, metadata_result, dct_result,
+                jpeg_ghost_result, noise_map_result, noiseprint_result,
+                cfa_result,
+            ):
+                yield _signal_event(sig)
+                await asyncio.sleep(0)
+
+            # ── Combine all 30 pre-computed results (no re-execution) ──────
+            def _combine():
+                return detector.combine_signals(
+                    base_report, dire_result, clip_result, own_result,
+                    prnu_result, ela_result, metadata_result, dct_result,
+                    jpeg_ghost_result, noise_map_result, noiseprint_result,
+                    cfa_result,
+                )
+
+            ai_detection = await loop.run_in_executor(None, _combine)
+
+            # ── Remaining report sections (no signal re-execution) ─────────
+            def _build_report():
+                from backend.services.image_forensics      import ImageForensics
+                from backend.services.generator_attribution import attribute_generator
+                from backend.services.platform_detector    import detect_platform
+                from backend.services.c2pa_verifier        import verify_c2pa
+                from backend.services.image_type_classifier import classify_image_type
+                from backend.core.config                   import settings
+                from datetime import datetime
+                import uuid
+
+                forensics   = ImageForensics(image_bytes, filename)
+                exif_data   = forensics.extract_exif()
+                hashes      = forensics.generate_hashes()
+                tampering   = forensics.detect_tampering_indicators(exif_data)
+                attribution = attribute_generator(image_bytes, filename)
+                platform    = detect_platform(image_bytes, filename)
+                c2pa        = verify_c2pa(image_bytes, filename)
+                img_type    = classify_image_type(image_bytes, filename)
+                width, height = forensics.pil_image.size
+
+                return {
+                    "evidence_id": str(uuid.uuid5(uuid.NAMESPACE_URL, hashes["sha256"])),
+                    "metadata": {
+                        "analysis_timestamp": datetime.now().isoformat(),
+                        "analyzer_version":   settings.VERSION,
+                    },
+                    "file_info": {
+                        "filename":        filename,
+                        "format":          forensics.pil_image.format or "Unknown",
+                        "mode":            forensics.pil_image.mode,
+                        "width":           width,
+                        "height":          height,
+                        "file_size_bytes": len(image_bytes),
+                    },
+                    "exif_data":             exif_data,
+                    "hashes":                hashes,
+                    "tampering_analysis":    tampering,
+                    "ai_detection":          ai_detection,
+                    "generator_attribution": attribution,
+                    "platform_forensics":    platform,
+                    "c2pa_provenance":       c2pa,
+                    "image_type":            img_type,
+                    "summary": {
+                        "has_metadata":                 exif_data.get("has_exif", False),
+                        "suspicious_flags_count":       len(tampering["suspicious_flags"]),
+                        "authenticity_confidence":      tampering["confidence"],
+                        "ai_probability":               ai_detection["ai_probability"],
+                        "ai_classification":            ai_detection["classification"],
+                        "total_detection_signals":      ai_detection["total_signals"],
+                        "suspicious_detection_signals": ai_detection["suspicious_signals_count"],
+                        "predicted_generator":          attribution["predicted_generator"],
+                        "platform_origin":              platform["predicted_platform"],
+                        "c2pa_status":                  c2pa["provenance_status"],
+                        "image_type":                   img_type["image_type"],
+                    },
+                }
+
+            report = await loop.run_in_executor(None, _build_report)
+
+        finally:
+            detector.cleanup()
+
+        # Sanitize NaN/Inf
         import math
         def _sanitize(obj):
             if isinstance(obj, float):
                 return 0.0 if (math.isnan(obj) or math.isinf(obj)) else obj
-            if isinstance(obj, dict): return {k: _sanitize(v) for k, v in obj.items()}
-            if isinstance(obj, list): return [_sanitize(v) for v in obj]
+            if isinstance(obj, dict):
+                return {k: _sanitize(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_sanitize(v) for v in obj]
             return obj
+
         report = _sanitize(report)
 
         yield _sse("summary", {
-            "report":          report,
-            "ai_probability":  report["summary"]["ai_probability"],
-            "classification":  report["summary"]["ai_classification"],
-            "total_signals":   report["summary"]["total_detection_signals"],
+            "report":         report,
+            "ai_probability": report["summary"]["ai_probability"],
+            "classification": report["summary"]["ai_classification"],
+            "total_signals":  report["summary"]["total_detection_signals"],
         })
 
     except Exception:
