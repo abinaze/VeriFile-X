@@ -7,7 +7,6 @@ sdk: docker
 pinned: false
 ---
 
-
 <div align="center">
 
 # VeriFile-X
