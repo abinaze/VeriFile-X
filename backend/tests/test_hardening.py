@@ -87,7 +87,11 @@ def test_analyze_rejects_tiny_image(client):
 def test_health_endpoint_returns_status(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["status"] in ("healthy", "degraded")  # degraded in CI without model files
+    data = response.json()
+    assert data["status"] in ("healthy", "degraded")  # degraded in CI without model files
+    # Verify the new degraded_detectors field is always present (may be empty list)
+    assert "degraded_detectors" in data, "Health response must include degraded_detectors list"
+    assert isinstance(data["degraded_detectors"], list)
 
 
 def test_root_endpoint_responds(client):
