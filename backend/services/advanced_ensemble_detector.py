@@ -228,21 +228,35 @@ class AdvancedEnsembleDetector(StatisticalDetector):
 
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
 
-        # Classification thresholds
-        if weighted_score > 0.80:
+        # ── Classification thresholds ──────────────────────────────────────────
+        # These are empirical and should be updated by running a ROC curve
+        # analysis on a held-out benchmark after retraining. Current values
+        # are conservative estimates that err toward "inconclusive" in the
+        # 0.40–0.60 range to avoid overconfident wrong predictions when
+        # forensic signals are weak or mixed.
+        #
+        # Updating them: fit Platt calibration on labeled data, then pick
+        # thresholds that maximise F1 at your required precision/recall.
+        _T_VERY_HIGH_AI  = 0.80   # > → "likely_ai_generated" / very_high confidence
+        _T_HIGH_AI       = 0.70   # > → "likely_ai_generated" / high
+        _T_MEDIUM_AI     = 0.60   # > → "possibly_ai_generated" / medium
+        _T_INCONCLUSIVE  = 0.40   # ≥ → "inconclusive" / low
+        _T_MEDIUM_REAL   = 0.30   # > → "possibly_authentic" / medium
+
+        if weighted_score > _T_VERY_HIGH_AI:
             classification = "likely_ai_generated"
             confidence     = "very_high"
-        elif weighted_score > 0.70:
+        elif weighted_score > _T_HIGH_AI:
             classification = "likely_ai_generated"
             confidence     = "high"
-        elif weighted_score > 0.60:
+        elif weighted_score > _T_MEDIUM_AI:
             classification = "possibly_ai_generated"
             confidence     = "medium"
-        elif weighted_score >= 0.40:
+        elif weighted_score >= _T_INCONCLUSIVE:
             # Explicit inconclusive zone — conflicting or weak signals
             classification = "inconclusive"
             confidence     = "low"
-        elif weighted_score > 0.30:
+        elif weighted_score > _T_MEDIUM_REAL:
             classification = "possibly_authentic"
             confidence     = "medium"
         else:
@@ -277,7 +291,12 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # MCMC probabilistic distribution
         from backend.services.mcmc_engine import run_mcmc as _run_mcmc
         import hashlib as _hl
-        _seed = int(_hl.sha256(self.image_bytes[:64]).hexdigest()[:8], 16) % (2**31)
+        # Use the full image sha256 for the MCMC seed so that two images
+        # with identical EXIF headers (same first 64 bytes) still get different
+        # chains. This doesn't make MCMC non-deterministic per image — it still
+        # retraces the same path each time the same image is analyzed (cached)
+        # — but it prevents cross-image seed collisions.
+        _seed = int(_hl.sha256(self.image_bytes).hexdigest()[:8], 16) % (2**31)
         probability_distribution = _run_mcmc(
             signals=all_signals,
             point_estimate=weighted_score,
