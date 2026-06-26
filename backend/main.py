@@ -222,10 +222,20 @@ async def health_check(request: Request):
     _xgb_ok   = (_ref / "ensemble_xgb.pkl").exists()
     _platt_ok = (_ref / "platt_params.json").exists()
     _degraded = not (_clip_ok and _own_ok and _xgb_ok)
+    # Build an explicit list of which models are missing so callers can
+    # identify exactly which detectors are running in fallback mode.
+    _degraded_detectors = []
+    if not _clip_ok:
+        _degraded_detectors.append("clip_database — CLIP scores will be random placeholders")
+    if not _own_ok:
+        _degraded_detectors.append("own_embedding — EfficientNet embedding scores will be 0.5")
+    if not _xgb_ok:
+        _degraded_detectors.append("xgboost_ensemble — ensemble falls back to unweighted sum")
     return {
         "status": "degraded" if _degraded else "healthy",
         "debug_mode": settings.DEBUG,
         "timestamp": datetime.now().isoformat(),
+        "degraded_detectors": _degraded_detectors,
         "detector_models": {
             "clip_database":     "ok" if _clip_ok  else "missing",
             "own_embedding":     "ok" if _own_ok   else "missing",
