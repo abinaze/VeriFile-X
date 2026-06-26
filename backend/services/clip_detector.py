@@ -152,7 +152,11 @@ class CLIPDetector:
         self.real_centroid = self.real_centroid / self.real_centroid.norm()
         self.fake_centroid = self.fake_centroid / self.fake_centroid.norm()
         
-        logger.info("Initialized placeholder centroids")
+        logger.error(
+            "CLIP real_centroid/fake_centroid NOT loaded — using random placeholders. "
+            "All CLIP scores will be RANDOM (noise). Check that clip_database.pkl is a "
+            "real binary file (not a Git LFS stub) and accessible at startup."
+        )
     
     def _extract_features(self, image_bytes: bytes) -> torch.Tensor:
         """Extract CLIP embedding from image."""
@@ -253,7 +257,10 @@ class CLIPDetector:
                 "raw_value": float(ai_score),
                 "expected_range": "> 0.5 for AI",
                 "method": "clip_embedding_similarity",
-                "from_cache": self._from_cache
+                "from_cache": self._from_cache,
+                # placeholder_mode=True means the centroids are random (DB not loaded)
+                # — caller should treat this score as noise, not a real measurement.
+                "placeholder_mode": not getattr(self, "db_available", False),
             }
             
         except Exception as e:
