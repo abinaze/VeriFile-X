@@ -265,7 +265,14 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             confidence     = "high" if weighted_score < 0.20 else "medium"
 
         sorted_signals = sorted(all_signals, key=lambda x: x["score"], reverse=True)
-        top_reasons    = [s["explanation"] for s in sorted_signals[:3]]
+        # Filter out neutral placeholder signals (confidence=0 means signal was
+        # unavailable/skipped, e.g. "CLIP database not built"). Including them
+        # as top reasons is misleading — they contain no forensic evidence.
+        top_reasons = [
+            s["explanation"]
+            for s in sorted_signals
+            if s.get("confidence", 0.0) > 0.0
+        ][:3]
 
         result = {
             "ai_probability":          float(weighted_score),
