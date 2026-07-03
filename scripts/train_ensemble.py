@@ -86,7 +86,7 @@ def main():
         cv_groups = None
         cv_method = "StratifiedKFold"
         logger.info("Only one source present — falling back to StratifiedKFold.")
-    scores = cross_validate(cv_model, X_dev, y_dev, cv=cv,
+    scores = cross_validate(cv_model, X_dev, y_dev, cv=cv, groups=cv_groups,
                             scoring=["roc_auc", "f1"], return_train_score=True)
     auc_cv = scores["test_roc_auc"].mean()
     f1_cv  = scores["test_f1"].mean()
