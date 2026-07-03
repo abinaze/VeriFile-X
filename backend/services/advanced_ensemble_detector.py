@@ -207,21 +207,33 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 )
         else:
             logger.info("DIRE unavailable — using confidence-gated dynamic ensemble")
+            # Apply analyst feedback weight multipliers (from POST /api/v1/feedback).
+            # load_weights() returns {} when no feedback recorded yet — no-op on fresh install.
+            from backend.services.feedback_manager import load_weights as _load_fb_weights
+            _fb = _load_fb_weights()
+            if _fb:
+                logger.info("Applying %d analyst feedback weight overrides", len(_fb))
+
+            def _fw(signal_name: str, base_weight: float) -> float:
+                """Return base_weight * feedback multiplier, clamped to [0.05, 2.0]."""
+                m = _fb.get(signal_name.lower(), 1.0)
+                return base_weight * max(0.05, min(2.0, m))
+
             # Build signal list; exclude any signal whose confidence=0 so that
             # inactive signals (ELA on PNG/WebP, missing own_embedding, etc.)
             # don't bias the weighted sum toward 0.5.
             _raw_signals = [
-                ("stat",       0.38, base_report["ai_probability"],   1.0),  # stat always active
-                ("own",        0.12, own_result["score"],             own_result.get("confidence", 0)),
-                ("clip",       0.18, clip_result["score"],            clip_result.get("confidence", 0)),
-                ("prnu",       0.10, prnu_result["score"],            prnu_result.get("confidence", 0)),
-                ("ela",        0.08, ela_result["score"],             ela_result.get("confidence", 0)),
-                ("meta",       0.06, metadata_result["score"],        metadata_result.get("confidence", 0)),
-                ("dct",        0.04, dct_result["score"],             dct_result.get("confidence", 0)),
-                ("jpeg_ghost", 0.04, jpeg_ghost_result["score"],      jpeg_ghost_result.get("confidence", 0)),
-                ("noiseprint", 0.03, noiseprint_result["score"],      noiseprint_result.get("confidence", 0)),
-                ("noise_map",  0.02, noise_map_result["score"],       noise_map_result.get("confidence", 0)),
-                ("cfa",        0.02, cfa_result["score"],             cfa_result.get("confidence", 0)),
+                ("stat",       _fw("statistical analysis",       0.38), base_report["ai_probability"],   1.0),
+                ("own",        _fw("own embedding detection",    0.12), own_result["score"],             own_result.get("confidence", 0)),
+                ("clip",       _fw("clip embedding analysis",    0.18), clip_result["score"],            clip_result.get("confidence", 0)),
+                ("prnu",       _fw("prnu camera fingerprint",    0.10), prnu_result["score"],            prnu_result.get("confidence", 0)),
+                ("ela",        _fw("ela compression analysis",   0.08), ela_result["score"],             ela_result.get("confidence", 0)),
+                ("meta",       _fw("metadata forensics",         0.06), metadata_result["score"],        metadata_result.get("confidence", 0)),
+                ("dct",        _fw("dct frequency analysis",     0.04), dct_result["score"],             dct_result.get("confidence", 0)),
+                ("jpeg_ghost", _fw("jpeg ghost analysis",        0.04), jpeg_ghost_result["score"],      jpeg_ghost_result.get("confidence", 0)),
+                ("noiseprint", _fw("noiseprint fingerprint",     0.03), noiseprint_result["score"],      noiseprint_result.get("confidence", 0)),
+                ("noise_map",  _fw("noise map analysis",         0.02), noise_map_result["score"],       noise_map_result.get("confidence", 0)),
+                ("cfa",        _fw("cfa demosaic analysis",      0.02), cfa_result["score"],             cfa_result.get("confidence", 0)),
             ]
             # Filter: only include signals with confidence > 0
             _active = [(name, w, score) for name, w, score, conf in _raw_signals if conf > 0]
