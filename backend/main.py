@@ -231,6 +231,11 @@ async def health_check(request: Request):
         _degraded_detectors.append("own_embedding — EfficientNet embedding scores will be 0.5")
     if not _xgb_ok:
         _degraded_detectors.append("xgboost_ensemble — ensemble falls back to unweighted sum")
+    if not _platt_ok:
+        _degraded_detectors.append(
+            "platt_calibration — using hand-picked defaults (A=5.0, B=-2.5), "
+            "not fitted to real data. Run scripts/fit_platt.py to fix."
+        )
     return {
         "status": "degraded" if _degraded else "healthy",
         "debug_mode": settings.DEBUG,
