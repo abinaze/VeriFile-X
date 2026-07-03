@@ -28,7 +28,7 @@ uvicorn==0.27.0
 watchfiles==1.1.1
 websockets==16.0
 cryptography==46.0.7
-transformers==4.53.1
+transformers==4.57.6
 tqdm==4.67.0
 diffusers==0.38.0
 huggingface_hub==0.34.0
