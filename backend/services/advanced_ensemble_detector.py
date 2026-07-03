@@ -81,13 +81,44 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Run parent class methods (19 statistical signals)
         base_report = super().detect()
 
+        # Gate camera-forensic signals by image content type.
+        # PRNU/ELA/metadata are designed for camera photos — running them on
+        # screenshots, illustrations, or documents injects noise into the ensemble.
+        from backend.services.image_type_classifier import classify_image_type as _classify
+        _img_type = _classify(self.image_bytes, self.filename)
+        logger.info(
+            "Image type: %s (confidence=%.2f) run_prnu=%s run_ela=%s run_metadata=%s",
+            _img_type["image_type"], _img_type["confidence"],
+            _img_type["run_prnu"], _img_type["run_ela"], _img_type["run_metadata"],
+        )
+
+        def _skipped(signal_name: str, method: str) -> dict:
+            return {
+                "signal_name":    signal_name,
+                "score":          0.5,
+                "confidence":     0.0,
+                "explanation":    (
+                    f"Skipped — not appropriate for {_img_type['image_type']} images "
+                    f"({_img_type['explanation']})"
+                ),
+                "raw_value":      0.5,
+                "expected_range": "> 0.5 for AI",
+                "method":         method,
+            }
+
         # Deep-learning and forensic signals
         dire_result       = self.dire_detector.detect(self.image_bytes, self.filename)
         clip_result       = self.clip_detector.detect(self.image_bytes, self.filename)
         own_result        = self.own_detector.detect(self.image_bytes, self.filename)
-        prnu_result       = detect_prnu(self.image_bytes, self.filename)
-        ela_result        = detect_ela(self.image_bytes, self.filename)
-        metadata_result   = analyze_metadata(self.image_bytes, self.filename)
+        prnu_result       = (detect_prnu(self.image_bytes, self.filename)
+                             if _img_type["run_prnu"]
+                             else _skipped("PRNU Camera Fingerprint", "prnu_skipped"))
+        ela_result        = (detect_ela(self.image_bytes, self.filename)
+                             if _img_type["run_ela"]
+                             else _skipped("ELA Compression Analysis", "ela_skipped"))
+        metadata_result   = (analyze_metadata(self.image_bytes, self.filename)
+                             if _img_type["run_metadata"]
+                             else _skipped("Metadata Forensics", "metadata_skipped"))
         dct_result        = detect_dct_artifacts(self.image_bytes, self.filename)
         jpeg_ghost_result = detect_jpeg_ghost(self.image_bytes, self.filename)
         noise_map_result  = detect_noise_map(self.image_bytes, self.filename)
