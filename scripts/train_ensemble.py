@@ -148,6 +148,7 @@ def main():
     logger.info(f"Model saved to {MODEL_OUT}")
 
     results = {
+        "cv_method":         cv_method,
         "cv_auc_mean":       round(auc_cv, 4),
         "cv_auc_std":        round(scores["test_roc_auc"].std(), 4),
         "cv_f1_mean":        round(f1_cv, 4),
@@ -159,6 +160,7 @@ def main():
         "scale_pos_weight":  round(float(scale_pos_weight), 4),
         "n_features":        len(feature_names),
         "n_samples":         len(y),
+        "feature_names":     feature_names,
         "feature_importance": {k: round(v, 6) for k, v in signal_importance},
     }
     with open(RESULTS_OUT, "w") as f:
