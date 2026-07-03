@@ -205,11 +205,10 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                     len(_active), len(_raw_signals), _total,
                 )
 
-        # Platt scaling calibration — proper sigmoid fit replacing hand-tuned stub
-        from backend.services.platt_calibrator import calibrate as _platt_calibrate
-        weighted_score = _platt_calibrate(weighted_score)
-
-        # XGBoost meta-model overrides weighted sum when available
+        # XGBoost meta-model overrides weighted sum when available.
+        # NOTE: Platt calibration is applied ONLY on the fallback path below.
+        # XGBoost.predict_proba already outputs calibrated probabilities;
+        # applying Platt on top would distort those scores.
         xgb_model, feature_names, _ = _load_xgb()
         if xgb_model is not None:
             signal_map = {
@@ -221,10 +220,12 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             weighted_score = float(xgb_model.predict_proba(feat_vec)[0][1])
             logger.info(f"XGBoost ensemble score: {weighted_score:.4f}")
         else:
-            logger.info("XGBoost model not found, using weighted sum fallback")
-            # Manual boost multipliers removed — the weighted sum above plus
-            # calibrate() is sufficient; XGBoost learns co-occurrence patterns
-            # from training data when available.
+            logger.info("XGBoost model not found — applying Platt calibration to weighted sum")
+            # Platt scaling calibration — proper sigmoid fit replacing hand-tuned stub.
+            # Only reaches here when XGBoost is unavailable; when XGBoost IS available
+            # its predict_proba output is already a calibrated probability.
+            from backend.services.platt_calibrator import calibrate as _platt_calibrate
+            weighted_score = _platt_calibrate(weighted_score)
 
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
 
