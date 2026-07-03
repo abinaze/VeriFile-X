@@ -81,13 +81,44 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # Run parent class methods (19 statistical signals)
         base_report = super().detect()
 
+        # Gate camera-forensic signals by image content type.
+        # PRNU/ELA/metadata are designed for camera photos — running them on
+        # screenshots, illustrations, or documents injects noise into the ensemble.
+        from backend.services.image_type_classifier import classify_image_type as _classify
+        _img_type = _classify(self.image_bytes, self.filename)
+        logger.info(
+            "Image type: %s (confidence=%.2f) run_prnu=%s run_ela=%s run_metadata=%s",
+            _img_type["image_type"], _img_type["confidence"],
+            _img_type["run_prnu"], _img_type["run_ela"], _img_type["run_metadata"],
+        )
+
+        def _skipped(signal_name: str, method: str) -> dict:
+            return {
+                "signal_name":    signal_name,
+                "score":          0.5,
+                "confidence":     0.0,
+                "explanation":    (
+                    f"Skipped — not appropriate for {_img_type['image_type']} images "
+                    f"({_img_type['explanation']})"
+                ),
+                "raw_value":      0.5,
+                "expected_range": "> 0.5 for AI",
+                "method":         method,
+            }
+
         # Deep-learning and forensic signals
         dire_result       = self.dire_detector.detect(self.image_bytes, self.filename)
         clip_result       = self.clip_detector.detect(self.image_bytes, self.filename)
         own_result        = self.own_detector.detect(self.image_bytes, self.filename)
-        prnu_result       = detect_prnu(self.image_bytes, self.filename)
-        ela_result        = detect_ela(self.image_bytes, self.filename)
-        metadata_result   = analyze_metadata(self.image_bytes, self.filename)
+        prnu_result       = (detect_prnu(self.image_bytes, self.filename)
+                             if _img_type["run_prnu"]
+                             else _skipped("PRNU Camera Fingerprint", "prnu_skipped"))
+        ela_result        = (detect_ela(self.image_bytes, self.filename)
+                             if _img_type["run_ela"]
+                             else _skipped("ELA Compression Analysis", "ela_skipped"))
+        metadata_result   = (analyze_metadata(self.image_bytes, self.filename)
+                             if _img_type["run_metadata"]
+                             else _skipped("Metadata Forensics", "metadata_skipped"))
         dct_result        = detect_dct_artifacts(self.image_bytes, self.filename)
         jpeg_ghost_result = detect_jpeg_ghost(self.image_bytes, self.filename)
         noise_map_result  = detect_noise_map(self.image_bytes, self.filename)
@@ -205,26 +236,38 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                     len(_active), len(_raw_signals), _total,
                 )
 
-        # Platt scaling calibration — proper sigmoid fit replacing hand-tuned stub
-        from backend.services.platt_calibrator import calibrate as _platt_calibrate
-        weighted_score = _platt_calibrate(weighted_score)
-
-        # XGBoost meta-model overrides weighted sum when available
+        # XGBoost meta-model overrides weighted sum when available.
+        # NOTE: Platt calibration is applied ONLY on the fallback path below.
+        # XGBoost.predict_proba already outputs calibrated probabilities;
+        # applying Platt on top would distort those scores.
         xgb_model, feature_names, _ = _load_xgb()
         if xgb_model is not None:
             signal_map = {
                 s["signal_name"].lower().replace(" ", "_"): s["score"]
                 for s in all_signals
             }
+            # Feature-name mismatch check: any XGBoost feature key not in
+            # signal_map will be filled with np.nan (XGBoost native missing).
+            # Mismatches are silent score degraders — log them explicitly.
+            _missing = [k for k in feature_names if k not in signal_map]
+            if _missing:
+                logger.warning(
+                    "XGBoost feature-name mismatch: %d/%d features not in live "
+                    "signal_map (will use np.nan). Missing: %s. "
+                    "Retrain ensemble_xgb.pkl or check signal_name strings.",
+                    len(_missing), len(feature_names), _missing,
+                )
             # np.nan lets XGBoost use its native missing-value branch selection
             feat_vec       = np.array([[signal_map.get(k, np.nan) for k in feature_names]])
             weighted_score = float(xgb_model.predict_proba(feat_vec)[0][1])
             logger.info(f"XGBoost ensemble score: {weighted_score:.4f}")
         else:
-            logger.info("XGBoost model not found, using weighted sum fallback")
-            # Manual boost multipliers removed — the weighted sum above plus
-            # calibrate() is sufficient; XGBoost learns co-occurrence patterns
-            # from training data when available.
+            logger.info("XGBoost model not found — applying Platt calibration to weighted sum")
+            # Platt scaling calibration — proper sigmoid fit replacing hand-tuned stub.
+            # Only reaches here when XGBoost is unavailable; when XGBoost IS available
+            # its predict_proba output is already a calibrated probability.
+            from backend.services.platt_calibrator import calibrate as _platt_calibrate
+            weighted_score = _platt_calibrate(weighted_score)
 
         suspicious_count = sum(1 for s in all_signals if s["score"] > 0.5)
 
@@ -264,7 +307,14 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             confidence     = "high" if weighted_score < 0.20 else "medium"
 
         sorted_signals = sorted(all_signals, key=lambda x: x["score"], reverse=True)
-        top_reasons    = [s["explanation"] for s in sorted_signals[:3]]
+        # Filter out neutral placeholder signals (confidence=0 means signal was
+        # unavailable/skipped, e.g. "CLIP database not built"). Including them
+        # as top reasons is misleading — they contain no forensic evidence.
+        top_reasons = [
+            s["explanation"]
+            for s in sorted_signals
+            if s.get("confidence", 0.0) > 0.0
+        ][:3]
 
         result = {
             "ai_probability":          float(weighted_score),

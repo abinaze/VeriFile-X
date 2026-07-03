@@ -127,7 +127,7 @@ def run_mcmc(
         log_post_prop = _log_posterior(proposal, scores, sigmas)
         log_alpha     = log_post_prop - log_post
 
-        if math.log(rng.uniform(1e-10, 1.0)) < log_alpha:
+        if math.log(max(rng.uniform(0.0, 1.0), 1e-300)) < log_alpha:
             theta    = proposal
             log_post = log_post_prop
             accepted += 1

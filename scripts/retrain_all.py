@@ -16,6 +16,7 @@ Steps:
     step5  — Build OwnEmbedding centroid database
     step6  — Extract 30-signal feature vectors
     step7  — Train XGBoost meta-model
+    step8  — Fit Platt calibration (requires features.csv + manifest.csv with val split)
 
 RTX 4050 (6 GB VRAM) recommended settings are used automatically unless
 overridden with the flags documented below.
@@ -76,6 +77,7 @@ STEP_OUTPUTS: dict[str, list[Path]] = {
     "step6": [FEATURES],
     "step7": [REFERENCE / "ensemble_xgb.pkl",
                REFERENCE / "ensemble_results.json"],
+    "step8": [REFERENCE / "platt_params.json"],
 }
 
 STEP_NAMES = {
@@ -86,6 +88,7 @@ STEP_NAMES = {
     "step5": "Build OwnEmbedding centroid database",
     "step6": "Extract 30-signal feature vectors",
     "step7": "Train XGBoost meta-model",
+    "step8": "Fit Platt calibration parameters",
 }
 
 # Rough time estimates per step (minutes) — for planning / ETA display
@@ -97,6 +100,7 @@ STEP_ETA_MIN = {
     "step5": 20,
     "step6": 180,   # depends heavily on --limit
     "step7": 15,
+    "step8": 2,
 }
 
 
@@ -311,6 +315,16 @@ def step7_train_ensemble(args, dry_run: bool) -> bool:
     )
 
 
+def step8_fit_platt(args, dry_run: bool) -> bool:
+    """Fit Platt calibration parameters on the val split of features.csv."""
+    logger.info("[step8] Fitting Platt calibration…")
+    return _run(
+        [_python(), str(SCRIPTS / "fit_platt.py"), "--split", "val"],
+        step="step8",
+        dry_run=dry_run,
+    )
+
+
 # -- Validation report ------------------------------------------------------
 
 def validation_report() -> None:
@@ -363,7 +377,7 @@ def validation_report() -> None:
 
 # -- Main -------------------------------------------------------------------
 
-ALL_STEPS = ["step1", "step2", "step3", "step4", "step5", "step6", "step7"]
+ALL_STEPS = ["step1", "step2", "step3", "step4", "step5", "step6", "step7", "step8"]
 
 
 def main() -> None:
@@ -491,6 +505,7 @@ def main() -> None:
         "step5": step5_build_centroids,
         "step6": step6_extract_features,
         "step7": step7_train_ensemble,
+        "step8": step8_fit_platt,
     }
 
     pipeline_start = time.monotonic()

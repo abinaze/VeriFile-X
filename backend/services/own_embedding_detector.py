@@ -42,12 +42,29 @@ class OwnEmbeddingDetector:
             self.ai_centroid      = None
             self._centroid_loaded = True
             return
-        with open(CENTROIDS_PATH, "rb") as f:
-            db = pickle.load(f)
-        self.real_centroid    = db["real_centroid"]
-        self.ai_centroid      = db["ai_centroid"]
-        self._centroid_loaded = True
-        logger.info(f"Loaded centroids: {db['real_count']} real, {db['ai_count']} AI, sep={db['separation']:.4f}")
+        try:
+            with open(CENTROIDS_PATH, "rb") as f:
+                db = pickle.load(f)
+            self.real_centroid = db["real_centroid"]
+            self.ai_centroid   = db["ai_centroid"]
+            logger.info(
+                "Loaded centroids: %d real, %d AI, sep=%.4f",
+                db["real_count"], db["ai_count"], db["separation"],
+            )
+        except Exception as exc:
+            # Handles Git LFS pointer stubs (tiny ASCII text) and corrupt files.
+            # Always set _centroid_loaded=True so we don't re-attempt on every
+            # request — the file isn't going to fix itself at runtime.
+            logger.error(
+                "own_centroids.pkl could not be loaded (%s). "
+                "Likely a Git LFS pointer stub — run: git lfs pull. "
+                "Falling back to direct-only embedding (no centroid scoring).",
+                exc,
+            )
+            self.real_centroid = None
+            self.ai_centroid   = None
+        finally:
+            self._centroid_loaded = True
 
     def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
         return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b) + 1e-8))
