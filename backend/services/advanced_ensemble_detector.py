@@ -246,6 +246,17 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 s["signal_name"].lower().replace(" ", "_"): s["score"]
                 for s in all_signals
             }
+            # Feature-name mismatch check: any XGBoost feature key not in
+            # signal_map will be filled with np.nan (XGBoost native missing).
+            # Mismatches are silent score degraders — log them explicitly.
+            _missing = [k for k in feature_names if k not in signal_map]
+            if _missing:
+                logger.warning(
+                    "XGBoost feature-name mismatch: %d/%d features not in live "
+                    "signal_map (will use np.nan). Missing: %s. "
+                    "Retrain ensemble_xgb.pkl or check signal_name strings.",
+                    len(_missing), len(feature_names), _missing,
+                )
             # np.nan lets XGBoost use its native missing-value branch selection
             feat_vec       = np.array([[signal_map.get(k, np.nan) for k in feature_names]])
             weighted_score = float(xgb_model.predict_proba(feat_vec)[0][1])
