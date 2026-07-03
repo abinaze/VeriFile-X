@@ -580,9 +580,13 @@ async def analyze_segment(
         logger.exception("Unexpected error validating /segment upload")
         raise HTTPException(status_code=422, detail="Invalid or unreadable image file")
 
-    from backend.services.segment_detector import detect_segments
-    result = detect_segments(image_bytes, file.filename or "upload")
-    return result
+    try:
+        from backend.services.segment_detector import detect_segments
+        result = detect_segments(image_bytes, file.filename or "upload")
+        return result
+    except Exception:
+        logger.error("Segment detection error", exc_info=True)
+        raise HTTPException(status_code=500, detail="Segment analysis failed")
 
 
 @router.post(
