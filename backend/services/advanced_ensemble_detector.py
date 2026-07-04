@@ -229,11 +229,11 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 ("prnu",       _fw("prnu camera fingerprint",    0.10), prnu_result["score"],            prnu_result.get("confidence", 0)),
                 ("ela",        _fw("ela compression analysis",   0.08), ela_result["score"],             ela_result.get("confidence", 0)),
                 ("meta",       _fw("metadata forensics",         0.06), metadata_result["score"],        metadata_result.get("confidence", 0)),
-                ("dct",        _fw("dct frequency analysis",     0.04), dct_result["score"],             dct_result.get("confidence", 0)),
+                ("dct",        _fw("dct frequency artifacts",     0.04), dct_result["score"],             dct_result.get("confidence", 0)),
                 ("jpeg_ghost", _fw("jpeg ghost analysis",        0.04), jpeg_ghost_result["score"],      jpeg_ghost_result.get("confidence", 0)),
-                ("noiseprint", _fw("noiseprint fingerprint",     0.03), noiseprint_result["score"],      noiseprint_result.get("confidence", 0)),
+                ("noiseprint", _fw("noiseprint camera fingerprint",     0.03), noiseprint_result["score"],      noiseprint_result.get("confidence", 0)),
                 ("noise_map",  _fw("noise map analysis",         0.02), noise_map_result["score"],       noise_map_result.get("confidence", 0)),
-                ("cfa",        _fw("cfa demosaic analysis",      0.02), cfa_result["score"],             cfa_result.get("confidence", 0)),
+                ("cfa",        _fw("cfa artifact analysis",      0.02), cfa_result["score"],             cfa_result.get("confidence", 0)),
             ]
             # Filter: only include signals with confidence > 0
             _active = [(name, w, score) for name, w, score, conf in _raw_signals if conf > 0]
