@@ -12,7 +12,7 @@ fastapi==0.117.0
 # closes all open Starlette CVEs (#102,135,136,162,163,199,202,203,206,207,208,209).
 # Pinning starlette directly would conflict with fastapi's upper bound.
 idna>=3.7
-Pygments>=2.18.0
+Pygments==2.20.0
 uvicorn[standard]==0.27.0
 
 # Configuration Management
