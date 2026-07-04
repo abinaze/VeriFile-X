@@ -73,9 +73,26 @@ class CLIPDetector:
                 device=self.device
             )
             
-            self._model_loaded = True
             self._from_cache = False
             logger.info("CLIP model loaded successfully")
+        except Exception as exc:
+            # Cache the failure so we don't retry a potentially expensive
+            # download (CLIP weights from OpenAI CDN) on every request.
+            logger.error(
+                "CLIP model load failed (%s) — will return neutral results "
+                "for all subsequent requests. Check clip package install and "
+                "network access to OpenAI CDN.", exc,
+            )
+            self.model       = None
+            self.preprocess  = None
+        finally:
+            self._model_loaded = True  # Always set — prevents per-request retry
+        if self.model is not None:
+            pass  # load succeeded, continue below
+        else:
+            return  # load failed, skip cache store and DB load
+        try:
+            import clip as _clip_store  # noqa: F811
             
             # Store in cache for future use
             self.cache.set(
