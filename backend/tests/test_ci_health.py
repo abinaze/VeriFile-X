@@ -16,7 +16,7 @@ def test_app_imports_without_error():
 def test_all_routers_registered():
     """All expected routers must be registered on the app."""
     from backend.main import app
-    prefixes = {route.path for route in app.routes}
+    prefixes = {route.path for route in app.routes if hasattr(route, 'path')}
     # Check that key endpoints exist
     paths_str = " ".join(str(p) for p in prefixes)
     assert "/api/v1/analyze/image" in paths_str or "/api/v1/analyze" in paths_str
