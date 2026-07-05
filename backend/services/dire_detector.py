@@ -99,7 +99,6 @@ class DIREDetector:
             if self.device == "cuda":
                 self.pipe.enable_attention_slicing()
 
-            self._model_loaded = True
             self._from_cache = False
             logger.info("Stable Diffusion model loaded successfully")
 
@@ -115,8 +114,18 @@ class DIREDetector:
             logger.info(f"Cached model ({self.model_size_mb}MB) for future use")
 
         except Exception as e:
-            logger.error(f"Failed to load Stable Diffusion model: {e}")
-            raise
+            # Do NOT re-raise. Cache the failure so every subsequent request
+            # is not forced to retry a potential ~4-5 GB SD 2.1 download.
+            logger.error(
+                "Failed to load Stable Diffusion model (%s) — DIRE will return "
+                "neutral results for all subsequent requests. Run: "
+                "git lfs pull && check diffusers install.", e,
+            )
+            self.pipe      = None
+            self.scheduler = None
+        finally:
+            # Always set — prevents per-request retry on failure
+            self._model_loaded = True
 
     def _preprocess_image(self, image_bytes: bytes) -> torch.Tensor:
         """
