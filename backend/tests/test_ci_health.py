@@ -15,9 +15,9 @@ def test_app_imports_without_error():
 
 def test_all_routers_registered():
     """Verify all major API route groups are registered (starlette 0.x + 1.x compat)."""
+    from backend.main import app as _app  # explicit import — avoids scope issues after refactor
+
     def _collect_paths(routes):
-        """Recursively collect paths; starlette 1.x wraps sub-routers in _IncludedRouter
-        objects that don't expose .path directly but carry their children in .routes."""
         paths = set()
         for route in routes:
             if hasattr(route, "path"):
@@ -26,13 +26,12 @@ def test_all_routers_registered():
                 paths |= _collect_paths(route.routes)
         return paths
 
-    all_paths = _collect_paths(app.routes)
+    all_paths = _collect_paths(_app.routes)
     paths_str = " ".join(all_paths)
-
     assert "/api/v1/analyze/image" in paths_str or "/api/v1/analyze" in paths_str, (
-        f"analyze route missing from: {paths_str}"
+        f"analyze route not found in registered paths: {paths_str}"
     )
-    assert "/health" in paths_str, f"health route missing from: {paths_str}"
+    assert "/health" in paths_str, f"health route not found: {paths_str}"
 
 def test_settings_loads():
     """Settings must load from environment without raising."""
