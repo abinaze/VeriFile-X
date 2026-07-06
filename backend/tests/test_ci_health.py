@@ -14,24 +14,22 @@ def test_app_imports_without_error():
 
 
 def test_all_routers_registered():
-    """Verify all major API route groups are registered (starlette 0.x + 1.x compat)."""
-    from backend.main import app as _app  # explicit import — avoids scope issues after refactor
+    """Verify major API route groups are registered (starlette-version-agnostic).
 
-    def _collect_paths(routes):
-        paths = set()
-        for route in routes:
-            if hasattr(route, "path"):
-                paths.add(route.path)
-            if hasattr(route, "routes"):
-                paths |= _collect_paths(route.routes)
-        return paths
+    Uses FastAPI's openapi() schema rather than walking app.routes directly —
+    the starlette 1.x _IncludedRouter structure doesn't store the full path
+    on sub-route objects, making recursive walks unreliable. The OpenAPI schema
+    is the canonical source of all registered paths and works across versions.
+    """
+    from backend.main import app as _app
 
-    all_paths = _collect_paths(_app.routes)
-    paths_str = " ".join(all_paths)
-    assert "/api/v1/analyze/image" in paths_str or "/api/v1/analyze" in paths_str, (
-        f"analyze route not found in registered paths: {paths_str}"
+    registered = _app.openapi().get("paths", {})
+    assert any(p.startswith("/api/v1/analyze") for p in registered), (
+        f"analyze route not found. Registered paths: {sorted(registered.keys())}"
     )
-    assert "/health" in paths_str, f"health route not found: {paths_str}"
+    assert "/health" in registered or any(p == "/health" for p in registered), (
+        f"health route not found. Registered paths: {sorted(registered.keys())}"
+    )
 
 def test_settings_loads():
     """Settings must load from environment without raising."""
