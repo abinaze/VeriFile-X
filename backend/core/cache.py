@@ -17,14 +17,19 @@ import threading
 from typing import Dict, Optional, Any, Union
 from datetime import datetime, timedelta
 from backend.core.logger import setup_logger
+from backend.core.config import settings
 
 logger = setup_logger(__name__)
 
 # Max cached results (prevents memory abuse)
-MAX_CACHE_SIZE = 500
+# BUG FIX: previously hardcoded, disconnected from settings.MAX_CACHE_SIZE
+# (declared in .env.example/render.yaml as a user-configurable knob that
+# silently did nothing). Now actually reads it.
+MAX_CACHE_SIZE = settings.MAX_CACHE_SIZE
 
 # Cache TTL: results expire after 1 hour
-CACHE_TTL_MINUTES = 60
+# BUG FIX: previously hardcoded, disconnected from settings.CACHE_TTL_MINUTES.
+CACHE_TTL_MINUTES = settings.CACHE_TTL_MINUTES
 
 
 class ForensicsCache:
