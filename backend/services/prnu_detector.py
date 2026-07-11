@@ -1,12 +1,25 @@
 """
-PRNU (Photo Response Non-Uniformity) Camera Fingerprint Detection.
+Single-image sensor-noise heuristic (named after, but NOT an implementation
+of, forensic PRNU analysis).
 
-Every real camera sensor has microscopic manufacturing defects that create
-a unique noise pattern embedded in every photo it takes — like a fingerprint.
-AI-generated images have no camera sensor, so they have no PRNU pattern.
+IMPORTANT — what this detector does NOT do: real PRNU (Photo Response
+Non-Uniformity) forensics is a REFERENCE-PATTERN comparison technique —
+it averages noise residuals across dozens of images KNOWN to come from
+one specific camera to isolate that sensor's fixed-pattern noise, then
+correlates a questioned image against that known-camera reference. That
+is the methodology courts and law enforcement have accepted.
 
-This is one of the most court-defensible forensic signals available.
-Used by law enforcement and accepted in legal proceedings worldwide.
+This module has no camera-reference database and operates on a SINGLE
+image with no reference pattern at all: wavelet-denoise residual, local
+patch autocorrelation, residual-energy ratio, and row/column variance
+consistency, combined as heuristics. It cannot honestly carry the
+"used by law enforcement / accepted in legal proceedings" framing, which
+describes the reference-pattern methodology above, not this one.
+
+What it can plausibly still detect: cameras impose consistent, structured
+sensor noise; some AI generators impose little or none. This heuristic
+may correlate with that difference, but it is unvalidated against
+labeled data and should be described accordingly, not as "PRNU."
 """
 import numpy as np
 from typing import Dict, Any
