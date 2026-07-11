@@ -33,7 +33,7 @@ def pytest_configure(config):
     )
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def _test_api_key(tmp_path, monkeypatch):
     """
     Auth was added to analyze.py/cases.py (see backend/core/auth.py).
