@@ -95,6 +95,38 @@ def _append_delivery(entry: Dict[str, Any]) -> None:
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
+def _reject_unsafe_webhook_target(url: str) -> None:
+    """
+    SSRF guard: resolve the webhook hostname and reject any address in a
+    private, loopback, link-local, or reserved range — including the
+    cloud metadata address (169.254.169.254) commonly used to steal
+    IAM credentials via SSRF. Re-run at delivery time too (not just
+    registration) to defeat DNS-rebinding attacks.
+    """
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("Webhook URL must include a valid hostname.")
+
+    try:
+        resolved_ips = {info[4][0] for info in socket.getaddrinfo(hostname, None)}
+    except socket.gaierror:
+        raise ValueError(f"Webhook hostname could not be resolved: {hostname}")
+
+    for ip_str in resolved_ips:
+        ip = ipaddress.ip_address(ip_str)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            raise ValueError(
+                f"Webhook URL resolves to a disallowed address ({ip_str}). "
+                "Private, loopback, link-local, reserved, and multicast "
+                "ranges are blocked to prevent SSRF."
+            )
+
+
 def register_webhook(
     url: str,
     name: str,
@@ -108,6 +140,7 @@ def register_webhook(
     """
     if not url.startswith(("http://", "https://")):
         raise ValueError("URL must start with http:// or https://")
+    _reject_unsafe_webhook_target(url)
 
     webhook_id = str(uuid.uuid4())
     # Log BEFORE generating the signing token so the token never appears
