@@ -206,11 +206,23 @@ def verify_c2pa(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]
                 "and does not indicate manipulation."
             )
         elif has_jumbf_c2pa and signing_info.get("signer"):
+            # NOTE: "verified" here means manifest+signer-name markers were
+            # found in the file's header/XMP text — NOT that any
+            # cryptographic signature, certificate, or hash was actually
+            # checked (no crypto library is imported anywhere in this
+            # module). A hand-crafted, unsigned XMP block naming a
+            # plausible signer is indistinguishable from a genuinely
+            # signed one under this check. Confidence lowered from a
+            # previous 0.90 to reflect that this is marker-presence
+            # detection, not verification — see cryptographically_verified
+            # below and the accuracy_note in the returned dict.
             provenance_status = "verified"
-            confidence        = 0.90
+            confidence        = 0.55
             explanation       = (
-                f"C2PA manifest found with signing information. "
-                f"Signer: {signing_info.get('signer', 'unknown')}. "
+                f"C2PA manifest markers found with signer information "
+                f"('{signing_info.get('signer', 'unknown')}'), but no "
+                "cryptographic signature was checked — this is header/XMP "
+                "marker detection, not verification. "
                 "Full cryptographic verification requires the C2PA SDK."
             )
         elif has_xmp_c2pa or has_jumbf_c2pa:
@@ -251,6 +263,11 @@ def verify_c2pa(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]
             "confidence":         round(confidence, 4),
             "explanation":        explanation,
             "file_hash":          file_hash,
+            # Explicit, unambiguous flag: this module never performs
+            # cryptographic signature/certificate verification, regardless
+            # of what provenance_status says. Always False in this
+            # implementation until the C2PA SDK is integrated.
+            "cryptographically_verified": False,
             "accuracy_note": (
                 "Full cryptographic C2PA verification requires the c2pa-python SDK. "
                 "This implementation uses header/XMP scanning for CI compatibility."
