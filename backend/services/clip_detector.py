@@ -154,27 +154,6 @@ class CLIPDetector:
             "Run scripts/build_clip_database.py to enable CLIP detection."
         )
     
-    def _initialize_placeholder_centroids(self):
-        """Initialize placeholder centroids (fallback)."""
-        embedding_dim = 512  # ViT-B/32 embedding size
-        
-        # Random initialization (will be replaced by actual data)
-        self.real_centroid = torch.randn(embedding_dim).to(self.device) * 0.01
-        self.fake_centroid = torch.randn(embedding_dim).to(self.device) * 0.01
-        
-        # Ensure they're different
-        self.fake_centroid += torch.ones(embedding_dim).to(self.device) * 0.1
-        
-        # Normalize
-        self.real_centroid = self.real_centroid / self.real_centroid.norm()
-        self.fake_centroid = self.fake_centroid / self.fake_centroid.norm()
-        
-        logger.error(
-            "CLIP real_centroid/fake_centroid NOT loaded — using random placeholders. "
-            "All CLIP scores will be RANDOM (noise). Check that clip_database.pkl is a "
-            "real binary file (not a Git LFS stub) and accessible at startup."
-        )
-    
     def _extract_features(self, image_bytes: bytes) -> torch.Tensor:
         """Extract CLIP embedding from image."""
         from io import BytesIO
