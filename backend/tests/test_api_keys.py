@@ -86,7 +86,10 @@ def test_check_permission_admin():
     assert check_permission("admin", "POST", "/api/v1/keys/") is True
     assert check_permission("admin", "DELETE", "/api/v1/keys/abc") is True
 
-def test_api_create_key_without_auth(client):
+def test_api_create_key_without_auth():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)  # deliberately unauthenticated — this test checks the no-auth path
     response = client.post("/api/v1/keys/", json={"name": "No Auth", "role": "analyst"})
     assert response.status_code == 401
 
