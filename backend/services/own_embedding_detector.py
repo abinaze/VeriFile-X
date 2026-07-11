@@ -1,12 +1,22 @@
 import pickle
-import logging
+from backend.core.logger import setup_logger
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 CENTROIDS_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "own_centroids.pkl"
+
+# BUG FIX: this detector previously never used the shared ModelCache
+# singleton (backend/core/model_cache.py) that dire_detector.py and
+# clip_detector.py both correctly use. Combined with a fresh
+# OwnEmbeddingDetector() being constructed on EVERY analysis request
+# (AdvancedEnsembleDetector.__init__ does self.own_detector =
+# OwnEmbeddingDetector()), the instance-scoped _model_loaded flag provided
+# zero benefit across requests — every single request reloaded the full
+# model from disk. Now cached under this key, same pattern as its siblings.
+_CACHE_KEY = "own-embedding-model"
 
 
 class OwnEmbeddingDetector:
@@ -18,18 +28,32 @@ class OwnEmbeddingDetector:
         self.real_centroid    = None
         self.ai_centroid      = None
         self._centroid_loaded = False
+        from backend.core.model_cache import get_model_cache
+        self.cache = get_model_cache()
 
     def _load_model(self):
         if self._model_loaded:
             return
         import torch
-        from backend.services.own_detector.model import load_model
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        cached = self.cache.get(_CACHE_KEY)
+        if cached is not None:
+            self.model = cached
+            self._model_loaded = True
+            logger.info("OwnEmbeddingDetector: reused cached model (no reload)")
+            return
+
+        from backend.services.own_detector.model import load_model
         self.model  = load_model(self.device)
         self._model_loaded = True
         if self.model is not None:
             self.model.eval()
-            logger.info(f"OwnEmbeddingDetector loaded on {self.device}")
+            # Estimate ~20MB for the trained EfficientNet-B0 checkpoint —
+            # matches the ballpark used in config/cache_config.py's
+            # MODEL_SIZES table for similarly-sized models.
+            self.cache.set(_CACHE_KEY, self.model, size_mb=20)
+            logger.info(f"OwnEmbeddingDetector loaded on {self.device} and cached")
         else:
             logger.warning("OwnEmbeddingDetector: no trained model found, signal will return neutral 0.5")
 
