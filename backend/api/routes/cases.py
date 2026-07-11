@@ -12,8 +12,12 @@ from backend.core.logger import setup_logger
 logger = setup_logger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
+from backend.core.auth import require_analyst
+from fastapi import Depends
+
 router = APIRouter(
     prefix="/api/v1/cases",
+    dependencies=[Depends(require_analyst)],
     tags=["Case Management"]
 )
 

@@ -23,8 +23,12 @@ logger = setup_logger(__name__)
 # Standalone limiter for this router — same config as main.py
 limiter = Limiter(key_func=get_remote_address)
 
+from backend.core.auth import require_analyst
+from fastapi import Depends
+
 router = APIRouter(
     prefix="/api/v1/analyze",
+    dependencies=[Depends(require_analyst)],
     tags=["Forensic Analysis"]
 )
 
