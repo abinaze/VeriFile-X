@@ -21,19 +21,34 @@ TRANSFORM = transforms.Compose([
 
 class OwnEmbeddingModel(nn.Module):
 
-    def __init__(self, embedding_dim: int = 512, freeze_backbone: bool = False):
+    def __init__(self, embedding_dim: int = 512, freeze_backbone: bool = False,
+                 skip_pretrained: bool = False):
+        """
+        Args:
+            skip_pretrained: if True, skip the ImageNet-pretrained weight
+                download entirely. BUG FIX: load_model() (below) always
+                constructs this model and then IMMEDIATELY overwrites every
+                one of its weights with the real trained checkpoint from
+                own_embedding_model.pt — meaning the pretrained-weight
+                download was previously performed and then 100% discarded
+                on every single load, wasting a network round-trip (only
+                mitigated by torch hub's local disk cache, which won't
+                survive an ephemeral/container-restart deployment).
+                load_model() now passes skip_pretrained=True.
+        """
         super().__init__()
 
         backbone = models.efficientnet_b0(weights=None)
-        try:
-            import torch.hub as hub
-            state = hub.load_state_dict_from_url(
-                "https://download.pytorch.org/models/efficientnet_b0_rwightman-3dd342df.pth",
-                check_hash=False,
-            )
-            backbone.load_state_dict(state)
-        except Exception as e:
-            logger.warning(f"Could not load pretrained weights: {e}. Using random init.")
+        if not skip_pretrained:
+            try:
+                import torch.hub as hub
+                state = hub.load_state_dict_from_url(
+                    "https://download.pytorch.org/models/efficientnet_b0_rwightman-3dd342df.pth",
+                    check_hash=False,
+                )
+                backbone.load_state_dict(state)
+            except Exception as e:
+                logger.warning(f"Could not load pretrained weights: {e}. Using random init.")
 
         self.features = backbone.features
         self.avgpool  = backbone.avgpool
@@ -82,7 +97,10 @@ def load_model(device: str = "cpu") -> Optional[OwnEmbeddingModel]:
         )
         return None
 
-    model = OwnEmbeddingModel()
+    # skip_pretrained=True: the real trained checkpoint loaded two lines
+    # below overwrites every weight anyway — no point downloading ImageNet
+    # pretrained weights first.
+    model = OwnEmbeddingModel(skip_pretrained=True)
     logger.info(f"Loading trained model from {MODEL_PATH}")
     state = torch.load(MODEL_PATH, map_location=device, weights_only=True)
     model.load_state_dict(state)
