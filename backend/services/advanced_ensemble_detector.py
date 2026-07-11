@@ -168,85 +168,65 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         # would otherwise trigger the high-weight DIRE branch incorrectly.
         dire_available = bool(dire_result.get("available", False))
 
-        if dire_available:
-            # DIRE-available branch — weights sum to exactly 1.0
-            # stat=0.26 DIRE=0.21 CLIP=0.16 PRNU=0.08 ELA=0.07
-            # meta=0.06 DCT=0.05  jpeg=0.04 noiseprint=0.03 noise=0.02 cfa=0.02
-            # own_result excluded from DIRE branch when confidence=0 (model missing).
-            # When own_result has confidence>0, include it with weight 0.08 by
-            # redistributing from stat (0.26->0.20) and CLIP (0.16->0.14).
-            _own_conf = own_result.get("confidence", 0.0)
-            if _own_conf > 0:
-                weighted_score = (
-                    0.20 * base_report["ai_probability"] +
-                    0.21 * dire_result["score"] +
-                    0.14 * clip_result["score"] +
-                    0.08 * own_result["score"] +
-                    0.08 * prnu_result["score"] +
-                    0.07 * ela_result["score"] +
-                    0.06 * metadata_result["score"] +
-                    0.05 * dct_result["score"] +
-                    0.04 * jpeg_ghost_result["score"] +
-                    0.03 * noiseprint_result["score"] +
-                    0.02 * noise_map_result["score"] +
-                    0.02 * cfa_result["score"]
-                )
-            else:
-                weighted_score = (
-                    0.26 * base_report["ai_probability"] +
-                    0.21 * dire_result["score"] +
-                    0.16 * clip_result["score"] +
-                    0.08 * prnu_result["score"] +
-                    0.07 * ela_result["score"] +
-                    0.06 * metadata_result["score"] +
-                    0.05 * dct_result["score"] +
-                    0.04 * jpeg_ghost_result["score"] +
-                    0.03 * noiseprint_result["score"] +
-                    0.02 * noise_map_result["score"] +
-                    0.02 * cfa_result["score"]
-                )
+        # UNIFIED SCORING PATH.
+        # Previously this branched into two independently-maintained
+        # formulas: a DIRE-available path with hardcoded static weights and
+        # NO confidence gating (any inactive signal's neutral 0.5 was
+        # blended in at full weight), and a DIRE-unavailable fallback path
+        # with confidence gating AND analyst-feedback weight multipliers.
+        # Every subsequent improvement to "how signals combine" landed only
+        # in the fallback path — including confidence gating itself and the
+        # feedback loop — meaning the recommended, higher-accuracy DIRE
+        # deployment never received either improvement.
+        #
+        # Both refinements are strictly more correct in every case, so the
+        # branch split is removed entirely: one signal list, one confidence
+        # filter, one feedback-weighted renormalization, whether or not
+        # DIRE happens to be available. DIRE/own_result simply drop out of
+        # the active set (like any other signal) when their own confidence
+        # is 0.0 (DIRE unavailable, or own_embedding model missing).
+        from backend.services.feedback_manager import load_weights as _load_fb_weights
+        _fb = _load_fb_weights()
+        if _fb:
+            logger.info("Applying %d analyst feedback weight overrides", len(_fb))
+
+        def _fw(signal_name: str, base_weight: float) -> float:
+            """Return base_weight * feedback multiplier, clamped to [0.05, 2.0]."""
+            m = _fb.get(signal_name.lower(), 1.0)
+            return base_weight * max(0.05, min(2.0, m))
+
+        # Base weights sum to 1.00 across all 12 top-level ensemble inputs.
+        _raw_signals = [
+            ("dire",       _fw("dire reconstruction error",   0.21), dire_result["score"],       dire_result.get("confidence", 0)),
+            ("stat",       _fw("statistical analysis",        0.20), base_report["ai_probability"], 1.0),
+            ("clip",       _fw("clip embedding analysis",      0.14), clip_result["score"],       clip_result.get("confidence", 0)),
+            ("own",        _fw("own embedding detection",      0.08), own_result["score"],       own_result.get("confidence", 0)),
+            ("prnu",       _fw("prnu camera fingerprint",       0.08), prnu_result["score"],       prnu_result.get("confidence", 0)),
+            ("ela",        _fw("ela compression analysis",      0.07), ela_result["score"],       ela_result.get("confidence", 0)),
+            ("meta",       _fw("metadata forensics",             0.06), metadata_result["score"],  metadata_result.get("confidence", 0)),
+            ("dct",        _fw("dct frequency artifacts",        0.05), dct_result["score"],       dct_result.get("confidence", 0)),
+            ("jpeg_ghost", _fw("jpeg ghost analysis",             0.04), jpeg_ghost_result["score"], jpeg_ghost_result.get("confidence", 0)),
+            ("noiseprint", _fw("noiseprint camera fingerprint",   0.03), noiseprint_result["score"], noiseprint_result.get("confidence", 0)),
+            ("noise_map",  _fw("noise map analysis",              0.02), noise_map_result["score"], noise_map_result.get("confidence", 0)),
+            ("cfa",        _fw("cfa artifact analysis",           0.02), cfa_result["score"],       cfa_result.get("confidence", 0)),
+        ]
+        # Filter: only include signals with confidence > 0, renormalize
+        # remaining weights so they still sum to 1.0. This is the fix for
+        # the "0.5 pollution" bug — a missing CLIP database, ELA skipped on
+        # a lossless format, PRNU/ELA/metadata skipped for a non-camera
+        # image type, etc. no longer drag the score toward 0.5 at full
+        # static weight; they're excluded and everyone else is rescaled.
+        _active = [(name, w, score) for name, w, score, conf in _raw_signals if conf > 0]
+        if not _active:
+            logger.warning("No active signals — returning neutral 0.5")
+            weighted_score = 0.5
         else:
-            logger.info("DIRE unavailable — using confidence-gated dynamic ensemble")
-            # Apply analyst feedback weight multipliers (from POST /api/v1/feedback).
-            # load_weights() returns {} when no feedback recorded yet — no-op on fresh install.
-            from backend.services.feedback_manager import load_weights as _load_fb_weights
-            _fb = _load_fb_weights()
-            if _fb:
-                logger.info("Applying %d analyst feedback weight overrides", len(_fb))
-
-            def _fw(signal_name: str, base_weight: float) -> float:
-                """Return base_weight * feedback multiplier, clamped to [0.05, 2.0]."""
-                m = _fb.get(signal_name.lower(), 1.0)
-                return base_weight * max(0.05, min(2.0, m))
-
-            # Build signal list; exclude any signal whose confidence=0 so that
-            # inactive signals (ELA on PNG/WebP, missing own_embedding, etc.)
-            # don't bias the weighted sum toward 0.5.
-            _raw_signals = [
-                ("stat",       _fw("statistical analysis",       0.38), base_report["ai_probability"],   1.0),
-                ("own",        _fw("own embedding detection",    0.12), own_result["score"],             own_result.get("confidence", 0)),
-                ("clip",       _fw("clip embedding analysis",    0.18), clip_result["score"],            clip_result.get("confidence", 0)),
-                ("prnu",       _fw("prnu camera fingerprint",    0.10), prnu_result["score"],            prnu_result.get("confidence", 0)),
-                ("ela",        _fw("ela compression analysis",   0.08), ela_result["score"],             ela_result.get("confidence", 0)),
-                ("meta",       _fw("metadata forensics",         0.06), metadata_result["score"],        metadata_result.get("confidence", 0)),
-                ("dct",        _fw("dct frequency artifacts",     0.04), dct_result["score"],             dct_result.get("confidence", 0)),
-                ("jpeg_ghost", _fw("jpeg ghost analysis",        0.04), jpeg_ghost_result["score"],      jpeg_ghost_result.get("confidence", 0)),
-                ("noiseprint", _fw("noiseprint camera fingerprint",     0.03), noiseprint_result["score"],      noiseprint_result.get("confidence", 0)),
-                ("noise_map",  _fw("noise map analysis",         0.02), noise_map_result["score"],       noise_map_result.get("confidence", 0)),
-                ("cfa",        _fw("cfa artifact analysis",      0.02), cfa_result["score"],             cfa_result.get("confidence", 0)),
-            ]
-            # Filter: only include signals with confidence > 0
-            _active = [(name, w, score) for name, w, score, conf in _raw_signals if conf > 0]
-            if not _active:
-                logger.warning("No active signals — returning neutral 0.5")
-                weighted_score = 0.5
-            else:
-                _total = sum(w for _, w, _ in _active)
-                weighted_score = sum((w / _total) * score for _, w, score in _active)
-                logger.info(
-                    "Dynamic ensemble: %d/%d signals active, sum_w=%.4f",
-                    len(_active), len(_raw_signals), _total,
-                )
+            _total = sum(w for _, w, _ in _active)
+            weighted_score = sum((w / _total) * score for _, w, score in _active)
+            logger.info(
+                "Unified ensemble: %d/%d signals active (dire_available=%s), sum_w=%.4f",
+                len(_active), len(_raw_signals), dire_available, _total,
+            )
 
         # XGBoost meta-model overrides weighted sum when available.
         # NOTE: Platt calibration is applied ONLY on the fallback path below.
