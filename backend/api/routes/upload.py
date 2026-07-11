@@ -28,11 +28,13 @@ router = APIRouter(
     No files are stored on disk.
     
     **Supported types:**
-    - Images: JPEG, PNG, WebP
-    - Videos: MP4, MPEG
-    - Documents: PDF
-    
-    **Max size:** 50MB
+    - Images: JPEG, PNG, WebP, TIFF, HEIC/HEIF
+
+    Note: video and document upload support is not currently enabled
+    (ALLOWED_VIDEO_TYPES/ALLOWED_DOC_TYPES are empty in this deployment's
+    settings) — image-only for now.
+
+    **Max size:** see MAX_FILE_SIZE_MB setting.
     """
 )
 async def validate_upload(
