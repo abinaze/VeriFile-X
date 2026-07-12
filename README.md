@@ -10,6 +10,7 @@ pinned: false
 <div align="center">
 
 
+
 # VeriFile-X
 
 **Forensic-Grade AI Image Detection Platform**
