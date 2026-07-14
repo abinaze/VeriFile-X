@@ -172,7 +172,6 @@ def _residual_kurtosis(noise: np.ndarray) -> float:
     flat = noise.flatten().astype(np.float64)
     if flat.std() < 1e-6:
         return 0.0
-    n = len(flat)
     mean = flat.mean()
     std = flat.std()
     kurt = float(np.mean(((flat - mean) / std) ** 4)) - 3.0
@@ -191,7 +190,11 @@ def _inter_patch_regularity(noise: np.ndarray, patch: int = _PATCH) -> float:
     Returns regularity score [0, 1]: high = regular (AI-like).
     """
     h, w = noise.shape
-    var_map_rows, var_map_cols = [], []
+    # var_map_cols was never appended to or read anywhere — pyflakes/mypy-
+    # confirmed dead. No column-wise pass was actually missing: np.fft.fft2()
+    # below operates on the full 2D var_grid and already captures periodicity
+    # in both row and column directions in one transform.
+    var_map_rows = []
 
     for y in range(0, h - patch, patch):
         row_vars = []
