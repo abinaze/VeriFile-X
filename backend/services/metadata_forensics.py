@@ -77,21 +77,48 @@ def _extract_full_exif(pil_image: Image.Image) -> Dict[str, Any]:
     return result
 
 
+def _dms_to_decimal(dms, ref: str) -> float:
+    """
+    Convert an EXIF (degrees, minutes, seconds) tuple to signed decimal
+    degrees, applying the hemisphere reference ('N'/'S'/'E'/'W').
+
+    BUG FIX: the previous check read only dms[0] (the DEGREES component
+    of the DMS tuple — always positive, always in [0,90]/[0,180] by
+    construction) and never looked at GPSLatitudeRef/GPSLongitudeRef at
+    all. Since a DMS degrees component can mathematically never fall
+    outside its own valid range, the old "plausibility" check could
+    never fail on any real (or even carelessly faked) EXIF data — it
+    was dead logic that always said "plausible."
+    """
+    if isinstance(dms, tuple) and len(dms) >= 3:
+        degrees, minutes, seconds = float(dms[0]), float(dms[1]), float(dms[2])
+    elif isinstance(dms, tuple) and len(dms) >= 1:
+        degrees, minutes, seconds = float(dms[0]), 0.0, 0.0
+    else:
+        degrees, minutes, seconds = float(dms), 0.0, 0.0
+    decimal = degrees + minutes / 60.0 + seconds / 3600.0
+    if ref in ("S", "W"):
+        decimal = -decimal
+    return decimal
+
+
 def _check_gps_plausibility(gps_info: Dict) -> tuple:
-    """Check if GPS coordinates are plausible."""
+    """Check if GPS coordinates are plausible (signed decimal degrees)."""
     try:
         lat = gps_info.get("GPSLatitude")
         lon = gps_info.get("GPSLongitude")
         if not lat or not lon:
             return True, "No GPS data"
-        # Basic range check
-        if isinstance(lat, tuple) and len(lat) >= 1:
-            lat_val = float(lat[0])
-            lon_val = float(lon[0]) if isinstance(lon, tuple) else 0
-            if -90 <= lat_val <= 90 and -180 <= lon_val <= 180:  # signed coords — negative = W hemisphere
-                return True, f"GPS valid ({lat_val:.2f}, {lon_val:.2f})"
-            else:
-                return False, "GPS coordinates out of valid range"
+
+        lat_ref = str(gps_info.get("GPSLatitudeRef", "N")).upper()[:1]
+        lon_ref = str(gps_info.get("GPSLongitudeRef", "E")).upper()[:1]
+
+        lat_val = _dms_to_decimal(lat, lat_ref)
+        lon_val = _dms_to_decimal(lon, lon_ref)
+
+        if -90 <= lat_val <= 90 and -180 <= lon_val <= 180:
+            return True, f"GPS valid ({lat_val:.4f}, {lon_val:.4f})"
+        return False, f"GPS coordinates out of valid range ({lat_val:.4f}, {lon_val:.4f})"
     except Exception:
         pass
     return True, "GPS data present but unverifiable"

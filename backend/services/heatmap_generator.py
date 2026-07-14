@@ -23,13 +23,6 @@ logger = logging.getLogger(__name__)
 _MODEL_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "own_embedding_model.pt"
 
 
-def _neutral_heatmap(image_bytes: bytes) -> np.ndarray:
-    """Return a uniform grey heatmap when model is unavailable."""
-    from PIL import Image
-    img = Image.open(BytesIO(image_bytes)).convert("RGB")
-    w, h = img.size
-    return np.full((h, w), 128, dtype=np.uint8)
-
 
 def generate_heatmap(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
     """

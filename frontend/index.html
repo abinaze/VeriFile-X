@@ -1474,13 +1474,20 @@ function renderResults(data) {
     document.getElementById('confidenceLevel').textContent = (ai.confidence || 'N/A').replace(/_/g, ' ');
 
     const fi = data.file_info;
+    // Escape untrusted backend-supplied strings before HTML interpolation.
+    // filename, EXIF values, and tampering-flag text all originate from the
+    // uploaded file's own metadata and must never be treated as safe HTML.
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+
     document.getElementById('fileInfo').innerHTML = `
-        <div class="info-row"><span class="info-label">Filename</span><span class="info-value">${fi.filename}</span></div>
-        <div class="info-row"><span class="info-label">Format</span><span class="info-value">${fi.format || 'Unknown'}</span></div>
+        <div class="info-row"><span class="info-label">Filename</span><span class="info-value">${esc(fi.filename)}</span></div>
+        <div class="info-row"><span class="info-label">Format</span><span class="info-value">${esc(fi.format || 'Unknown')}</span></div>
         <div class="info-row"><span class="info-label">Dimensions</span><span class="info-value">${fi.width} x ${fi.height}px</span></div>
-        <div class="info-row"><span class="info-label">Mode</span><span class="info-value">${fi.mode}</span></div>
+        <div class="info-row"><span class="info-label">Mode</span><span class="info-value">${esc(fi.mode)}</span></div>
         <div class="info-row"><span class="info-label">File Size</span><span class="info-value">${(fi.file_size_bytes / 1024).toFixed(1)} KB</span></div>
-        <div class="info-row"><span class="info-label">Analyzer Version</span><span class="info-value">${data.metadata.analyzer_version}</span></div>
+        <div class="info-row"><span class="info-label">Analyzer Version</span><span class="info-value">${esc(data.metadata.analyzer_version)}</span></div>
     `;
 
     const h = data.hashes;
@@ -1497,7 +1504,7 @@ function renderResults(data) {
     document.getElementById('tamperingInfo').innerHTML = flags.length === 0
         ? `<div class="no-flags">No tampering indicators found</div>
            <div class="info-row" style="margin-top:12px"><span class="info-label">Authenticity Confidence</span><span class="info-value" style="color:var(--green)">${t.confidence}</span></div>`
-        : flags.map(f => `<div class="flag-item"><div class="flag-dot"></div>${f}</div>`).join('')
+        : flags.map(f => `<div class="flag-item"><div class="flag-dot"></div>${esc(f)}</div>`).join('')
           + `<div class="info-row" style="margin-top:8px"><span class="info-label">Confidence</span><span class="info-value" style="color:var(--orange)">${t.confidence}</span></div>`;
 
     const exif = data.exif_data || {};
@@ -1506,7 +1513,7 @@ function renderResults(data) {
     } else {
         const skip = ['has_exif', 'gps'];
         const rows = Object.entries(exif).filter(([k]) => !skip.includes(k)).slice(0, 10)
-            .map(([k, v]) => `<div class="info-row"><span class="info-label">${k}</span><span class="info-value" style="max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v}</span></div>`).join('');
+            .map(([k, v]) => `<div class="info-row"><span class="info-label">${esc(k)}</span><span class="info-value" style="max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v)}</span></div>`).join('');
         document.getElementById('exifInfo').innerHTML = rows || '<p class="exif-empty">No readable EXIF fields.</p>';
     }
 
@@ -1517,7 +1524,7 @@ function renderResults(data) {
         const [scoreCls, fillCls] = cls.split(' ');
         return `<div class="signal-item">
             <div class="signal-header">
-                <span class="signal-name">${s.signal_name || s.name || 'Signal'}</span>
+                <span class="signal-name">${esc(s.signal_name || s.name || 'Signal')}</span>
                 <span class="signal-score ${scoreCls}">${pct}%</span>
             </div>
             <div class="signal-bar"><div class="signal-fill ${fillCls}" style="width:${pct}%"></div></div>

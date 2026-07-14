@@ -181,20 +181,31 @@ class DIREDetector:
             ).sample
         return pixels.to(self.device)
 
-    def _add_noise(self, image: torch.Tensor, timestep=50) -> torch.Tensor:
+    def _add_noise(self, image: torch.Tensor, timestep=50, generator=None) -> torch.Tensor:
         """
         Add noise to a latent (forward diffusion).
 
         Args:
             image:     Clean latent tensor (1, 4, 64, 64).
-            timestep:  Scalar timestep value or tensor.  Must equal the
-                       first timestep in the reverse schedule so that the
-                       noise level exactly matches where _denoise starts.
+            timestep:  Scalar timestep value or tensor.
+            generator: Optional torch.Generator for reproducible noise.
+                       BUG FIX: previously no generator= was passed at all,
+                       drawing from PyTorch's shared GLOBAL default RNG.
+                       main.py seeds that RNG once at process start
+                       (torch.manual_seed(42)) — only the FIRST DIRE call
+                       after startup got that seed; every subsequent call
+                       (any image, any request) drew different noise,
+                       producing a different score for the SAME image
+                       analyzed twice. Passing a per-image seeded
+                       generator (see detect()) restores determinism.
 
         Returns:
             Noised latent tensor.
         """
-        noise = torch.randn_like(image)
+        if generator is not None:
+            noise = torch.randn(image.shape, generator=generator, device=generator.device, dtype=image.dtype).to(image.device)
+        else:
+            noise = torch.randn_like(image)
         ts = timestep if torch.is_tensor(timestep) else torch.tensor([timestep], device=self.device)
         noisy_image = self.scheduler.add_noise(image, noise, ts)
         return noisy_image
@@ -290,7 +301,13 @@ class DIREDetector:
 
             # 4. Forward diffusion — noise the latents at the schedule's
             #    start timestep so _denoise can fully reconstruct them.
-            noisy_latents = self._add_noise(latents, timestep=start_timestep)
+            # Seed derived from full image content (same pattern as
+            # mcmc_engine.py's own seed-collision fix) so the SAME image
+            # always gets the SAME noise, distinct images get independent draws.
+            import hashlib as _hashlib
+            _seed = int.from_bytes(_hashlib.sha256(image_bytes).digest()[:8], "big") % (2**31)
+            _generator = torch.Generator(device="cpu").manual_seed(_seed)
+            noisy_latents = self._add_noise(latents, timestep=start_timestep, generator=_generator)
 
             # 5. Reverse diffusion — iteratively denoise in latent space.
             reconstructed_latents = self._denoise(noisy_latents, steps=denoise_steps)

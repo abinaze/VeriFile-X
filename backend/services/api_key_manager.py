@@ -29,8 +29,6 @@ ROLES = {
     "admin":   {"GET", "POST", "PATCH", "DELETE"},
 }
 
-_ANALYST_PATHS = {"/api/v1/analyze/", "/api/v1/cases/"}
-_ADMIN_PATHS   = {"/api/v1/keys/"}
 
 
 def _now() -> str:
@@ -108,20 +106,6 @@ def verify_key(raw_key: str) -> Optional[Dict[str, Any]]:
             return {k: v for k, v in entry.items() if k != "key_hash"}
     return None
 
-
-def check_permission(role: str, method: str, path: str) -> bool:
-    allowed_methods = ROLES.get(role, set())
-    if method.upper() not in allowed_methods:
-        return False
-    if role == "viewer":
-        for restricted in list(_ANALYST_PATHS) + list(_ADMIN_PATHS):
-            if path.startswith(restricted):
-                return False
-    if role == "analyst":
-        for restricted in _ADMIN_PATHS:
-            if path.startswith(restricted):
-                return False
-    return True
 
 
 def revoke_key(key_id: str, revoked_by: str = "system") -> Dict[str, Any]:

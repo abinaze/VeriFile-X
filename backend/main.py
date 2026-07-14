@@ -38,7 +38,14 @@ from backend.api.routes import feedback
 logger = setup_logger(__name__)
 
 # Shared rate limiter — imported by all routes
-limiter = Limiter(key_func=get_remote_address)
+# BUG FIX: previously no default_limits — settings.RATE_LIMIT_PER_MINUTE
+# (declared in .env.example/render.yaml) had no effect anywhere. Wired
+# here as the DEFAULT limit for any endpoint without its own explicit
+# @limiter.limit(...) decorator — the 24 existing per-endpoint
+# decorators are intentionally tuned differently per endpoint cost and
+# are NOT touched by this change.
+from backend.core.config import settings as _settings
+limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 shared_limiter = limiter  # alias for explicit import
 
 
@@ -188,20 +195,26 @@ async def reset_metrics_endpoint(request: Request):
     # If ADMIN_KEY_HASH is not set, fall back to length check only (dev mode).
     expected_hash = _os.getenv("ADMIN_KEY_HASH", "")
     if not expected_hash:
-        # Only hard-block when explicitly deployed to production.
-        # Production is indicated by PRODUCTION=true env var.
-        # DEBUG=true, CI=true, or unset env vars all allow length-only check
-        # (dev, CI, and staging environments should not require ADMIN_KEY_HASH).
-        _is_production = _os.getenv("PRODUCTION", "").lower() in ("1", "true", "yes")
-        if _is_production:
-            logger.error("ADMIN_KEY_HASH not set in production — admin access blocked.")
+        # Fail CLOSED by default: ADMIN_KEY_HASH is required unless the
+        # operator explicitly opts into the insecure length-only check via
+        # ALLOW_INSECURE_ADMIN=true (intended for local dev only).
+        # Previous logic inverted this — it only blocked when PRODUCTION
+        # was explicitly set true, meaning any deployment that forgot to
+        # set PRODUCTION (confirmed: this project's own render.yaml never
+        # sets it) silently ran with the insecure length-only check.
+        _allow_insecure = _os.getenv("ALLOW_INSECURE_ADMIN", "").lower() in ("1", "true", "yes")
+        if not _allow_insecure:
+            logger.error("ADMIN_KEY_HASH not set — admin access blocked by default.")
             raise HTTPException(
                 status_code=503,
-                detail="Admin access is disabled: ADMIN_KEY_HASH environment variable is not configured."
+                detail=(
+                    "Admin access is disabled: set ADMIN_KEY_HASH, or set "
+                    "ALLOW_INSECURE_ADMIN=true for local development only."
+                )
             )
         logger.warning(
-            "ADMIN_KEY_HASH not set — using length-only check. "
-            "Set ADMIN_KEY_HASH and PRODUCTION=true before deploying to production."
+            "ADMIN_KEY_HASH not set — ALLOW_INSECURE_ADMIN=true is active, "
+            "using length-only check. This must never be set in production."
         )
     if expected_hash:
         provided_hash = _hl.sha256(admin_key.encode()).hexdigest()

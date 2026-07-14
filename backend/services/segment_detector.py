@@ -110,11 +110,43 @@ def detect_segments(image_bytes: bytes, filename: str = "unknown") -> Dict[str, 
                 positions.append((ri, ci))
 
         def _norm(vals: List[float]) -> np.ndarray:
+            """
+            BUG FIX: this previously did pure per-image min-max scaling —
+            (a - min) / (max - min) — which mathematically GUARANTEES the
+            single highest-raw-value tile in ANY image maps to exactly 1.0
+            and the lowest to exactly 0.0, regardless of the image's
+            absolute characteristics. Since hot_tiles/coverage are then
+            thresholded at a fixed 0.6 on this per-image-relative scale,
+            EVERY image — authentic or not — tends to show some "hot"
+            tiles purely from ordinary variation (a sharp subject against
+            soft background, texture next to a flat area, a shadow). A
+            portrait with natural depth-of-field blur was a plausible
+            false-positive under the old design; it could not distinguish
+            "this tile looks different because it's an inserted AI patch"
+            from "this tile looks different because that's what any
+            ordinary photo's foreground vs. background looks like."
+
+            Fix: z-score relative to the image's OWN mean/std, then squash
+            through a sigmoid centered on a fixed anomaly threshold
+            (in std-devs above the mean). A tile only scores "hot" if it
+            is a genuine statistical outlier relative to the rest of the
+            image — not merely "the single most different tile in this
+            particular photo." A uniform image (std≈0) now correctly
+            produces a low, non-alarming score for every tile, rather
+            than guaranteeing one tile hits the maximum.
+            """
             a = np.array(vals, dtype=np.float64)
-            mn, mx = a.min(), a.max()
-            if mx - mn < 1e-10:
-                return np.full_like(a, 0.5)
-            return (a - mn) / (mx - mn)
+            mean, std = a.mean(), a.std()
+            if std < 1e-10:
+                # No meaningful variation between tiles at all — nothing
+                # can be a statistical outlier. Return a low, non-alarming
+                # score rather than the old behavior (guaranteed 0.5, or
+                # under true min-max, a guaranteed 0.0/1.0 split).
+                return np.full_like(a, 0.3)
+            z = (a - mean) / std
+            _ANOMALY_Z = 1.5   # tiles beyond ~1.5 std above the image's own mean
+            _STEEPNESS = 2.0
+            return 1.0 / (1.0 + np.exp(-_STEEPNESS * (z - _ANOMALY_Z)))
 
         ela_n   = _norm(tiles_ela)
         dct_n   = _norm(tiles_dct)

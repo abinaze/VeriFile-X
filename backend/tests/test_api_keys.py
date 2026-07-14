@@ -71,22 +71,13 @@ def test_list_keys_excludes_revoked():
     assert len(active) == 1
     assert active[0]["key_id"] == c1["key_id"]
 
-def test_check_permission_viewer():
-    from backend.services.api_key_manager import check_permission
-    assert check_permission("viewer", "GET", "/api/v1/history") is True
-    assert check_permission("viewer", "POST", "/api/v1/analyze/image") is False
 
-def test_check_permission_analyst():
-    from backend.services.api_key_manager import check_permission
-    assert check_permission("analyst", "POST", "/api/v1/analyze/image") is True
-    assert check_permission("analyst", "POST", "/api/v1/keys/") is False
 
-def test_check_permission_admin():
-    from backend.services.api_key_manager import check_permission
-    assert check_permission("admin", "POST", "/api/v1/keys/") is True
-    assert check_permission("admin", "DELETE", "/api/v1/keys/abc") is True
 
-def test_api_create_key_without_auth(client):
+def test_api_create_key_without_auth():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    client = TestClient(app)  # deliberately unauthenticated — this test checks the no-auth path
     response = client.post("/api/v1/keys/", json={"name": "No Auth", "role": "analyst"})
     assert response.status_code == 401
 

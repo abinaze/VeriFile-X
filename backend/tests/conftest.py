@@ -34,9 +34,32 @@ def pytest_configure(config):
 
 
 @pytest.fixture
-def client():
-    """Synchronous test client for API endpoint testing."""
-    return TestClient(app)
+def _test_api_key(tmp_path, monkeypatch):
+    """
+    Auth was added to analyze.py/cases.py (see backend/core/auth.py).
+    Every existing test that hits those routers via the `client` fixture
+    needs a valid analyst-role key — this creates one against an isolated,
+    per-test keys file so tests never touch the real data/api_keys.jsonl.
+    """
+    from backend.services import api_key_manager
+    temp_keys = tmp_path / "test_api_keys.jsonl"
+    monkeypatch.setattr(api_key_manager, "KEYS_PATH", temp_keys)
+    result = api_key_manager.create_key("pytest-analyst", role="analyst")
+    return result["key"]
+
+
+@pytest.fixture
+def client(_test_api_key):
+    """
+    Synchronous test client for API endpoint testing.
+    Auto-attaches a valid analyst Authorization header to every request,
+    since analyze.py/cases.py now require auth (backend/core/auth.py).
+    Tests that specifically need to verify auth-rejection should
+    construct their own bare TestClient(app) instead of using this fixture.
+    """
+    test_client = TestClient(app)
+    test_client.headers.update({"Authorization": f"Bearer {_test_api_key}"})
+    return test_client
 
 
 @pytest.fixture

@@ -96,6 +96,16 @@ def validate_file_size(file_bytes: bytes, filename: str) -> int:
 def validate_file(file_bytes: bytes, filename: str) -> dict:
     """
     Complete file validation (type + size + extension).
+
+    BUG FIX: extension_valid was previously computed and returned in the
+    result dict but NEVER enforced — "valid": True was hardcoded
+    regardless of its value. Combined with FileValidationResponse (the
+    Pydantic response model used by /api/v1/upload/validate) not
+    declaring an extension_valid field at all, Pydantic v2's default
+    extra="ignore" silently dropped the field entirely — so a MIME-type
+    match with a crafted/mismatched extension (e.g. real image bytes
+    saved as "photo.pdf") always reported valid: true with no visible
+    signal anything was off. Now actually raises.
     """
     # Validate size first (fail fast for DoS protection)
     size_bytes = validate_file_size(file_bytes, filename)
@@ -106,6 +116,13 @@ def validate_file(file_bytes: bytes, filename: str) -> dict:
     # Extension cross-check — catches files whose content MIME passes but
     # extension was crafted to bypass downstream extension-based filters.
     extension_valid = (extension in _ALLOWED_EXTENSIONS) if extension else True
+
+    if not extension_valid:
+        raise FileValidationError(
+            f"File extension '.{extension}' does not match any extension "
+            f"allowed for content type '{mime_type}'. This may indicate a "
+            "renamed or spoofed file."
+        )
 
     return {
         "valid":           True,

@@ -21,10 +21,21 @@ from backend.core.config import settings
 logger = setup_logger(__name__)
 
 # Standalone limiter for this router — same config as main.py
-limiter = Limiter(key_func=get_remote_address)
+# BUG FIX: previously no default_limits — settings.RATE_LIMIT_PER_MINUTE
+# (declared in .env.example/render.yaml) had no effect anywhere. Wired
+# here as the DEFAULT limit for any endpoint without its own explicit
+# @limiter.limit(...) decorator — the 24 existing per-endpoint
+# decorators are intentionally tuned differently per endpoint cost and
+# are NOT touched by this change.
+from backend.core.config import settings as _settings
+limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
+
+from backend.core.auth import require_analyst
+from fastapi import Depends
 
 router = APIRouter(
     prefix="/api/v1/analyze",
+    dependencies=[Depends(require_analyst)],
     tags=["Forensic Analysis"]
 )
 

@@ -50,9 +50,12 @@ def test_metrics_performance_keys(client):
         assert key in perf
 
 
-def test_metrics_reset_clears_data(client):
+def test_metrics_reset_clears_data(client, monkeypatch):
+    import hashlib
+    admin_key = "test-admin-key-12345"
+    monkeypatch.setenv("ADMIN_KEY_HASH", hashlib.sha256(admin_key.encode()).hexdigest())
     r = client.post("/api/v1/metrics/reset",
-                   headers={"X-Admin-Key": "test-admin-key-12345"})
+                   headers={"X-Admin-Key": admin_key})
     assert r.status_code == 200
     m = client.get("/api/v1/metrics").json()
     assert m["detection"]["n_scored"] == 0
