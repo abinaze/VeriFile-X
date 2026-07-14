@@ -35,7 +35,7 @@ References
 """
 import numpy as np
 from io import BytesIO
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple
 
 from PIL import Image
 from backend.core.logger import setup_logger
@@ -218,15 +218,10 @@ def detect_jpeg_ghost(image_bytes: bytes, filename: str = "unknown") -> Dict[str
                 "conversion from another format, or moderate AI post-processing."
             )
 
-        # Lossless source: PNG/WebP images that were never JPEG encode no ghost,
-        # but that does not make them AI-generated — downweight accordingly.
-        if _is_lossless and verdict == "no_ghost":
-            score = max(0.0, score - 0.25)
-            confidence *= 0.5
-            explanation = (
-                "Lossless source format (no JPEG history expected). "
-                + explanation
-            )
+        # (dead "lossless downweight" branch removed — this function already
+        # early-returns whenever _is_lossless is True, earlier in this same
+        # function, so this branch could never execute; mirror-image of the
+        # ela_detector.py ordering bug fixed earlier in this same audit branch)
 
         return {
             "signal_name": "JPEG Ghost Analysis",
