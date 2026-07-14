@@ -107,9 +107,16 @@ def test_metrics_endpoint(client):
     assert "detection" in data
     assert "performance" in data
 
-def test_metrics_reset_endpoint(client):
+def test_metrics_reset_endpoint(client, monkeypatch):
+    import hashlib
+    admin_key = "test-admin-key-12345"
+    # Fix #7 made the admin gate fail CLOSED by default (ADMIN_KEY_HASH
+    # required). This test previously relied on the old insecure
+    # length-only fallback, which no longer runs. Configure the real,
+    # secure path instead of reverting the security fix.
+    monkeypatch.setenv("ADMIN_KEY_HASH", hashlib.sha256(admin_key.encode()).hexdigest())
     response = client.post("/api/v1/metrics/reset",
-                        headers={"X-Admin-Key": "test-admin-key-12345"})
+                        headers={"X-Admin-Key": admin_key})
     assert response.status_code == 200
     assert "reset" in response.json()["message"].lower()
 
