@@ -109,34 +109,21 @@ def _pdf_stream(content: bytes) -> tuple:
 
 
 class _PDFWriter:
-    """Minimal PDF/1.4 writer — no dependencies."""
+    """
+    Minimal PDF/1.4 writer — no dependencies.
+
+    build() (the only method ever called on instances of this class) uses
+    zero instance state — verified empirically (0 "self." references
+    anywhere in build(), self._buf confirmed untouched at its initial 15
+    bytes after calling .build()). __init__ previously set up
+    self._objects/_offsets/_buf plus three helper methods
+    (_add_object/_write_object/_text_stream) purely for build() to ignore
+    entirely, since build() re-derives everything with fresh local
+    variables instead. Removed as dead code.
+    """
 
     def __init__(self):
-        self._objects: list = []
-        self._offsets: list = []
-        self._buf     = io.BytesIO()
-        self._buf.write(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-
-    def _add_object(self, content: bytes) -> int:
-        obj_num = len(self._objects) + 1
-        self._objects.append(content)
-        return obj_num
-
-    def _write_object(self, obj_num: int, content: bytes):
-        self._offsets.append(self._buf.tell())
-        self._buf.write(f"{obj_num} 0 obj\n".encode())
-        self._buf.write(content)
-        self._buf.write(b"\nendobj\n")
-
-    def _text_stream(self, lines: list, font_size: int = 10) -> bytes:
-        """Build a PDF content stream from a list of (x, y, text) tuples."""
-        ops = [b"BT", f"/F1 {font_size} Tf".encode()]
-        for x, y, text in lines:
-            safe = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-            safe = safe.encode("latin-1", errors="replace").decode("latin-1")
-            ops.append(f"{x} {y} Td ({safe}) Tj 0 -{font_size + 2} Td".encode())
-        ops.append(b"ET")
-        return b"\n".join(ops)
+        pass
 
     def build(self, report: Dict[str, Any]) -> bytes:
         summary  = report.get("summary", {})
