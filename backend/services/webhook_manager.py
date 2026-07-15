@@ -15,7 +15,7 @@ Security design:
 import hashlib
 import hmac
 import json
-import logging
+from backend.core.logger import setup_logger
 import secrets
 import threading
 import time
@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional
 from urllib.request import urlopen, Request as _URLRequest
 from urllib.error import URLError, HTTPError
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 # ── Storage paths (always relative to this file, never CWD) ─────────────────
 _DATA_DIR = Path(__file__).parent.parent / "data"

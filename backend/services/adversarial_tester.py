@@ -22,12 +22,12 @@ For each attack the system measures:
 
 Target robustness: score delta < 0.20 for mild attacks (intensity 0.3)
 """
-import logging
+from backend.core.logger import setup_logger
 import numpy as np
 from typing import Dict, Any, List
 from io import BytesIO
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 _ATTACK_CONFIGS = {
     "jpeg_recompression": {

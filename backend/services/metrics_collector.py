@@ -14,13 +14,13 @@ Designed for use with /api/v1/metrics endpoint and future
 Prometheus/Grafana integration.
 """
 import time
-import logging
+from backend.core.logger import setup_logger
 import threading
 from typing import Dict, Any, List
 from collections import deque, defaultdict
 from datetime import datetime, timezone
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 _lock = threading.Lock()
 

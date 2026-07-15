@@ -12,12 +12,12 @@ import json
 import uuid
 import hashlib
 import secrets
-import logging
+from backend.core.logger import setup_logger
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 import threading as _threading
 _key_write_lock = _threading.Lock()

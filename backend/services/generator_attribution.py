@@ -35,13 +35,13 @@ Accuracy note:
   Rule-based heuristics achieve ~60-70% on held-out test sets.
   Confidence scores reflect heuristic certainty, not calibrated probability.
 """
-import logging
+from backend.core.logger import setup_logger
 import numpy as np
 from typing import Dict, Any
 from io import BytesIO
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 # Known generator frequency signatures from research
 _GENERATOR_PROFILES = {

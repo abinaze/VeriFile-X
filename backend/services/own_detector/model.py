@@ -3,9 +3,9 @@ import torch.nn as nn
 from torchvision import models, transforms
 from pathlib import Path
 from typing import Tuple, Optional
-import logging
+from backend.core.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 MODEL_PATH = Path(__file__).parent.parent.parent.parent / "data" / "reference" / "own_embedding_model.pt"
 
