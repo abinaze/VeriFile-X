@@ -26,13 +26,13 @@ baseline weights — not absolute values. A weight of 1.0 = no change.
 """
 
 import json
-import logging
+from backend.core.logger import setup_logger
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 _DATA_DIR        = Path(__file__).parent.parent.parent / "data"
 _FEEDBACK_PATH   = _DATA_DIR / "feedback.jsonl"

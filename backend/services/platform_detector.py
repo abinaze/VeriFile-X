@@ -22,12 +22,12 @@ Platforms detected:
 Accuracy: ~65-75% on single re-encoding chain.
           Degrades on multi-hop chains (WhatsApp -> screenshot -> Instagram).
 """
-import logging
+from backend.core.logger import setup_logger
 import numpy as np
 from typing import Dict, Any
 from io import BytesIO
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 # Platform JPEG quality fingerprints (approximate ranges from empirical testing)
 _PLATFORM_PROFILES = {

@@ -27,12 +27,12 @@ Storage:
 """
 import json
 import uuid
-import logging
+from backend.core.logger import setup_logger
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 CASES_PATH = Path(__file__).parent.parent / "data" / "cases.jsonl"
 _VALID_STATUSES = {"open", "closed", "archived"}

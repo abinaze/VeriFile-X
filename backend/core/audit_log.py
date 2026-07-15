@@ -6,14 +6,14 @@ Rotation: file is moved to audit_log.jsonl.bak when it exceeds 50MB.
 """
 import json
 import threading
-import logging
+from backend.core.logger import setup_logger
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
 from backend.core.config import settings
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 AUDIT_LOG_PATH = Path(__file__).parent.parent / "data" / "audit_log.jsonl"
 MAX_LOG_BYTES      = 50 * 1024 * 1024  # 50 MB

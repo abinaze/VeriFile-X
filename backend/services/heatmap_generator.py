@@ -12,13 +12,13 @@ Method:
 5. Resize to original image dimensions
 6. Apply COLORMAP_JET and alpha-blend with original image
 """
-import logging
+from backend.core.logger import setup_logger
 import numpy as np
 from pathlib import Path
 from typing import Dict, Any
 from io import BytesIO
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 _MODEL_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "own_embedding_model.pt"
 

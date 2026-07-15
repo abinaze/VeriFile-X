@@ -27,10 +27,10 @@ Protocol (each event is JSON):
 """
 import json
 import asyncio
-import logging
+from backend.core.logger import setup_logger
 from typing import AsyncGenerator
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[str, None]:

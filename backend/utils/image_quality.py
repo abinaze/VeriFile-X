@@ -10,11 +10,11 @@ Quality tiers:
   low        - Analysis runs with reduced confidence
   unsuitable - Reject (too small, corrupt)
 """
-import logging
+from backend.core.logger import setup_logger
 from typing import Dict, Any
 from io import BytesIO
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 MIN_WIDTH  = 64
 MIN_HEIGHT = 64

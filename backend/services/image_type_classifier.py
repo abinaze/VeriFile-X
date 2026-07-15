@@ -17,12 +17,12 @@ Accuracy note:
   Rule-based. ~80% accuracy on clear cases.
   Edge cases (memes, edited photos, AI art) may be misclassified.
 """
-import logging
+from backend.core.logger import setup_logger
 import numpy as np
 from typing import Dict, Any
 from io import BytesIO
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 def classify_image_type(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:

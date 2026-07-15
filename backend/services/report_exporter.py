@@ -26,11 +26,11 @@ All exports include:
 import json
 import csv
 import io
-import logging
+from backend.core.logger import setup_logger
 import zlib
 from typing import Dict, Any
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 # ── JSON export ───────────────────────────────────────────────────────────────

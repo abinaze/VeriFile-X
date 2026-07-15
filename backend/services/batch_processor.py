@@ -16,10 +16,10 @@ Limits:
   MAX_IMAGE_SIZE = 5MB per image in batch mode
   Processing is sequential to avoid OOM on GPU
 """
-import logging
+from backend.core.logger import setup_logger
 from typing import Dict, Any, List
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 MAX_BATCH_SIZE    = 10
 MAX_IMAGE_BYTES   = 5 * 1024 * 1024  # 5MB per image in batch

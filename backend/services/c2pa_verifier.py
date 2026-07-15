@@ -19,12 +19,12 @@ What we check:
   3. EXIF fields that reference C2PA signing certificates
   4. Soft binding hashes (thumbnail hash verification)
 """
-import logging
+from backend.core.logger import setup_logger
 import hashlib
 import struct
 from typing import Dict, Any
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 # C2PA magic bytes and identifiers
 _JUMBF_BOX_TYPE   = b"jumb"
