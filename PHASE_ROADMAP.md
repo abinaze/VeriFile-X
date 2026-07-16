@@ -61,7 +61,7 @@ Thread-safe `ForensicsCache` with TTL expiry. SHA-256 pre-computed hash accepted
 Sliding window rate limiter via slowapi. IP SHA-256 hashing in logs. Security headers: HSTS, CSP, X-Frame-Options, Permissions-Policy. Input validation and injection detection.
 
 ### Phase 15 — Audit Log and Provenance
-Append-only SHA-256 hash-chained audit log. Concurrent write lock. Timestamped rotation on size. `settings.VERSION` in every record.
+Append-only audit log (JSONL). Concurrent write lock. Timestamped rotation on size. `settings.VERSION` in every record. **Correction (July 2026 audit):** earlier drafts of this document and the README described this as "hash-chained" — it is not; there is no previous-entry-hash linking field. It is append-only, not tamper-evident, and is now described accordingly everywhere in the docs.
 
 ### Phase 16 — Case Management
 Investigation case system with JSONL persistence. Evidence attachment. Case search, status management, and summary generation. Append-only case store — last snapshot per case_id wins.
@@ -74,9 +74,12 @@ Server-Sent Events endpoint for real-time per-signal streaming. 26 signals strea
 
 ---
 
-## Planned Phases
+## Phase 19 and Later
 
 ### Phase 19 — Webhook System
+
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
 
 **Summary:** Outbound webhook delivery so downstream systems receive analysis results without polling.
 
@@ -90,6 +93,9 @@ Server-Sent Events endpoint for real-time per-signal streaming. 26 signals strea
 ---
 
 ### Phase 20 — JPEG Ghost and Noise Map Detectors
+
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
 
 **Summary:** Two new forensic signals based on double-JPEG compression detection and residual noise map analysis.
 
@@ -107,6 +113,9 @@ Server-Sent Events endpoint for real-time per-signal streaming. 26 signals strea
 ---
 
 ### Phase 21 — Noiseprint Learned Camera Fingerprint
+
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
 
 **Summary:** Upgrade the PRNU detector with a learning-based camera fingerprint. Noiseprint trains a CNN to suppress scene content and enhance model-specific residuals — consistently outperforms classical PRNU on forgery localization.
 
@@ -126,6 +135,9 @@ forgery score  = 1 - cosine_similarity(patch_residual, image_residual)
 
 ### Phase 22 — CFA Artifact Analysis
 
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
+
 **Summary:** Color Filter Array inter-pixel correlation analysis. AI-generated images have no Bayer sensor pattern — CFA analysis detects the absence of this expected correlation.
 
 **Key algorithm:**
@@ -143,19 +155,29 @@ cfa_ratio = skip0_std / skip1_std
 
 ### Phase 23 — Signed Reports and Chain of Custody
 
-**Summary:** Cryptographically signed PDF reports and a public verification endpoint for third-party report validation.
+**Status:** NOT IMPLEMENTED. **Correction (July 2026 audit):** this phase was never built, despite
+the README at one point describing Ed25519 signing, a `chain_of_custody` report field, and a
+`GET /api/v1/verify/{evidence_id}` endpoint as though they existed. A repository-wide search
+confirms there is no `ed25519`/`chain_of_custody`/`verify_url` anywhere in the codebase, and no
+`/api/v1/verify/*` router is mounted anywhere. This entry is left here, corrected, rather than
+deleted, specifically so this gap has a visible paper trail instead of silently vanishing.
 
-**What it builds:**
+**Summary:** Cryptographically signed PDF reports and a public verification endpoint for third-party report validation. Still genuinely useful; still not built.
+
+**What it would build:**
 - Ed25519 report signing
 - `GET /api/v1/verify/{evidence_id}` — public endpoint, no API key required
 - Chain-of-custody JSON block embedded in every export
 - QR code in PDF linking to verification endpoint
 
-**Version:** 7.6.0 → 7.7.0
+**Target version:** to be scheduled — not committed to a specific release yet.
 
 ---
 
 ### Phase 24 — MCMC Probabilistic Authenticity Engine
+
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
 
 **Summary:** Replace the single point-estimate with a probability distribution using Markov Chain Monte Carlo sampling over the signal space.
 
@@ -180,6 +202,9 @@ cfa_ratio = skip0_std / skip1_std
 
 ### Phase 25 — Platt Scaling Confidence Calibration
 
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
+
 **Summary:** Replace the current one-line `calibrate()` stub with a properly fitted Platt scaling layer trained on a labeled holdout set.
 
 **Algorithm:**
@@ -196,6 +221,9 @@ Wilson score intervals provide 90% confidence bounds.
 
 ### Phase 26 — Stable Evidence IDs
 
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
+
 **Summary:** Replace random UUID4 evidence IDs with deterministic UUID5 derived from the file's SHA-256 hash.
 
 ```python
@@ -210,6 +238,9 @@ Same file always produces the same evidence_id, enabling cross-case deduplicatio
 
 ### Phase 27 — Segment-Level AI Detection
 
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
+
 **Summary:** Detect partial AI insertion — real background with AI-generated subject composited in.
 
 **What it builds:**
@@ -223,6 +254,9 @@ Same file always produces the same evidence_id, enabling cross-case deduplicatio
 
 ### Phase 28 — TIFF and HEIC Format Support
 
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
+
 **Summary:** Accept professional camera formats so unmodified originals can be analyzed without lossy conversion.
 
 **Why:** Forcing users to convert TIFF/HEIC to JPEG before upload destroys EXIF data and alters ELA baselines — exactly the evidence the system needs.
@@ -233,7 +267,12 @@ Same file always produces the same evidence_id, enabling cross-case deduplicatio
 
 ---
 
-### Phase 29 — Nash Equilibrium Adaptive Detection
+### Phase 29 — Analyst Feedback Weight Adaptation
+
+**Correction (July 2026 audit):** originally titled "Nash Equilibrium Adaptive Detection" — the mechanism is a straightforward per-signal weight penalty on incorrect predictions, not a game-theoretic equilibrium computation. Renamed to describe what it actually does.
+
+**Status:** DONE — confirmed shipped, verified against the live codebase during the July 2026 security & accuracy audit (Phase 32 below).
+
 
 **Summary:** Signal weight self-adjustment based on analyst feedback. When analysts mark a result as wrong, the signals that were most mislead receive lower weight on similar future inputs.
 
@@ -263,11 +302,103 @@ Same file always produces the same evidence_id, enabling cross-case deduplicatio
 
 **Checklist:**
 - [ ] 100 concurrent user load test, 30-minute sustained
-- [ ] All 341+ tests passing at ≥ 80% coverage
+- [ ] All 480+ tests passing at ≥ 80% coverage
 - [ ] Penetration test on all API endpoints
 - [ ] README, DEPLOYMENT, PHASE_ROADMAP complete
 - [ ] All Dependabot alerts resolved or documented
 - [ ] `v1.0.0` tagged and GitHub release published
+
+---
+
+### Phase 32 — Security, Accuracy, and Code Quality Audit Remediation
+
+**Status:** DONE (merged via `fix/full-audit-security-accuracy-cleanup`, PR #158).
+
+**Summary:** A full line-by-line professional audit of the backend, frontend, and CI configuration
+surfaced 14 critical/high findings and roughly 30 further medium/low findings. This phase is the
+complete remediation, verified fix-by-fix against the live codebase rather than assumed from a
+plan — several early attempts at these fixes silently failed to apply (a Python patch script's
+`assert` raised without halting the shell, producing "nothing to commit, working tree clean") and
+had to be re-diagnosed and reapplied correctly; see the commit history on the branch above for the
+full sequence.
+
+**Security:**
+- Fixed stored XSS in the frontend (filename, EXIF values, and tampering-flag text are now
+  HTML-escaped before being rendered)
+- Added authentication to `analyze.py` and `cases.py` — previously the two most sensitive routers
+  in the app had none at all
+- Consolidated four independently-drifting inline auth checks (`keys.py`, `webhooks.py`,
+  `feedback.py` ×2) into one shared, tested dependency (`backend/core/auth.py`)
+- Added SSRF protection to webhook registration (hostname resolution plus a private/loopback/
+  link-local/reserved/multicast IP check)
+- Fixed an admin-endpoint auth bypass that was live in the project's own real deployment
+  configuration (the gate now fails closed by default)
+- Added rate limiting to `webhooks.py`, which previously had none on any of its five endpoints
+
+**Accuracy:**
+- Fixed `noiseprint_detector.py`'s reference-patch bug, which made the signal mathematically
+  incapable of returning anything but a constant, confidently-wrong "authentic" score
+- Unified the ensemble's two independently-maintained scoring branches into one confidence-gated,
+  feedback-weighted path, so the recommended (DIRE-enabled) deployment no longer misses
+  refinements that previously only applied to the fallback path
+- Fixed DIRE's noise draw to use a per-image seeded generator instead of the shared global RNG,
+  restoring same-image determinism
+- Fixed `segment_detector.py`'s per-image min-max normalization, which mathematically guaranteed
+  "hot tiles" on every image, authentic or not
+- Fixed the GPS plausibility check in metadata forensics, which never applied the hemisphere sign
+  and so could not meaningfully fail on any input
+
+**Correctness and documentation honesty:**
+- Corrected the PRNU and C2PA signals' documentation and confidence to match what they actually
+  check, rather than the more legally/forensically loaded techniques their naming implied
+- Enforced `extension_valid`, which was previously computed and then silently discarded
+- Fixed two lossless-format ordering bugs (`ela_detector.py`, `jpeg_ghost_detector.py`)
+- Removed the `Ed25519`/`chain_of_custody`/"court-ready" and "hash-chained audit log" claims from
+  the README, SECURITY.md, and this file (see Phase 15 and Phase 23 corrections above) — these
+  were confirmed, by exhaustive repository search, to not exist in the code
+
+**Configuration and dead code:**
+- Wired `CACHE_TTL_MINUTES`, `MAX_CACHE_SIZE`, `LOG_LEVEL`, and `RATE_LIMIT_PER_MINUTE` to the code
+  paths they were always documented as controlling, but previously did not
+- Removed confirmed-dead code: an unused legacy schema file, a superseded path-based RBAC function,
+  unused `CacheConfig` fields, two dead detector methods, and the dead internals of the PDF writer
+  class (`build()` never touched any of the instance state `__init__` set up)
+- Standardized all 18 remaining bare `logging.getLogger(__name__)` call sites onto the project's
+  own `setup_logger()`, restoring visibility into logs that were previously silently dropped
+  (nothing in the app calls `logging.basicConfig()`, so unconfigured loggers defaulted to level
+  WARNING with no handler)
+- Gave `OwnEmbeddingDetector` the same shared-model-cache treatment its sibling detectors (DIRE,
+  CLIP) already had, and skipped a wasted ImageNet-weight download that was always immediately
+  discarded anyway
+
+**Documentation and repository hygiene:**
+- Full rewrite of README.md, SECURITY.md, and this file, grounded in what the code actually does
+- New non-commercial LICENSE (PolyForm Noncommercial 1.0.0), replacing MIT
+- New SVG project logo, replacing a Git-LFS-pointer PNG that did not actually resolve to an image
+  in a plain repository download
+
+---
+
+### Phase 33 — Outstanding Follow-Ups From the Phase 32 Audit
+
+**Status:** PLANNED. Tracked here rather than left implicit, so they do not quietly disappear the
+way Phase 23 did.
+
+- Re-validate the ensemble/XGBoost meta-model on a larger, resolution-matched dataset with grouped,
+  leakage-checked cross-validation (split by source/generation run, not by individual image) — see
+  [README: Accuracy, Validation, and Honest Limitations](README.md#accuracy-validation-and-honest-limitations)
+- Re-check webhook SSRF safety at delivery time, not only at registration, to defeat DNS rebinding
+  between the two
+- Add rotation/pruning to `data/api_keys.jsonl`, which currently grows by one line per successful
+  authentication with no bound
+- Rename the four test files that still carry their original numbered-phase names
+  (`test_phase20.py`, `test_phase21_22.py`, `test_phase24_26.py`, `test_phase27_29.py`) to
+  content-based names
+- Address the pre-existing mypy/flake8 backlog, then remove `continue-on-error: true` from those
+  CI steps so real findings can actually block a merge — deliberately sequenced after the backlog
+  cleanup, not before, so this doesn't retroactively block unrelated work
+- Resolve or document the currently-open `transformers`/`torch` CVEs once upstream ships a stable
+  fixed release
 
 ---
 
