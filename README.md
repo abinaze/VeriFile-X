@@ -6,65 +6,91 @@ colorTo: purple
 sdk: docker
 pinned: false
 ---
-
 <div align="center">
-
-
-
-# VeriFile-X
-
-**Forensic-Grade AI Image Detection Platform**
+<h1>VeriFile-X</h1>
 
 <img src="frontend/logo2.png" width="400" alt="VeriFile-X Logo"><br>
 
+**A 30-signal ensemble platform for detecting AI-generated images, with fully explainable, per-signal forensic reports.**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Site-22d3ee?style=for-the-badge)](https://abinaze.github.io/VeriFile-X)
-[![API](https://img.shields.io/badge/API-HuggingFace%20Space-ff6b35?style=for-the-badge)](https://abinazebinoy-verifile-x-api.hf.space)
-[![License](https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/Tests-488%20Passing-brightgreen?style=for-the-badge)](backend/tests/)
-[![Version](https://img.shields.io/badge/Version-8.5.0-blue?style=for-the-badge)](backend/core/config.py)
-[![Coverage](https://img.shields.io/badge/Coverage-80%25-green?style=for-the-badge)](backend/tests/)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-2d3748?style=for-the-badge)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Tests](https://img.shields.io/badge/Tests-480%2B%20Passing-2f855a?style=for-the-badge)](backend/tests/)
+[![Coverage](https://img.shields.io/badge/Coverage-~82%25-2f855a?style=for-the-badge)](backend/tests/)
+[![Version](https://img.shields.io/badge/Version-8.5.0-2b6cb0?style=for-the-badge)](backend/core/config.py)
 
-**30 Detection Signals · Ed25519 Signed Reports · MCMC Confidence Intervals · Court-Ready Forensics**
+[Live Demo](https://abinaze.github.io/VeriFile-X) · [API Docs](https://abinazebinoy-verifile-x-api.hf.space/docs) · [Report an Issue](../../issues) · [Security Policy](SECURITY.md)
 
 </div>
 
 ---
 
+## Contents
+
+- [Overview](#overview)
+- [Why This Exists](#why-this-exists)
+- [Core Capabilities](#core-capabilities)
+- [Detection Architecture](#detection-architecture)
+- [Ensemble Weighting](#ensemble-weighting)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Building Reference Models](#building-reference-models)
+- [Configuration](#configuration)
+- [API Reference](#api-reference)
+- [Usage Example](#usage-example)
+- [Supported Formats](#supported-formats)
+- [Report Format](#report-format)
+- [Testing](#testing)
+- [Security Model](#security-model)
+- [Accuracy, Validation, and Honest Limitations](#accuracy-validation-and-honest-limitations)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Author](#author)
+
+---
+
 ## Overview
 
-VeriFile-X is an open-source, production-grade forensic AI image detection platform. It analyzes any image using **30 independent detection signals** drawn from published research in computer vision, image forensics, digital signal processing, and deep learning. Rather than returning a single opaque score, it produces a full forensic report explaining exactly which signals fired, their individual confidence levels, and why the verdict was reached.
+VeriFile-X analyzes a single uploaded image and returns a full forensic breakdown of whether it is authentic or AI-generated, built from **30 independently-computed detection signals** spanning:
 
-Designed for **journalists, legal professionals, researchers, and security teams** who require verifiable, explainable, auditable results — not a black-box percentage.
+- **Classical image forensics** — sensor-noise heuristics, JPEG/ELA compression-error analysis, JPEG-ghost double-compression detection, CFA (color filter array) demosaicing correlation, EXIF metadata plausibility checks
+- **Frequency-domain statistics** — DCT coefficient analysis, FFT radial spectrum slope, wavelet energy, Mahalanobis distance and KL-divergence outlier detection against a natural-image prior, local covariance and patch-anisotropy variance
+- **Deep-learning detectors** — a diffusion-reconstruction-error model (DIRE), CLIP zero-shot embedding-centroid distance, and a custom fine-tuned EfficientNet-B0 classifier
 
----
+Rather than returning one opaque probability, every analysis reports **which signals fired, at what confidence, and why** — combined through a confidence-gated ensemble, with an **MCMC-derived posterior distribution** around the final estimate (a 90% credible interval and a certainty label) rather than a single unexplained point score.
 
-## Honest Accuracy Disclosure
+The system is built API-first on FastAPI, with a lightweight single-page frontend, investigation case management, API-key based role access control, outbound webhook delivery, adversarial-robustness self-testing, and PDF/JSON/CSV report export.
 
-VeriFile-X accuracy depends on whether reference model files exist in `data/reference/`:
+## Why This Exists
 
-| Configuration | Signals Active | Realistic Accuracy |
-|---|---|---|
-| Full deployment (all models built) | 30/30 | 82-91% |
-| No reference models (fresh install) | ~19/30 | 55-68% |
-| CLIP only missing | 29/30 | 70-80% |
+Most publicly available "AI image detector" tools return a single percentage with no way to inspect how it was produced. That is close to useless for anyone who has to justify a conclusion — a journalist verifying a source photo, a moderator reviewing a report, a researcher benchmarking detection methods, or simply a developer who wants to understand *why* a model called something suspicious.
 
-After a fresh `git clone`, the `data/` directories contain only `.gitkeep` files. You must build the reference models before deploying. See [Building Reference Models](#building-reference-models) below.
+VeriFile-X is built around the opposite default: every score is decomposable. If you disagree with a verdict, you can see exactly which of the 30 signals drove it, at what individual confidence, and reproduce the computation yourself, because every signal is a documented, independently testable function rather than a black box.
 
-The `/health` endpoint reports exactly which models are loaded and the expected accuracy tier.
+## Core Capabilities
 
----
+- **30-signal detection ensemble** across five detector families, described in [Detection Architecture](#detection-architecture) below
+- **MCMC-calibrated confidence** — a Metropolis-Hastings sampler over the active signal set produces a full posterior distribution (point estimate, 50%/90% credible intervals, standard deviation, categorical certainty), not just a point score
+- **Confidence-gated ensemble combination** — a signal that could not run (missing reference database, lossless format with no JPEG history, tiny image) is excluded and remaining weights are renormalized, rather than silently pulling the score toward a placeholder value
+- **Analyst feedback loop** — corrections submitted through the feedback endpoint adjust per-signal weight multipliers for future analyses of similar inputs
+- **Investigation case management** — group multiple pieces of evidence under a named case, with status tracking, tagging, and full-text search
+- **Role-based API key access control** — admin / analyst roles, keys stored as salted hashes only, enforced uniformly across every router via a single shared dependency
+- **Outbound webhooks** — HMAC-SHA256-signed delivery of completed analyses to a downstream URL, with automatic retry and an SSRF-hardened registration check (private/loopback/link-local/reserved/multicast destinations are rejected)
+- **Batch and streaming analysis** — up to 10 images per batch request, or a single image streamed signal-by-signal over Server-Sent Events for real-time UI feedback
+- **Adversarial robustness self-test** — re-runs detection after JPEG recompression, Gaussian blur/noise, downscale-upscale, and histogram equalization to report how stable a verdict is under common image transformations
+- **Segment-level localization** — a per-tile probability grid for detecting partial AI insertion (an authentic background with an AI-generated subject composited in)
+- **Generator attribution and platform-of-origin detection** — best-effort classification of which model family likely produced an image, and which social platform's re-encoding pipeline it passed through
+- **C2PA content-credential scanning** and **PDF/JSON/CSV export** with a from-scratch, dependency-free PDF writer
 
 ## Detection Architecture
 
-### Signal Pipeline (30 Signals)
-
 ```
-Image Input (JPEG / PNG / WebP / TIFF / HEIC)
+Image Input (JPEG / PNG / WebP / TIFF / HEIC / HEIF)
         |
-        v  EXIF orientation correction
+        v  EXIF orientation correction, quality gate, extension/MIME cross-check
         |
         +-> Statistical Analysis (19 sub-signals)
         |     FFT radial spectrum, KL divergence, Mahalanobis distance,
@@ -72,217 +98,125 @@ Image Input (JPEG / PNG / WebP / TIFF / HEIC)
         |     spectral entropy, LBP texture, edge statistics, color correlation,
         |     compression artifacts, perturbation stability, eigenvalue spread,
         |     local covariance, patch anisotropy, color distribution,
-        |     blockiness (inter-block), frequency ratio
+        |     inter-block regularity, radial frequency ratio
         |
         +-> Deep Learning Signals
-        |     DIRE (SD 2.1 diffusion reconstruction error)
-        |     CLIP (embedding centroid distance)
-        |     OwnEmbedding (fine-tuned EfficientNet-B0)
+        |     DIRE            diffusion reconstruction error (Stable Diffusion 2.1)
+        |     CLIP             zero-shot embedding-centroid distance
+        |     OwnEmbedding     fine-tuned EfficientNet-B0 classifier
         |
-        +-> Camera Forensics Signals
-        |     PRNU (noise autocorrelation residual)
-        |     CFA (Bayer demosaicing correlations)
-        |     Noiseprint (Haar camera fingerprint)
+        +-> Camera / Sensor Forensics Signals
+        |     PRNU-style noise heuristic (single-image; see limitations)
+        |     CFA              Bayer demosaicing correlation
+        |     Noiseprint       smoothed noise-residual patch consistency
         |
         +-> Compression Forensics Signals
-        |     ELA (JPEG re-compression error level)
-        |     JPEG Ghost (NSE energy curve Q=30-99)
-        |     Noise Map (Gaussian residual frequency)
+        |     ELA              JPEG re-compression error level
+        |     JPEG Ghost       double-compression energy curve
+        |     Noise Map        Gaussian-residual frequency and regularity
         |
         +-> Metadata Signal
-              EXIF forensics (GPS plausibility, device fingerprint)
-                       |
-                       v
-              Confidence-Gated Dynamic Ensemble
-              (inactive signals excluded -- no 0.5 pollution)
-                       |
-                       +-> Platt Scaling Calibration
-                       +-> MCMC Posterior Distribution
-                       +-> XGBoost Meta-Model (when ensemble_xgb.pkl exists)
-                                 |
-                                 v
-                       Forensic Report
-                       ai_probability, classification, confidence
-                       probability_distribution (interval_90, std, certainty)
-                       chain_of_custody (Ed25519 signed, SHA-256 digest)
-                       30 signal breakdowns with per-signal explanations
+        |     EXIF forensics (signed GPS plausibility, device fingerprint,
+        |     editing-software disclosure)
+        |
+        v
+  Confidence-Gated Ensemble Combination
+  (inactive signals excluded; remaining weights renormalized to 1.0;
+   analyst-feedback weight multipliers applied)
+        |
+        +-> Platt-Scaling Calibration
+        +-> MCMC Posterior Distribution (point estimate, credible intervals, certainty)
+        +-> XGBoost meta-model override, when a trained model is present
+        |
+        v
+  Forensic Report
+  classification, calibrated probability, posterior distribution,
+  per-signal breakdown with individual scores/confidence/explanations
 ```
 
-### Ensemble Weighting (DIRE-available branch)
+Detector class hierarchy: `AdvancedAIDetector` -> `UltraAdvancedDetector` -> `CovarianceDetector` -> `StatisticalDetector` -> `AdvancedEnsembleDetector`, with the standalone deep-learning and forensic-signal modules composed in at the ensemble layer.
+
+## Ensemble Weighting
 
 | Signal | Weight |
-|--------|--------|
-| Statistical (19 sub-signals) | 0.26 |
-| DIRE | 0.21 |
-| CLIP | 0.16 |
-| OwnEmbedding (when loaded) | 0.08 |
-| PRNU | 0.08 |
-| ELA | 0.07 |
-| Metadata | 0.06 |
-| DCT Frequency | 0.05 |
+|---|---|
+| DIRE (diffusion reconstruction) | 0.21 |
+| Statistical analysis (19 sub-signals) | 0.20 |
+| CLIP embedding distance | 0.14 |
+| OwnEmbedding (fine-tuned EfficientNet-B0) | 0.08 |
+| PRNU-style noise heuristic | 0.08 |
+| ELA compression analysis | 0.07 |
+| Metadata / EXIF forensics | 0.06 |
+| DCT frequency artifacts | 0.05 |
 | JPEG Ghost | 0.04 |
 | Noiseprint | 0.03 |
 | Noise Map | 0.02 |
-| CFA Bayer | 0.02 |
+| CFA Bayer correlation | 0.02 |
 | **Total** | **1.00** |
 
-Signals with `confidence=0` are excluded and remaining weights renormalised. A missing CLIP database does not pollute the score with a fixed 0.5.
+This is a single, unified weighting path — an earlier version of the ensemble applied confidence-gating and feedback-weighting only when the DIRE model was unavailable, which meant the higher-accuracy DIRE-enabled deployment silently missed both refinements. That branch split has been removed: any signal with `confidence == 0` (a missing reference database, a lossless-format skip, a tiny/corrupt input) is excluded from the sum entirely, and the remaining weights are renormalized so they always total 1.0.
 
----
+## Tech Stack
 
-## Building Reference Models
+| Layer | Choice |
+|---|---|
+| Language | Python 3.11 |
+| API framework | FastAPI 0.139, Pydantic v2, pydantic-settings |
+| ASGI server | Uvicorn |
+| Deep learning | PyTorch 2.7 (CPU build), torchvision, Hugging Face `diffusers` + `transformers`, OpenAI CLIP |
+| Classical ML | scikit-learn, XGBoost, SHAP |
+| Image processing | Pillow, OpenCV, scikit-image, pillow-heif (HEIC/HEIF) |
+| Rate limiting | slowapi |
+| Testing | pytest, pytest-cov, pytest-asyncio |
+| Frontend | Single-file vanilla JavaScript SPA, no build step |
+| CI | GitHub Actions (pytest + coverage, flake8, mypy, pip-audit) |
+| Deployment | Docker, Hugging Face Spaces (API), GitHub Pages (frontend) |
 
-Without reference models the system runs on statistical signals only (~55-68% accuracy). Build them once after setup:
+## Project Structure
 
-```bash
-# 1. Collect datasets (minimum: 5,000 real + 5,000 AI images)
-python scripts/download_real_images.py
-python scripts/generate_ai_samples.py
-
-# 2. Build CLIP reference database
-python scripts/build_clip_database.py
-
-# 3. Train OwnEmbedding model
-python scripts/train_embedding.py --epochs 20 --batch 32
-python scripts/build_centroids.py
-
-# 4. Train XGBoost meta-model + Platt calibration
-python scripts/train_ensemble.py
-
-# 5. Verify
-curl http://localhost:8000/health | python3 -m json.tool
+```
+VeriFile-X/
+├── backend/
+│   ├── api/routes/       analyze, cases, feedback, keys, upload, webhooks
+│   ├── core/             config, auth, cache, logger, audit_log, model_cache
+│   ├── services/         30 detection signals + ensemble, MCMC, Platt calibration
+│   ├── tests/            480+ tests, ~82% coverage
+│   ├── utils/            validators, image quality gating
+│   └── main.py
+├── data/
+│   ├── reference/        model/reference files (built via scripts/, gitignored)
+│   ├── audit_log.jsonl   append-only analysis audit trail
+│   ├── cases.jsonl        investigation case store
+│   └── signal_weights.json  analyst-feedback weight overrides
+├── frontend/
+│   └── index.html        single-file SPA, no build step required
+├── scripts/               dataset collection and model training scripts
+├── assets/                logo and other repository media
+├── .github/workflows/     CI (pytest, flake8, mypy, pip-audit) + Pages deploy
+├── Dockerfile
+├── DEPLOYMENT.md
+├── PHASE_ROADMAP.md
+├── SECURITY.md
+├── CONTRIBUTING.md
+└── LICENSE
 ```
 
-Free datasets: CIFAKE (60k real + 60k AI), ArtiFact (2.5M, 13 generators), GenImage (1.35M, 8 generators)
+## Getting Started
 
----
+### Prerequisites
 
-## Supported Formats
+- Python 3.11 or later
+- ~4 GB free disk space if you intend to run the DIRE detector locally (Stable Diffusion 2.1 weights); the system runs without it, with DIRE excluded from the ensemble and remaining weights renormalized
+- Git
 
-| Format | MIME Type | Notes |
-|--------|-----------|-------|
-| JPEG | image/jpeg | Full signal support |
-| PNG | image/png | ELA and JPEG Ghost return neutral (lossless) |
-| WebP | image/webp | ELA and JPEG Ghost return neutral (lossless) |
-| TIFF | image/tiff | Full signal support |
-| HEIC | image/heic | Requires pillow-heif installed |
-| HEIF | image/heif | Requires pillow-heif installed |
-
-Max file size: 10 MB per analysis request.
-
----
-
-## API Reference
-
-Interactive docs: `/docs` (Swagger UI) and `/redoc`
-
-### Analysis
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/analyze/image` | Full 30-signal forensic analysis |
-| POST | `/api/v1/analyze/image/stream` | Real-time SSE stream per signal |
-| POST | `/api/v1/analyze/segment` | Per-tile AI probability grid |
-| POST | `/api/v1/analyze/heatmap` | Grad-CAM manipulation heatmap |
-| POST | `/api/v1/analyze/attribution` | AI generator attribution |
-| POST | `/api/v1/analyze/platform` | Social media platform detection |
-| POST | `/api/v1/analyze/c2pa` | C2PA content credential verification |
-| POST | `/api/v1/analyze/robustness` | Adversarial robustness test |
-| POST | `/api/v1/analyze/batch` | Batch analysis (up to 10 images) |
-| POST | `/api/v1/analyze/export/{fmt}` | Export: pdf, json, csv |
-| GET | `/api/v1/analyze/history` | Recent analysis history |
-| GET | `/api/v1/analyze/stats` | Aggregate statistics |
-
-### Verification
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/verify/{evidence_id}` | Verify Ed25519 report signature (no auth) |
-| GET | `/api/v1/verify/public-key` | Ed25519 public key PEM (no auth) |
-
-### Case Management
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/cases/` | Create investigation case |
-| GET | `/api/v1/cases/` | List cases |
-| GET | `/api/v1/cases/search` | Full-text search |
-| GET | `/api/v1/cases/{id}` | Get case with evidence |
-| POST | `/api/v1/cases/{id}/evidence` | Attach evidence |
-| DELETE | `/api/v1/cases/{id}` | Archive case |
-
-### Webhooks and Feedback
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/webhooks/` | Register webhook (admin) |
-| GET | `/api/v1/webhooks/` | List webhooks (admin) |
-| DELETE | `/api/v1/webhooks/{id}` | Delete webhook (admin) |
-| POST | `/api/v1/feedback/` | Submit analyst correction |
-| GET | `/api/v1/feedback/` | Feedback history |
-| GET | `/api/v1/feedback/weights` | Adaptive signal weights (admin) |
-
-### Observability
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health + detector model status |
-| GET | `/api/v1/metrics` | System metrics |
-| POST | `/api/v1/metrics/reset` | Reset counters (admin) |
-
----
-
-## Report Format
-
-```json
-{
-  "evidence_id": "uuid5-from-sha256",
-  "file_hash": "sha256:...",
-  "summary": {
-    "ai_probability": 0.87,
-    "ai_classification": "likely_ai_generated",
-    "confidence": "high",
-    "total_detection_signals": 30,
-    "suspicious_detection_signals": 22
-  },
-  "probability_distribution": {
-    "point_estimate": 0.87,
-    "interval_90": [0.74, 0.96],
-    "interval_50": [0.81, 0.92],
-    "std": 0.06,
-    "certainty": "high"
-  },
-  "chain_of_custody": {
-    "signed_at": "2026-05-27T10:00:00Z",
-    "digest_sha256": "...",
-    "signature": "base64url...",
-    "algorithm": "Ed25519",
-    "verify_url": "/api/v1/verify/..."
-  },
-  "detection_signals": [...]
-}
-```
-
-### Classification Labels
-
-| Label | Score Range | Meaning |
-|-------|-------------|---------|
-| `likely_ai_generated` | > 0.70 | Strong AI indicators |
-| `possibly_ai_generated` | 0.60-0.70 | Moderate AI indicators |
-| `inconclusive` | 0.40-0.60 | Conflicting or weak signals |
-| `possibly_authentic` | 0.30-0.40 | Moderate authentic indicators |
-| `likely_authentic` | < 0.30 | Strong authentic indicators |
-
----
-
-## Quick Start
+### Installation
 
 ```bash
 git clone https://github.com/abinaze/VeriFile-X.git
 cd VeriFile-X
 
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate        # Windows: venv\Scripts\activate
 
 pip install -r backend/requirements.txt \
   --extra-index-url https://download.pytorch.org/whl/cpu
@@ -290,100 +224,201 @@ pip install -r backend/requirements.txt \
 uvicorn backend.main:app --reload --port 8000
 ```
 
-Open `frontend/index.html` in your browser. API docs: `http://localhost:8000/docs`
+Open `frontend/index.html` directly in a browser, or serve it with any static file server. Interactive API documentation is available at `http://localhost:8000/docs` (Swagger UI) and `http://localhost:8000/redoc`.
 
-After starting, check `/health` to see which detector models are loaded.
+After starting the server, check `GET /health` to see which detector models are actually loaded — the platform degrades gracefully (excluding a signal and renormalizing weights) rather than failing when a heavy model isn't available.
 
-For Docker and production deployment, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For Docker and production deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
----
+## Building Reference Models
 
-## Project Structure
+Without built reference models, the ensemble runs on the statistical and metadata signals only, with CLIP, OwnEmbedding, and the XGBoost meta-model excluded and their weights renormalized across the remaining signals.
 
-```
-VeriFile-X/
-+-- backend/
-|   +-- api/routes/         analyze, cases, feedback, keys, segment, verify, webhooks
-|   +-- core/               config, cache, audit_log, logger
-|   +-- services/           30 detection signals + ensemble + MCMC + Platt + signing
-|   +-- tests/              488 tests, 80%+ coverage
-|   +-- utils/              validators, image_quality
-|   +-- main.py
-+-- data/
-|   +-- reference/          Model files (built by scripts/ -- required for full accuracy)
-|   +-- audit_log.jsonl     Append-only hash-chained audit trail
-|   +-- cases.jsonl         Investigation cases
-|   +-- feedback.jsonl      Analyst corrections
-|   +-- signal_weights.json Nash adaptive weight overrides
-+-- frontend/
-|   +-- index.html          Single-file SPA, no build step required
-+-- scripts/                Dataset collection + model training scripts
-+-- .github/workflows/      CI (pytest + coverage) + GitHub Pages deployment
-+-- Dockerfile
-+-- DEPLOYMENT.md
-+-- PHASE_ROADMAP.md
-+-- SECURITY.md
+```bash
+# 1. Collect datasets
+python scripts/download_real_images.py
+python scripts/generate_ai_samples.py
+
+# 2. Build the CLIP reference database
+python scripts/build_clip_database.py
+
+# 3. Train the OwnEmbedding model
+python scripts/train_embedding.py --epochs 20 --batch 32
+python scripts/build_centroids.py
+
+# 4. Train the XGBoost meta-model and Platt calibration
+python scripts/train_ensemble.py
+
+# 5. Verify
+curl http://localhost:8000/health | python3 -m json.tool
 ```
 
----
+See [Accuracy, Validation, and Honest Limitations](#accuracy-validation-and-honest-limitations) before treating any locally-trained meta-model's reported metrics as a validated accuracy figure — `scripts/train_ensemble.py` includes its own data-leakage self-check for exactly this reason.
 
-## Environment Variables
+## Configuration
+
+All settings are read via `pydantic-settings` in `backend/core/config.py`, with the following environment variables:
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `CORS_ORIGINS` | localhost + production | Comma-separated allowed origins |
-| `DEBUG` | `False` | Enables admin access without ADMIN_KEY_HASH (dev only) |
-| `RATE_LIMIT_PER_MINUTE` | `10` | Rate limit per IP |
-| `MAX_FILE_SIZE_MB` | `50` | Upload limit |
-| `MAX_ANALYSIS_SIZE_MB` | `10` | Analysis processing limit |
-| `CACHE_TTL_MINUTES` | `60` | Result cache TTL |
-| `ADMIN_KEY_HASH` | required in production | SHA-256 of admin key. Unset + DEBUG=False blocks all admin endpoints. |
+|---|---|---|
+| `CORS_ORIGINS` | localhost + production origins | Comma-separated allowed origins |
+| `DEBUG` | `false` | Enables verbose logging; does not weaken the admin gate |
+| `ADMIN_KEY_HASH` | *(required)* | SHA-256 hash of the admin key. Admin endpoints return 503 if unset, unless `ALLOW_INSECURE_ADMIN=true` is explicitly set for local development |
+| `ALLOW_INSECURE_ADMIN` | `false` | Local-development-only opt-in to a length-only admin check when `ADMIN_KEY_HASH` is not configured. Never set this in production |
+| `RATE_LIMIT_PER_MINUTE` | `10` | Default per-IP rate limit, applied as the fallback for any endpoint without its own explicit, more specific limit |
+| `MAX_FILE_SIZE_MB` | `50` | Upload size limit |
+| `MAX_ANALYSIS_SIZE_MB` | `10` | Size limit for the analysis pipeline specifically |
+| `CACHE_TTL_MINUTES` | `60` | Result cache time-to-live |
+| `MAX_CACHE_SIZE` | `500` | Maximum cached result entries |
+| `LOG_LEVEL` | `INFO` | Log level when `DEBUG` is false |
 
----
+## API Reference
 
-## Security
+Interactive, always-current documentation: `/docs` (Swagger UI) and `/redoc`. The tables below summarize the endpoint surface; treat `/docs` as authoritative for exact request/response schemas.
 
-- Content-Length pre-check before reading file into RAM
-- EXIF orientation applied before analysis (prevents spatial signal errors on rotated images)
-- Rate limiting on all endpoints (sliding window per IP)
-- Security headers: HSTS, CSP, X-Frame-Options, Permissions-Policy
-- API keys stored as SHA-256 hashes only
-- Ed25519 signed reports with public verification endpoint
-- Admin endpoints blocked (503) when ADMIN_KEY_HASH unset in production
-- Append-only hash-chained audit log
-- Webhook HMAC-SHA256 signing
+### Analysis (`/api/v1/analyze`) — requires an analyst or admin API key
 
-See [SECURITY.md](SECURITY.md) for responsible disclosure policy.
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/image` | Full 30-signal forensic analysis |
+| POST | `/image/stream` | Real-time Server-Sent Events stream, one event per signal |
+| POST | `/segment` | Per-tile AI-probability grid |
+| POST | `/heatmap` | Grad-CAM manipulation-localization heatmap |
+| POST | `/attribution` | Generator attribution (which model family likely produced the image) |
+| POST | `/platform` | Social-platform re-encoding fingerprint detection |
+| POST | `/c2pa` | C2PA content-credential scan |
+| POST | `/robustness` | Adversarial robustness self-test |
+| POST | `/batch` | Batch analysis, up to 10 images |
+| POST | `/export/{format}` | Export a report as `pdf`, `json`, or `csv` |
+| GET | `/history` | Recent analysis history |
+| GET | `/stats` | Aggregate statistics |
 
----
+### Case Management (`/api/v1/cases`) — requires an analyst or admin API key
 
-## Known Limitations
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/` | Create an investigation case |
+| GET | `/` | List cases |
+| GET | `/search` | Full-text case search |
+| GET | `/{id}` | Get a case with its attached evidence |
+| POST | `/{id}/evidence` | Attach evidence to a case |
+| DELETE | `/{id}` | Archive a case |
 
-| Limitation | Notes |
-|-----------|-------|
-| CLIP/XGBoost require training data | Build reference models for full accuracy |
-| DIRE requires SD 2.1 (~4 GB, GPU recommended) | Gracefully excluded when unavailable |
-| PRNU is single-image autocorrelation, not true multi-image PRNU | Weighted conservatively |
-| CFA breaks for iPhone Night Mode / pixel binning | Known physics limitation |
-| Platt calibration uses defaults before fitting | Run train_ensemble.py |
+### Keys, Webhooks, and Feedback
 
----
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/v1/keys/` | admin | Create an API key |
+| GET | `/api/v1/keys/` | admin | List API keys |
+| DELETE | `/api/v1/keys/{id}` | admin | Revoke an API key |
+| GET | `/api/v1/keys/verify` | any valid key | Verify the caller's own key |
+| POST | `/api/v1/webhooks/` | admin | Register a webhook (hostname resolved and checked against private/loopback/reserved ranges) |
+| GET | `/api/v1/webhooks/` | admin | List webhooks |
+| DELETE | `/api/v1/webhooks/{id}` | admin | Delete a webhook |
+| POST | `/api/v1/feedback/` | analyst/admin | Submit an analyst correction |
+| GET | `/api/v1/feedback/` | analyst/admin | Feedback history |
+| GET | `/api/v1/feedback/weights` | admin | Current adaptive signal-weight overrides |
 
-## Development
+### Observability
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/health` | Health check plus which detector models are currently loaded |
+| GET | `/api/v1/metrics` | Aggregate system metrics |
+| POST | `/api/v1/metrics/reset` | Reset metrics counters (admin only) |
+
+## Usage Example
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/analyze/image" \
+  -H "Authorization: Bearer <your-analyst-key>" \
+  -F "file=@photo.jpg"
+```
+
+## Supported Formats
+
+| Format | MIME Type | Notes |
+|---|---|---|
+| JPEG | `image/jpeg` | Full signal support |
+| PNG | `image/png` | ELA and JPEG Ghost return a neutral, non-participating score (lossless format, no prior JPEG history) |
+| WebP | `image/webp` | Same lossless-format handling as PNG |
+| TIFF | `image/tiff` | Full signal support |
+| HEIC / HEIF | `image/heic`, `image/heif` | Requires `pillow-heif` |
+
+Maximum file size: see `MAX_ANALYSIS_SIZE_MB` in [Configuration](#configuration).
+
+## Report Format
+
+Every analysis returns a JSON report keyed by a stable `evidence_id` (a UUID5 derived from the file's SHA-256 hash, so re-analyzing the same file always yields the same ID), containing file/EXIF metadata, a tampering analysis, the full per-signal breakdown, and a summary classification with an MCMC-derived probability distribution. See `/docs` for the exact, generated schema — response shapes are intentionally not duplicated here in prose to avoid this document drifting out of sync with the code.
+
+### Classification Labels
+
+| Label | Typical Score Range | Meaning |
+|---|---|---|
+| `likely_ai_generated` | > 0.70 | Strong AI indicators |
+| `possibly_ai_generated` | 0.60 – 0.70 | Moderate AI indicators |
+| `inconclusive` | 0.40 – 0.60 | Conflicting or weak signals |
+| `possibly_authentic` | 0.30 – 0.40 | Moderate authentic indicators |
+| `likely_authentic` | < 0.30 | Strong authentic indicators |
+
+## Testing
 
 ```bash
 cd backend
 pytest tests/ -v -m "not slow" --tb=short
 pytest tests/ --cov=. --cov-report=term-missing --cov-fail-under=70
 flake8 backend/ --max-line-length=120
+mypy backend/
 ```
 
----
+CI runs the same suite on every push and pull request; see `.github/workflows/ci.yml`.
+
+## Security Model
+
+- API-key based role access control (admin / analyst), enforced uniformly across every router through a single shared FastAPI dependency, not a per-file reimplementation
+- Keys are stored as salted hashes only; the raw key is shown exactly once, at creation
+- Admin endpoints fail closed by default: they return 503 unless `ADMIN_KEY_HASH` is configured (or `ALLOW_INSECURE_ADMIN=true` is explicitly set for local development)
+- Webhook URLs are resolved and checked against private, loopback, link-local, reserved, and multicast IP ranges before registration, to prevent SSRF
+- Per-IP sliding-window rate limiting on every endpoint
+- Security response headers: HSTS, CSP, X-Frame-Options, Permissions-Policy
+- User-supplied strings (filename, EXIF fields) are HTML-escaped before rendering in the frontend
+- An append-only, timestamped audit log records filename, hash, and verdict per analysis for accountability; this is a disclosed, deliberate feature, not incidental logging
+
+See [SECURITY.md](SECURITY.md) for the responsible-disclosure process.
+
+## Accuracy, Validation, and Honest Limitations
+
+VeriFile-X's 480+ tests verify that the *pipeline* behaves correctly — bounded output ranges, determinism on repeated analysis of the same file, graceful degradation on corrupt or unusual input, and correct ensemble arithmetic. That is a meaningfully different claim from validated, real-world classification accuracy against a large, diverse, properly held-out set of authentic and AI-generated images, and this README does not publish a specific accuracy percentage, because the one internal training run available (`data/reference/ensemble_results.json`) evaluates on a small fraction of the dataset scale described in `data/DATASETS.md`, and `scripts/train_ensemble.py`'s own logging flags that specific result as showing signs consistent with data leakage rather than genuine cross-generator separability.
+
+Re-validating the meta-model on a larger, resolution-matched dataset with grouped, leakage-checked cross-validation (splitting by source/generation run, not by individual image) is the top item on the [roadmap](PHASE_ROADMAP.md). Until that work lands, treat VeriFile-X as a rich, inspectable ensemble of individually-reasoned forensic signals with a documented methodology — not as a benchmark-proven or court-validated accuracy claim.
+
+Other known, specific limitations:
+
+| Limitation | Detail |
+|---|---|
+| CLIP / OwnEmbedding / XGBoost need built reference data | See [Building Reference Models](#building-reference-models); excluded gracefully (weights renormalized) when absent |
+| DIRE requires Stable Diffusion 2.1 (~4 GB; GPU recommended) | Excluded gracefully when unavailable |
+| The PRNU-style signal is a single-image heuristic | It is not multi-image camera-reference-pattern PRNU forensics, and is weighted and documented accordingly |
+| CFA analysis can be unreliable on computational photography | Night-mode multi-frame fusion and pixel-binning sensors break the classical Bayer-pattern assumption |
+| Platt calibration uses fixed defaults until fitted | Run `scripts/train_ensemble.py` against your own labeled holdout to fit it |
+| C2PA scanning is header/XMP-based, not the reference C2PA SDK | Chosen for deployment portability; documented in the signal's own `accuracy_note` field |
+
+## Roadmap
+
+Full phase-by-phase history and forward-looking plans: [PHASE_ROADMAP.md](PHASE_ROADMAP.md).
+
+## Contributing
+
+Contributions are welcome under the terms of the project [License](#license) — see [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, code style, and pull request process.
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+VeriFile-X is licensed under the **PolyForm Noncommercial License 1.0.0** — see [LICENSE](LICENSE) for the full text.
 
----
+In short: you are free to use, study, modify, and share this project — including its code, methodology, and any findings derived from it — for personal, academic, research, nonprofit, and government purposes. You may not sell it, or use it or its output to provide a commercial product or service, without a separate commercial license from the maintainer.
 
-*Developed and maintained by **Abinaze Binoy**.*
+## Author
+
+Developed and maintained by **Abinaze Binoy**.
+
+Project: [github.com/abinaze/VeriFile-X](https://github.com/abinaze/VeriFile-X)
