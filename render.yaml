@@ -24,6 +24,14 @@ services:
         value: 500
       - key: LOG_LEVEL
         value: INFO
+      - key: ADMIN_KEY_HASH
+        sync: false
+        # Set this manually in the Render dashboard (Environment tab) to a
+        # SHA-256 hash of your chosen admin key — do not commit the actual
+        # hash or key to this file. Admin endpoints (metrics reset, etc.)
+        # return 503 until this is configured; that is the intended,
+        # fail-closed default, not a bug. Never set ALLOW_INSECURE_ADMIN
+        # here.
     healthCheckPath: /health
 
 
