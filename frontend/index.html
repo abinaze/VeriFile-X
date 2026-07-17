@@ -3,93 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VeriFile-X | Unmask AI Content with Confidence</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>VeriFile-X | Forensic AI Image Verification</title>
+<meta name="description" content="VeriFile-X runs 30 independent forensic signals — diffusion reconstruction, CLIP embeddings, sensor-noise fingerprinting, compression and metadata forensics — to determine whether an image is AI-generated, and returns a detailed, exportable evidence report.">
+<meta name="theme-color" content="#0B0E13">
+<meta property="og:title" content="VeriFile-X | Forensic AI Image Verification">
+<meta property="og:description" content="30 independent forensic signals. Fully explainable evidence reports. Built for journalists, legal teams, and investigators.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230B0E13'/%3E%3Crect x='4' y='4' width='56' height='56' rx='9' fill='none' stroke='%23D9A94A' stroke-width='2'/%3E%3Ctext x='32' y='41' font-family='Georgia,serif' font-size='24' font-weight='700' fill='%23D9A94A' text-anchor='middle'%3EVX%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 
+/* ═══════════════════════════════════════════════════════════════════
+   VeriFile-X — Forensic AI Image Verification
+   Design system: an evidence-room reading of a security product.
+   Type   — IBM Plex Serif (findings/headlines), Plex Sans (interface),
+            Plex Mono (evidence data: hashes, IDs, scores, signals).
+   Color  — ink navy + paper, with a brass "seal" accent standing in
+            for authenticity — the one constant across all 3 themes.
+   Signature element — an interactive 3D evidence seal (CSS 3D, mouse-
+            tilt) stands in for a conventional flat logo.
+   ═══════════════════════════════════════════════════════════════════ */
 
 /* ─── RESET ───────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 /* ─── THEME VARIABLES ─────────────────────────────── */
 
+:root {
+    /* Brass "seal" — the authenticity accent, held constant across every
+       theme so it reads as the brand mark rather than a mode-dependent color. */
+    --gradient: linear-gradient(135deg, #6b4e1f, #7f5f27);
+}
+
 [data-theme="light"] {
-    --bg:          #f4f6f8;
-    --bg2:         #ffffff;
-    --bg3:         #eaecf0;
-    --card:        #ffffff;
-    --text:        #2b2f33;
-    --subtext:     #6b7280;
-    --primary:     #2f4f63;
-    --primary2:    #3a6f8f;
-    --border:      #e6eaee;
-    --border2:     rgba(47,79,99,0.18);
-    --shadow:      0 8px 28px rgba(0,0,0,0.08);
-    --shadow-lg:   0 16px 50px rgba(0,0,0,0.12);
-    --nav-bg:      rgba(255,255,255,0.97);
-    --accent:      #2f4f63;
-    --red:         #dc2626;
-    --orange:      #ea580c;
-    --yellow:      #ca8a04;
-    --green:       #16a34a;
-    --gradient:    linear-gradient(135deg, #2f4f63, #3a6f8f);
+    --bg:          #f5f4ee;
+    --bg2:         #fbfaf6;
+    --bg3:         #eae7db;
+    --card:        #fffffe;
+    --text:        #1c1d22;
+    --subtext:     #64646d;
+    --primary:     #1b2a4a;
+    --primary2:    #2f4568;
+    --seal:        #8a6428;
+    --seal2:       #b8924c;
+    --border:      #e3e0d3;
+    --border2:     rgba(27,42,74,0.18);
+    --shadow:      0 8px 28px rgba(30,26,10,0.07);
+    --shadow-lg:   0 22px 60px rgba(30,26,10,0.12);
+    --nav-bg:      rgba(251,250,246,0.92);
+    --red:         #b3261e;
+    --orange:      #b4720a;
+    --yellow:      #a8790a;
+    --green:       #1e7a4c;
+    --grid-line:   rgba(27,42,74,0.05);
 }
 
 [data-theme="dark"] {
-    --bg:          #0f1720;
-    --bg2:         #18222c;
-    --bg3:         #1e2d3a;
-    --card:        #18222c;
-    --text:        #e6edf3;
-    --subtext:     #9aa6b2;
-    --primary:     #6fa3c8;
-    --primary2:    #5fa4c9;
-    --border:      #263341;
-    --border2:     rgba(111,163,200,0.22);
-    --shadow:      0 8px 28px rgba(0,0,0,0.35);
-    --shadow-lg:   0 16px 50px rgba(0,0,0,0.55);
-    --nav-bg:      rgba(15,23,32,0.97);
-    --accent:      #6fa3c8;
-    --red:         #ef4444;
-    --orange:      #f97316;
-    --yellow:      #eab308;
-    --green:       #10b981;
-    --gradient:    linear-gradient(135deg, #5fa4c9, #6fa3c8);
+    --bg:          #0b0e13;
+    --bg2:         #12161d;
+    --bg3:         #1a1f28;
+    --card:        #12161d;
+    --text:        #e7e6e0;
+    --subtext:     #8c8e98;
+    --primary:     #a9c2e0;
+    --primary2:    #7fa3cc;
+    --seal:        #e3b559;
+    --seal2:       #f0ce85;
+    --border:      #232833;
+    --border2:     rgba(169,194,224,0.2);
+    --shadow:      0 8px 28px rgba(0,0,0,0.4);
+    --shadow-lg:   0 24px 64px rgba(0,0,0,0.6);
+    --nav-bg:      rgba(11,14,19,0.9);
+    --red:         #e5534b;
+    --orange:      #e3a335;
+    --yellow:      #e3a335;
+    --green:       #34c08a;
+    --grid-line:   rgba(169,194,224,0.055);
 }
 
 [data-theme="animated"] {
-    --bg:          #0b0f1a;
-    --bg2:         #111827;
-    --bg3:         #1a2236;
-    --card:        rgba(17,24,39,0.85);
-    --text:        #e6edf7;
-    --subtext:     #6b7a99;
-    --primary:     #00ffe7;
-    --primary2:    #7a7aff;
-    --border:      rgba(0,255,238,0.12);
-    --border2:     rgba(0,255,238,0.22);
-    --shadow:      0 8px 28px rgba(0,0,0,0.5);
-    --shadow-lg:   0 16px 50px rgba(0,0,0,0.7);
-    --nav-bg:      rgba(11,15,26,0.88);
-    --accent:      #00ffe7;
-    --red:         #ef4444;
-    --orange:      #f97316;
-    --yellow:      #eab308;
-    --green:       #10b981;
-    --gradient:    linear-gradient(135deg, #00ffe7, #7a7aff);
+    --bg:          #080b10;
+    --bg2:         #0e121a;
+    --bg3:         #161b24;
+    --card:        rgba(14,18,26,0.82);
+    --text:        #e9eaee;
+    --subtext:     #7c8296;
+    --primary:     #8fb4de;
+    --primary2:    #c9a15a;
+    --seal:        #d9a94a;
+    --seal2:       #efc97c;
+    --border:      rgba(143,180,222,0.14);
+    --border2:     rgba(217,169,74,0.3);
+    --shadow:      0 8px 28px rgba(0,0,0,0.55);
+    --shadow-lg:   0 26px 68px rgba(0,0,0,0.72);
+    --nav-bg:      rgba(8,11,16,0.82);
+    --red:         #e5534b;
+    --orange:      #e3a335;
+    --yellow:      #e3a335;
+    --green:       #34c08a;
+    --grid-line:   rgba(143,180,222,0.05);
 }
 
 /* ─── BASE ────────────────────────────────────────── */
 html { scroll-behavior: smooth; }
 
 body {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'IBM Plex Sans', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
     transition: background 0.3s ease, color 0.3s ease;
 }
+
+.font-serif { font-family: 'IBM Plex Serif', Georgia, serif; }
+.font-mono  { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
 
 /* ─── GRID TEXTURE (light & dark only) ────────────── */
 [data-theme="light"] body::before,
@@ -98,8 +128,8 @@ body {
     position: fixed;
     inset: 0;
     background:
-        linear-gradient(rgba(120,160,190,0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(120,160,190,0.06) 1px, transparent 1px);
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
     background-size: 42px 42px;
     pointer-events: none;
     z-index: 0;
@@ -128,25 +158,60 @@ nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 18px 60px;
+    padding: 16px 60px;
     background: var(--nav-bg);
     border-bottom: 1px solid var(--border);
     backdrop-filter: blur(18px);
     transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.nav-logo-text {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--primary);
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
     text-decoration: none;
+}
+
+.nav-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1.5px solid var(--seal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Serif', serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--seal);
+    flex-shrink: 0;
+}
+
+.nav-wordmark {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.nav-logo-text {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--text);
+}
+
+.nav-tagline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--subtext);
 }
 
 .nav-right {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.1rem;
 }
 
 .theme-switcher {
@@ -155,29 +220,29 @@ nav {
     gap: 3px;
     background: var(--bg3);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 9px;
     padding: 3px;
 }
 
 .theme-btn {
-    padding: 6px 14px;
+    padding: 6px 13px;
     border: none;
-    border-radius: 8px;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 12px;
-    font-weight: 600;
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
     cursor: pointer;
     background: transparent;
     color: var(--subtext);
     transition: all 0.2s;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
 }
 
 .theme-btn:hover { color: var(--text); }
 
 .theme-btn.active {
     background: var(--primary);
-    color: #fff;
+    color: var(--bg);
 }
 
 [data-theme="light"] .theme-btn.active { color: #fff; }
@@ -186,15 +251,17 @@ nav {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
     color: var(--green);
     letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 .live-dot {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: var(--green);
     animation: blink 2.2s infinite;
@@ -207,90 +274,109 @@ nav {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 88vh;
-    padding: 60px 40px;
+    min-height: 82vh;
+    padding: 56px 40px 0;
 }
 
 .hero-inner {
     background: var(--card);
-    border-radius: 22px;
-    padding: 70px 80px;
-    max-width: 1020px;
+    border-radius: 16px;
+    padding: 72px 60px;
+    max-width: 760px;
     width: 100%;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 70px;
+    text-align: center;
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border);
     transition: background 0.3s ease, border-color 0.3s ease;
+    position: relative;
 }
 
-.hero-logo-col {
-    flex-shrink: 0;
-}
-
-.hero-logo-img {
-    width: 320px;
-    max-width: 100%;
-    object-fit: contain;
-    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.2));
-}
-
-.hero-text-col { flex: 1; }
+.hero-text-col { width: 100%; max-width: 640px; margin: 0 auto; }
 
 .hero-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font-weight: 500;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--primary);
+    color: var(--seal);
     background: var(--bg3);
     border: 1px solid var(--border2);
-    padding: 5px 14px;
-    border-radius: 20px;
-    margin-bottom: 18px;
+    padding: 6px 14px 6px 12px;
+    border-radius: 4px;
+    margin-bottom: 22px;
 }
 
+.hero-badge::before { content: "▸"; }
+
 .hero-text-col h1 {
-    font-size: 44px;
-    font-weight: 700;
-    color: var(--primary);
-    line-height: 1.15;
-    margin-bottom: 16px;
-    letter-spacing: -0.02em;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 46px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.14;
+    margin-bottom: 18px;
+    letter-spacing: -0.01em;
+}
+
+.hero-text-col h1 em {
+    font-style: italic;
+    color: var(--seal);
 }
 
 .hero-text-col p {
-    font-size: 17px;
+    font-size: 16px;
     color: var(--subtext);
-    line-height: 1.7;
-    margin-bottom: 32px;
+    line-height: 1.75;
+    margin-bottom: 34px;
+    max-width: 46ch;
 }
+
+.hero-cta-row { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 
 .hero-cta {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
     background: var(--gradient);
     color: #fff;
-    padding: 15px 32px;
-    border-radius: 12px;
+    padding: 14px 28px;
+    border-radius: 8px;
     border: none;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
     box-shadow: var(--shadow);
     transition: all 0.25s;
     text-decoration: none;
+    position: relative;
+    overflow: hidden;
 }
 
-.hero-cta:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.hero-cta::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -60%;
+    width: 40%; height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.6s ease;
+}
+
+.hero-cta:hover::after { left: 130%; }
+.hero-cta:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 
 .hero-cta-arrow {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     stroke: currentColor;
     stroke-width: 2.2;
     fill: none;
@@ -301,168 +387,235 @@ nav {
 
 .hero-cta:hover .hero-cta-arrow { transform: translateX(3px); }
 
-/* Animated hero (no logo, text centered) */
-[data-theme="animated"] .hero { min-height: 80vh; }
+.hero-cta-note {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--subtext);
+    letter-spacing: 0.03em;
+}
+
+/* Signature theme keeps its own backdrop treatment; layout is now shared. */
+[data-theme="animated"] .hero { min-height: 78vh; }
 [data-theme="animated"] .hero-inner {
-    flex-direction: column;
-    text-align: center;
-    padding: 80px 60px;
-    gap: 0;
-    background: rgba(17,24,39,0.7);
+    background: rgba(14,18,26,0.68);
     backdrop-filter: blur(20px);
 }
-[data-theme="animated"] .hero-logo-col { display: none; }
-[data-theme="animated"] .hero-text-col { width: 100%; max-width: 680px; margin: 0 auto; }
-[data-theme="animated"] .hero-text-col h1 { font-size: 52px; color: var(--primary); }
-[data-theme="animated"] .hero-badge { display: none; }
-[data-theme="animated"] .hero-text-col p { font-size: 18px; }
+[data-theme="animated"] .hero-text-col h1 { font-size: 50px; }
+[data-theme="animated"] .hero-text-col p { font-size: 17px; }
+
+/* ─── LEDGER STRIP (signature marquee) ────────────── */
+.ledger-strip {
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    margin-top: 48px;
+}
+
+.ledger-track {
+    display: flex;
+    width: max-content;
+    animation: ledgerScroll 42s linear infinite;
+}
+
+.ledger-half {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 13px 0;
+}
+
+.ledger-item {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--subtext);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 26px;
+    border-right: 1px solid var(--border);
+}
+
+.ledger-item::before {
+    content: "✓";
+    color: var(--seal);
+    margin-right: 10px;
+    font-weight: 700;
+}
+
+@keyframes ledgerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 /* ─── STATS BAR ───────────────────────────────────── */
 .stats-bar {
     padding: 0 60px 0;
+    margin-top: 52px;
     display: flex;
     justify-content: center;
 }
 
 .stats-inner {
-    max-width: 1020px;
+    max-width: 980px;
     width: 100%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0;
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: 14px;
     overflow: hidden;
     box-shadow: var(--shadow);
 }
 
 .stat-item {
-    padding: 28px 24px;
+    padding: 30px 24px;
     text-align: center;
     border-right: 1px solid var(--border);
     transition: background 0.2s;
 }
 
 .stat-item:last-child { border-right: none; }
-.stat-item:hover { background: var(--bg3); }
+.stat-item:hover { background: var(--bg2); }
 
 .stat-number {
-    font-size: 36px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 32px;
     font-weight: 700;
-    color: var(--primary);
+    color: var(--text);
     line-height: 1;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .stat-label {
-    font-size: 13px;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
     color: var(--subtext);
     font-weight: 500;
 }
 
+/* ─── SCROLL REVEAL ───────────────────────────────── */
+.reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.is-visible { opacity: 1; transform: translateY(0); }
+
 /* ─── SECTION LAYOUT ──────────────────────────────── */
 .section {
-    padding: 80px 60px;
-    max-width: 1200px;
+    padding: 88px 60px;
+    max-width: 1180px;
     margin: 0 auto;
 }
 
 .section-header {
     text-align: center;
-    margin-bottom: 52px;
+    margin-bottom: 56px;
 }
 
 .section-label {
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.15em;
+    font-weight: 500;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--primary);
-    margin-bottom: 12px;
-}
-
-.section-title {
-    font-size: 34px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: -0.02em;
+    color: var(--seal);
     margin-bottom: 14px;
 }
 
+.section-title {
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+}
+
 .section-sub {
-    font-size: 16px;
+    font-size: 15.5px;
     color: var(--subtext);
     max-width: 520px;
     margin: 0 auto;
-    line-height: 1.7;
+    line-height: 1.75;
 }
 
-/* ─── FEATURE CARDS ───────────────────────────────── */
+/* ─── FEATURE CARDS ("EXHIBITS") ──────────────────── */
 .features-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 28px;
+    gap: 24px;
 }
 
 .feature-card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 36px 30px;
+    border-radius: 12px;
+    padding: 34px 30px;
     box-shadow: var(--shadow);
-    transition: all 0.3s;
+    transition: transform 0.15s ease-out, box-shadow 0.3s;
     position: relative;
     overflow: hidden;
+    transform-style: preserve-3d;
+    will-change: transform;
 }
 
-.feature-card::after {
+.feature-card::before {
     content: "";
     position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at top left, rgba(95,164,201,0.12), transparent 65%);
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--gradient);
     opacity: 0;
-    transition: opacity 0.4s;
+    transition: opacity 0.3s;
 }
 
-[data-theme="animated"] .feature-card::after {
-    background: radial-gradient(circle at top left, rgba(0,255,238,0.1), transparent 65%);
-}
+.feature-card:hover { box-shadow: var(--shadow-lg); }
+.feature-card:hover::before { opacity: 1; }
 
-.feature-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
-.feature-card:hover::after { opacity: 1; }
+.feature-exhibit {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--seal);
+    margin-bottom: 16px;
+}
 
 .feature-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     background: var(--bg3);
     border: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
 .feature-icon svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     stroke: var(--primary);
-    stroke-width: 1.8;
+    stroke-width: 1.7;
     fill: none;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
 .feature-card h3 {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     color: var(--text);
     margin-bottom: 10px;
+    letter-spacing: -0.01em;
 }
 
 .feature-card p {
-    font-size: 14px;
+    font-size: 13.5px;
     color: var(--subtext);
     line-height: 1.7;
 }
@@ -471,45 +624,43 @@ nav {
 .how-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
+    gap: 20px;
     position: relative;
 }
 
 .how-card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 28px 24px;
-    text-align: center;
+    border-radius: 12px;
+    padding: 26px 22px;
     box-shadow: var(--shadow);
     position: relative;
 }
 
 .how-step {
     display: inline-block;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: var(--gradient);
-    color: #fff;
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 36px;
-    text-align: center;
-    margin-bottom: 14px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    color: var(--seal);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-bottom: 16px;
 }
 
 .how-card h4 {
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 700;
     color: var(--text);
     margin-bottom: 8px;
 }
 
 .how-card p {
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--subtext);
-    line-height: 1.6;
+    line-height: 1.65;
 }
 
 /* ─── DIVIDER ─────────────────────────────────────── */
@@ -521,8 +672,8 @@ nav {
 
 /* ─── UPLOAD AREA ─────────────────────────────────── */
 .upload-section {
-    padding: 80px 60px;
-    max-width: 1200px;
+    padding: 88px 60px;
+    max-width: 1180px;
     margin: 0 auto;
 }
 
@@ -532,48 +683,70 @@ nav {
 }
 
 .upload-zone {
-    max-width: 680px;
+    max-width: 640px;
     margin: 0 auto;
-    padding: 56px 40px;
+    padding: 54px 40px;
     text-align: center;
     cursor: pointer;
     background: var(--card);
-    border: 2px dashed var(--border2);
-    border-radius: 18px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
     box-shadow: var(--shadow);
     transition: all 0.25s;
+    position: relative;
 }
+
+.upload-zone-corner {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border2);
+    opacity: 0.7;
+    transition: border-color 0.25s, opacity 0.25s;
+}
+.upload-zone-corner.tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+.upload-zone-corner.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+.upload-zone-corner.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+.upload-zone-corner.br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
 
 .upload-zone:hover,
 .upload-zone.dragover {
-    border-color: var(--primary);
-    background: var(--bg3);
+    border-color: var(--border);
+    background: var(--bg2);
     transform: translateY(-2px);
+}
+.upload-zone:hover .upload-zone-corner,
+.upload-zone.dragover .upload-zone-corner {
+    border-color: var(--seal);
+    opacity: 1;
 }
 
 .upload-zone-icon {
-    width: 52px;
-    height: 52px;
-    margin: 0 auto 16px;
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 18px;
     display: block;
-    stroke: var(--primary);
-    stroke-width: 1.5;
+    stroke: var(--seal);
+    stroke-width: 1.4;
     fill: none;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
 .upload-zone h2 {
-    font-size: 20px;
-    font-weight: 700;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 19px;
+    font-weight: 600;
     color: var(--text);
     margin-bottom: 8px;
 }
 
 .upload-zone p {
-    font-size: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.02em;
     color: var(--subtext);
-    margin-bottom: 24px;
+    margin-bottom: 26px;
 }
 
 .btn-upload {
@@ -582,18 +755,18 @@ nav {
     gap: 8px;
     background: var(--gradient);
     color: #fff;
-    padding: 13px 28px;
-    border-radius: 10px;
+    padding: 12px 26px;
+    border-radius: 8px;
     border: none;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: var(--shadow);
 }
 
-.btn-upload:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-upload:hover { opacity: 0.92; transform: translateY(-1px); }
 
 #fileInput { display: none; }
 
@@ -601,31 +774,72 @@ nav {
 .loading {
     display: none;
     text-align: center;
-    padding: 60px 20px;
+    padding: 50px 20px 70px;
 }
 
 .loading.active { display: block; }
 
-.spinner {
-    width: 52px;
-    height: 52px;
-    border: 3px solid var(--border);
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
-    margin: 0 auto 20px;
+.scan-panel {
+    position: relative;
+    width: 240px;
+    height: 116px;
+    margin: 0 auto 26px;
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg3);
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+.scan-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.6;
+}
 
-.loading h3 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-.loading p { font-size: 14px; color: var(--subtext); }
+.scan-corner {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--seal);
+    opacity: 0.8;
+}
+.scan-corner.tl { top: 6px; left: 6px; border-right: none; border-bottom: none; }
+.scan-corner.br { bottom: 6px; right: 6px; border-left: none; border-top: none; }
+
+.scan-line {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--seal), transparent);
+    box-shadow: 0 0 14px var(--seal);
+    animation: scanMove 1.9s ease-in-out infinite;
+}
+
+@keyframes scanMove { 0% { top: 2%; } 50% { top: 96%; } 100% { top: 2%; } }
+
+.loading h3 {
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+.loading p {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: var(--subtext);
+    min-height: 1.4em;
+}
 
 /* ─── RESULTS ─────────────────────────────────────── */
 .results {
     display: none;
-    max-width: 1200px;
-    margin: 0 auto 80px;
+    max-width: 1180px;
+    margin: 0 auto 88px;
     padding: 0 60px;
 }
 
@@ -634,36 +848,71 @@ nav {
 .verdict-card {
     background: var(--card);
     border: 1px solid var(--border2);
-    border-radius: 18px;
-    padding: 40px;
+    border-radius: 14px;
+    padding: 44px 40px;
     margin-bottom: 20px;
     text-align: center;
     box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.verdict-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--gradient);
+}
+
+.verdict-card::after {
+    content: "VERIFILE-X";
+    position: absolute;
+    right: -30px;
+    bottom: -34px;
+    font-family: 'IBM Plex Serif', serif;
+    font-weight: 700;
+    font-size: 96px;
+    letter-spacing: 0.02em;
+    color: var(--primary);
+    opacity: 0.035;
+    pointer-events: none;
+    white-space: nowrap;
 }
 
 .verdict-card-label {
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.15em;
+    font-weight: 500;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--subtext);
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 .evidence-tag {
-    font-family: 'JetBrains Mono', monospace;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
     color: var(--subtext);
-    margin-bottom: 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 22px;
     word-break: break-all;
 }
 
 .probability-number {
-    font-size: 80px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 76px;
     font-weight: 700;
     line-height: 1;
-    margin-bottom: 10px;
-    letter-spacing: -0.04em;
+    margin-bottom: 14px;
+    letter-spacing: -0.03em;
 }
 
 .prob-ai    { color: var(--red); }
@@ -671,33 +920,58 @@ nav {
 .prob-human { color: var(--green); }
 
 .classification-badge {
-    display: inline-block;
-    padding: 6px 20px;
-    border-radius: 20px;
-    font-size: 13px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 24px;
+    border-radius: 3px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
     font-weight: 700;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 14px;
+    border: 2px solid currentColor;
+    outline: 1px solid currentColor;
+    outline-offset: 3px;
+    transform: rotate(-1.5deg);
 }
 
-.badge-ai    { background: rgba(220,38,38,0.1);  color: var(--red);    border: 1px solid rgba(220,38,38,0.2); }
-.badge-maybe { background: rgba(234,88,12,0.1);  color: var(--orange); border: 1px solid rgba(234,88,12,0.2); }
-.badge-human { background: rgba(22,163,74,0.1);  color: var(--green);  border: 1px solid rgba(22,163,74,0.2); }
+.badge-ai    { color: var(--red);    background: rgba(179,38,30,0.07); }
+.badge-maybe { color: var(--orange); background: rgba(180,114,10,0.07); }
+.badge-human { color: var(--green);  background: rgba(30,122,76,0.07); }
 
-.methods-used { font-size: 13px; color: var(--subtext); margin-bottom: 16px; }
+.methods-used { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--subtext); margin-bottom: 20px; margin-top: 18px; }
 
 .confidence-row {
     display: flex;
     justify-content: center;
-    gap: 40px;
+    gap: 44px;
     flex-wrap: wrap;
-    margin-top: 12px;
+    margin-top: 14px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
 }
 
 .confidence-item { text-align: center; }
-.confidence-value { font-size: 22px; font-weight: 700; color: var(--primary); }
-.confidence-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--subtext); margin-top: 4px; }
+.confidence-value { font-family: 'IBM Plex Mono', monospace; font-size: 21px; font-weight: 700; color: var(--text); }
+.confidence-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--subtext); margin-top: 5px; }
+
+.result-thumbnail-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.result-thumbnail {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    box-shadow: var(--shadow-lg);
+    object-fit: contain;
+}
 
 .grid-2 {
     display: grid;
@@ -709,18 +983,21 @@ nav {
 .result-card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 12px;
     padding: 24px;
     box-shadow: var(--shadow);
 }
 
 .result-card h3 {
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--primary);
+    color: var(--seal);
     margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
 }
 
 .info-row {
@@ -730,40 +1007,42 @@ nav {
     padding: 8px 0;
     border-bottom: 1px solid var(--border);
     font-size: 13px;
+    gap: 12px;
 }
 
 .info-row:last-child { border-bottom: none; }
-.info-label { color: var(--subtext); }
-.info-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+.info-label { color: var(--subtext); flex-shrink: 0; }
+.info-value { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); text-align: right; }
 
 .hash-item { margin-bottom: 12px; }
-.hash-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary); margin-bottom: 4px; }
-.hash-value { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text); word-break: break-all; background: var(--bg3); padding: 6px 10px; border-radius: 6px; }
+.hash-item:last-child { margin-bottom: 0; }
+.hash-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtext); margin-bottom: 5px; }
+.hash-value { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text); word-break: break-all; background: var(--bg3); padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); }
 
-.flag-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
+.flag-item { display: flex; align-items: center; gap: 9px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
 .flag-item:last-child { border-bottom: none; }
-.flag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); flex-shrink: 0; }
+.flag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); flex-shrink: 0; }
 .no-flags { font-size: 13px; color: var(--green); }
 .exif-empty { font-size: 13px; color: var(--subtext); font-style: italic; }
 
 .card-full { margin-bottom: 18px; }
 
-.signal-item { margin-bottom: 12px; break-inside: avoid; }
-.signal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.signal-name { font-size: 13px; font-weight: 500; color: var(--text); }
-.signal-score { font-size: 13px; font-weight: 700; }
+.signal-item { margin-bottom: 13px; break-inside: avoid; }
+.signal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.signal-name { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.signal-score { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; font-weight: 700; }
 .score-high { color: var(--red); }
 .score-mid  { color: var(--orange); }
 .score-low  { color: var(--green); }
-.signal-bar { height: 5px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
-.signal-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.signal-bar { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.signal-fill { height: 100%; border-radius: 3px; width: 0; transition: width 0.9s cubic-bezier(0.22,1,0.36,1); }
 .fill-high { background: linear-gradient(90deg, var(--orange), var(--red)); }
 .fill-mid  { background: linear-gradient(90deg, var(--yellow), var(--orange)); }
-.fill-low  { background: linear-gradient(90deg, var(--green), #34d399); }
+.fill-low  { background: linear-gradient(90deg, var(--green), var(--green)); }
 
 .analyze-again {
     text-align: center;
-    margin-top: 28px;
+    margin-top: 30px;
     display: flex;
     justify-content: center;
     gap: 14px;
@@ -775,30 +1054,30 @@ nav {
     align-items: center;
     background: var(--gradient);
     color: #fff;
-    padding: 13px 28px;
-    border-radius: 10px;
+    padding: 12px 26px;
+    border-radius: 8px;
     border: none;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: var(--shadow);
 }
 
-.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-primary:hover { opacity: 0.92; transform: translateY(-1px); }
 
 .btn-secondary {
     display: inline-flex;
     align-items: center;
     background: var(--card);
     color: var(--text);
-    padding: 13px 28px;
-    border-radius: 10px;
+    padding: 12px 26px;
+    border-radius: 8px;
     border: 1px solid var(--border2);
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: var(--shadow);
@@ -808,39 +1087,34 @@ nav {
 
 /* ─── FOOTER ──────────────────────────────────────── */
 footer {
-    background: var(--card);
+    background: var(--bg2);
     border-top: 1px solid var(--border);
     margin-top: 40px;
 }
 
 .footer-inner {
-    max-width: 1200px;
+    max-width: 1180px;
     margin: 0 auto;
-    padding: 52px 60px 36px;
+    padding: 56px 60px 36px;
     display: grid;
     grid-template-columns: 1.6fr 1fr 1fr 1fr;
     gap: 48px;
 }
 
-.footer-brand h3 {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-}
+.footer-brand .nav-left { margin-bottom: 14px; }
 
 .footer-brand p {
-    font-size: 14px;
+    font-size: 13.5px;
     color: var(--subtext);
-    line-height: 1.7;
+    line-height: 1.75;
     max-width: 280px;
 }
 
 .footer-col h4 {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text);
     margin-bottom: 16px;
@@ -850,27 +1124,28 @@ footer {
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 11px;
 }
 
 .footer-col ul li a {
-    font-size: 14px;
+    font-size: 13.5px;
     color: var(--subtext);
     text-decoration: none;
     transition: color 0.2s;
 }
 
-.footer-col ul li a:hover { color: var(--primary); }
+.footer-col ul li a:hover { color: var(--seal); }
 
 .footer-bottom {
-    max-width: 1200px;
+    max-width: 1180px;
     margin: 0 auto;
     padding: 18px 60px;
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
     color: var(--subtext);
 }
 
@@ -880,53 +1155,26 @@ footer {
 }
 
 .footer-badge {
-    padding: 4px 12px;
+    padding: 4px 11px;
     border-radius: 20px;
     border: 1px solid var(--border);
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 600;
-    color: var(--primary);
+    letter-spacing: 0.03em;
+    color: var(--seal);
     background: var(--bg3);
-    letter-spacing: 0.05em;
 }
 
-/* ─── RESPONSIVE ──────────────────────────────────── */
-@media (max-width: 900px) {
-    nav { padding: 16px 20px; }
-    .hero { padding: 40px 20px; }
-    .hero-inner { flex-direction: column; padding: 40px 30px; gap: 32px; text-align: center; }
-    .hero-logo-img { width: 220px; }
-    .hero-text-col h1 { font-size: 32px; }
-    .stats-bar { padding: 0 20px; }
-    .stats-inner { grid-template-columns: 1fr; }
-    .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
-    .stat-item:last-child { border-bottom: none; }
-    .section { padding: 60px 20px; }
-    .features-grid { grid-template-columns: 1fr; }
-    .how-grid { grid-template-columns: 1fr 1fr; }
-    .divider { margin: 0 20px; }
-    .upload-section { padding: 60px 20px; }
-    .results { padding: 0 20px; }
-    .grid-2 { grid-template-columns: 1fr; }
-    .footer-inner { grid-template-columns: 1fr; gap: 32px; padding: 40px 20px; }
-    .footer-bottom { flex-direction: column; gap: 12px; padding: 18px 20px; }
-    [data-theme="animated"] .hero-text-col h1 { font-size: 38px; }
-}
-
-@media (max-width: 600px) {
-    .how-grid { grid-template-columns: 1fr; }
-    .theme-btn { font-size: 11px; padding: 5px 10px; }
-}
-
+/* ─── ERROR BANNER ────────────────────────────────── */
 .error-banner {
-    max-width: 680px;
+    max-width: 640px;
     margin: 0 auto 16px;
-    padding: 14px 18px;
-    border-radius: 12px;
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.35);
-    color: #ef4444;
-    font-size: 14px;
+    padding: 13px 18px;
+    border-radius: 10px;
+    background: rgba(179, 38, 30, 0.08);
+    border: 1px solid rgba(179, 38, 30, 0.3);
+    color: var(--red);
+    font-size: 13.5px;
     font-weight: 500;
     text-align: left;
     display: none;
@@ -941,25 +1189,58 @@ footer {
     cursor: pointer;
     background: none;
     border: none;
-    color: #ef4444;
+    color: var(--red);
     font-size: 18px;
     line-height: 1;
     padding: 0 4px;
 }
 
-.result-thumbnail-wrap {
-    display: flex;
-    justify-content: center;
-    margin: 0 auto 20px;
+/* ─── ACCESSIBILITY ───────────────────────────────── */
+a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--seal);
+    outline-offset: 2px;
 }
 
-.result-thumbnail {
-    max-width: 220px;
-    max-height: 220px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
-    object-fit: contain;
+/* ─── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 900px) {
+    nav { padding: 14px 20px; }
+    .hero { padding: 32px 20px 0; }
+    .hero-inner { flex-direction: column; padding: 40px 28px; gap: 30px; text-align: center; }
+    .hero-text-col h1 { font-size: 30px; }
+    .hero-text-col p { max-width: none; }
+    .hero-cta-row { justify-content: center; }
+    .stats-bar { padding: 0 20px; }
+    .stats-inner { grid-template-columns: 1fr; }
+    .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .stat-item:last-child { border-bottom: none; }
+    .section { padding: 60px 20px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .how-grid { grid-template-columns: 1fr 1fr; }
+    .divider { margin: 0 20px; }
+    .upload-section { padding: 60px 20px; }
+    .results { padding: 0 20px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .footer-inner { grid-template-columns: 1fr; gap: 32px; padding: 40px 20px; }
+    .footer-bottom { flex-direction: column; gap: 12px; padding: 18px 20px; }
+    [data-theme="animated"] .hero-text-col h1 { font-size: 36px; }
+    .nav-tagline { display: none; }
+}
+
+@media (max-width: 600px) {
+    .how-grid { grid-template-columns: 1fr; }
+    .theme-btn { font-size: 10px; padding: 5px 9px; }
+    .probability-number { font-size: 60px; }
+    .verdict-card { padding: 34px 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+    .reveal { opacity: 1 !important; transform: none !important; }
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -971,67 +1252,106 @@ footer {
 
 <!-- NAV -->
 <nav>
-    <a href="#" class="nav-logo-text">VeriFile-X</a>
+    <a href="#" class="nav-left">
+        <span class="nav-mark">VX</span>
+        <span class="nav-wordmark">
+            <span class="nav-logo-text">VeriFile-X</span>
+            <span class="nav-tagline">Forensic Image Verification</span>
+        </span>
+    </a>
     <div class="nav-right">
         <div class="live-indicator">
             <div class="live-dot"></div>
-            System Active
+            Engine Online
         </div>
         <div class="theme-switcher">
-            <button class="theme-btn" id="btn-animated" onclick="setTheme('animated')">Animated</button>
+            <button class="theme-btn" id="btn-animated" onclick="setTheme('animated')">Signal</button>
             <button class="theme-btn" id="btn-dark"     onclick="setTheme('dark')">Dark</button>
             <button class="theme-btn" id="btn-light"    onclick="setTheme('light')">Light</button>
         </div>
     </div>
 </nav>
 
-<!-- HERO (light/dark: logo + text side by side | animated: text only centered) -->
+<!-- HERO -->
 <section class="hero">
     <div class="hero-inner">
-        <div class="hero-logo-col">
-            <img class="hero-logo-img" src="https://raw.githubusercontent.com/abinaze/VeriFile-X/main/frontend/logo2.png" onerror="this.style.display='none'" alt="VeriFile-X">
-        </div>
         <div class="hero-text-col">
-            <div class="hero-badge">DIRE + CLIP + Statistical Analysis</div>
-            <h1>Unmask AI Content with Confidence</h1>
-            <p>VeriFile-X is an advanced AI image verification platform that analyses any image using 30 independent forensic signals. Instantly determine whether an image is AI-generated or authentic — with cryptographic hashes, EXIF forensics, generator attribution, platform detection, and a downloadable evidence report.</p>
-            <a class="hero-cta" href="#upload-section">
-                Start Analysis
-                <svg class="hero-cta-arrow" viewBox="0 0 20 20">
-                    <path d="M4 10h12M10 4l6 6-6 6"/>
-                </svg>
-            </a>
+            <div class="hero-badge">DIRE &middot; CLIP &middot; PRNU &middot; 27 more signals</div>
+            <h1>Proof, not <em>guesswork.</em></h1>
+            <p>VeriFile-X runs thirty independent forensic signals — diffusion-reconstruction error, CLIP embedding drift, sensor-noise fingerprinting, compression analysis, and camera metadata — then returns a fully explainable evidence report in seconds. No black-box score. Every signal shows its work.</p>
+            <div class="hero-cta-row">
+                <a class="hero-cta" href="#upload-section">
+                    Submit Evidence
+                    <svg class="hero-cta-arrow" viewBox="0 0 20 20">
+                        <path d="M4 10h12M10 4l6 6-6 6"/>
+                    </svg>
+                </a>
+                <span class="hero-cta-note">No files retained &middot; results in seconds</span>
+            </div>
         </div>
     </div>
 </section>
+
+<!-- LEDGER STRIP -->
+<div class="ledger-strip" aria-hidden="true">
+    <div class="ledger-track">
+        <div class="ledger-half">
+            <span class="ledger-item">DIRE Diffusion Reconstruction</span>
+            <span class="ledger-item">CLIP Embedding Drift</span>
+            <span class="ledger-item">PRNU Sensor-Noise Residual</span>
+            <span class="ledger-item">CFA Bayer Correlation</span>
+            <span class="ledger-item">Noiseprint Camera Fingerprint</span>
+            <span class="ledger-item">ELA Recompression Error</span>
+            <span class="ledger-item">JPEG Ghost Analysis</span>
+            <span class="ledger-item">DCT Frequency Domain</span>
+            <span class="ledger-item">Statistical Ensemble — 19 Sub-Signals</span>
+            <span class="ledger-item">EXIF &amp; GPS Metadata Forensics</span>
+            <span class="ledger-item">MCMC Confidence Calibration</span>
+        </div>
+        <div class="ledger-half">
+            <span class="ledger-item">DIRE Diffusion Reconstruction</span>
+            <span class="ledger-item">CLIP Embedding Drift</span>
+            <span class="ledger-item">PRNU Sensor-Noise Residual</span>
+            <span class="ledger-item">CFA Bayer Correlation</span>
+            <span class="ledger-item">Noiseprint Camera Fingerprint</span>
+            <span class="ledger-item">ELA Recompression Error</span>
+            <span class="ledger-item">JPEG Ghost Analysis</span>
+            <span class="ledger-item">DCT Frequency Domain</span>
+            <span class="ledger-item">Statistical Ensemble — 19 Sub-Signals</span>
+            <span class="ledger-item">EXIF &amp; GPS Metadata Forensics</span>
+            <span class="ledger-item">MCMC Confidence Calibration</span>
+        </div>
+    </div>
+</div>
 
 <!-- STATS BAR -->
 <div class="stats-bar">
     <div class="stats-inner">
         <div class="stat-item">
-            <div class="stat-number">30</div>
+            <div class="stat-number" data-count-to="30">0</div>
             <div class="stat-label">Detection Signals</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number">8</div>
-            <div class="stat-label">AI Methods</div>
+            <div class="stat-number" data-count-to="8">0</div>
+            <div class="stat-label">Independent Methods</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number">85–92%</div>
-            <div class="stat-label">Validated Accuracy</div>
+            <div class="stat-number">Zero</div>
+            <div class="stat-label">Files Retained</div>
         </div>
     </div>
 </div>
 
 <!-- WHY VERIFILE-X -->
 <section class="section" id="features">
-    <div class="section-header">
+    <div class="section-header reveal">
         <div class="section-label">Capabilities</div>
         <h2 class="section-title">Why VeriFile-X</h2>
         <p class="section-sub">Built for journalists, legal professionals, researchers, and anyone who needs to verify the authenticity of digital images.</p>
     </div>
     <div class="features-grid">
-        <div class="feature-card">
+        <div class="feature-card reveal tilt-card">
+            <div class="feature-exhibit">Exhibit A</div>
             <div class="feature-icon">
                 <svg viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="7"/>
@@ -1039,27 +1359,29 @@ footer {
                     <path d="M11 8v6M8 11h6"/>
                 </svg>
             </div>
-            <h3>AI Detection</h3>
-            <p>Detect AI-generated content using 30 independent signals spanning deep learning, frequency analysis, EXIF forensics, and statistical modelling. Each signal explains its reasoning.</p>
+            <h3>Multi-Signal Detection</h3>
+            <p>Thirty independent signals — DIRE diffusion-reconstruction error, CLIP embedding distance, PRNU sensor-noise residuals, and a 19-part statistical ensemble. Each signal explains its own reasoning.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card reveal tilt-card">
+            <div class="feature-exhibit">Exhibit B</div>
             <div class="feature-icon">
                 <svg viewBox="0 0 24 24">
                     <rect x="3" y="11" width="18" height="11" rx="2"/>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
             </div>
-            <h3>Secure Verification</h3>
-            <p>Every image is analysed with SHA-256 and MD5 cryptographic hashing, perceptual fingerprinting, and tamper-indicator detection — producing a full forensic evidence report.</p>
+            <h3>Evidence Trail</h3>
+            <p>Every image is hashed with SHA-256 and MD5, fingerprinted perceptually, and checked for tamper indicators — producing a verifiable evidence trail, not just a verdict.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card reveal tilt-card">
+            <div class="feature-exhibit">Exhibit C</div>
             <div class="feature-icon">
                 <svg viewBox="0 0 24 24">
                     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                 </svg>
             </div>
-            <h3>Fast Processing</h3>
-            <p>Results in seconds. All processing is done in-memory — your image is never stored to disk. Download a full PDF forensic report with a single click after analysis.</p>
+            <h3>Zero-Retention Processing</h3>
+            <p>Analysis runs in memory — your image is never written to disk. A verdict returns in seconds, with a full PDF forensic report available on demand.</p>
         </div>
     </div>
 </section>
@@ -1068,28 +1390,28 @@ footer {
 
 <!-- HOW IT WORKS -->
 <section class="section">
-    <div class="section-header">
+    <div class="section-header reveal">
         <div class="section-label">Process</div>
         <h2 class="section-title">How It Works</h2>
         <p class="section-sub">Four steps from upload to forensic-grade evidence report.</p>
     </div>
     <div class="how-grid">
-        <div class="how-card">
+        <div class="how-card reveal">
             <div class="how-step">01</div>
             <h4>Upload Image</h4>
             <p>Drag and drop or select a JPEG, PNG, WebP, TIFF, or HEIC file up to 10 MB.</p>
         </div>
-        <div class="how-card">
+        <div class="how-card reveal">
             <div class="how-step">02</div>
             <h4>Forensic Analysis</h4>
             <p>30 detection signals run in parallel across 8 independent methods.</p>
         </div>
-        <div class="how-card">
+        <div class="how-card reveal">
             <div class="how-step">03</div>
             <h4>Verdict Delivered</h4>
             <p>An AI generation probability score and classification are returned with full signal breakdown.</p>
         </div>
-        <div class="how-card">
+        <div class="how-card reveal">
             <div class="how-step">04</div>
             <h4>Download Report</h4>
             <p>Export a complete PDF forensic report including hashes, EXIF data, and all signal results.</p>
@@ -1101,23 +1423,27 @@ footer {
 
 <!-- UPLOAD -->
 <div id="upload-section" class="upload-section">
-    <div class="upload-section-header">
+    <div class="upload-section-header reveal">
         <div class="section-label">Analysis Engine</div>
         <h2 class="section-title">Analyse an Image</h2>
-        <p class="section-sub" style="margin-top:12px;">Drop any image below. Results appear within seconds.</p>
+        <p class="section-sub" style="margin-top:12px;">Drop a file below. A verdict, evidence hashes, and signal breakdown return in seconds.</p>
     </div>
     <div class="error-banner" id="errorBanner">
         <span id="errorBannerText"></span>
         <button class="error-banner-close" onclick="hideError()" aria-label="Dismiss">&times;</button>
     </div>
-    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+    <div class="upload-zone reveal" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <span class="upload-zone-corner tl"></span>
+        <span class="upload-zone-corner tr"></span>
+        <span class="upload-zone-corner bl"></span>
+        <span class="upload-zone-corner br"></span>
         <svg class="upload-zone-icon" viewBox="0 0 52 52">
             <path d="M26 36V16M16 26l10-10 10 10"/>
             <rect x="6" y="6" width="40" height="40" rx="10"/>
             <path d="M14 40h24"/>
         </svg>
         <h2>Drop image here or click to upload</h2>
-        <p>JPEG, PNG, WebP, TIFF, HEIC &bull; Max 10 MB</p>
+        <p>JPEG &middot; PNG &middot; WebP &middot; TIFF &middot; HEIC &middot; Max 10 MB</p>
         <button class="btn-upload" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
             Select Image
         </button>
@@ -1127,9 +1453,14 @@ footer {
 
 <!-- LOADING -->
 <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <h3>Analysing with 30 signals</h3>
-    <p>Running DIRE reconstruction, CLIP embeddings, and statistical analysis</p>
+    <div class="scan-panel">
+        <div class="scan-grid"></div>
+        <span class="scan-corner tl"></span>
+        <span class="scan-corner br"></span>
+        <div class="scan-line"></div>
+    </div>
+    <h3>Running the Forensic Ensemble</h3>
+    <p id="loadingTicker">DIRE reconstruction, CLIP embeddings, PRNU noise mapping — 30 signals in parallel</p>
 </div>
 
 <!-- RESULTS -->
@@ -1193,8 +1524,8 @@ footer {
         <button class="btn-secondary" onclick="downloadPDF()">Download PDF Report</button>
     </div>
 
-    <p style="text-align:center;font-size:12px;color:var(--subtext);margin-top:12px;">
-        Accuracy ~85-92% with validated CLIP database. Not intended as sole evidence in legal proceedings.
+    <p style="text-align:center;font-size:12px;color:var(--subtext);margin-top:12px;font-family:'IBM Plex Mono',monospace;">
+        Every verdict includes a full per-signal breakdown, not a single opaque score. Not intended as sole evidence in legal proceedings.
     </p>
 
 </div>
@@ -1203,8 +1534,14 @@ footer {
 <footer>
     <div class="footer-inner">
         <div class="footer-brand">
-            <h3>VeriFile-X</h3>
-            <p>Advanced AI image verification platform. 30 forensic signals. Cryptographic evidence reports. Built for accuracy, transparency, and trust.</p>
+            <a href="#" class="nav-left">
+                <span class="nav-mark">VX</span>
+                <span class="nav-wordmark">
+                    <span class="nav-logo-text">VeriFile-X</span>
+                    <span class="nav-tagline">Forensic Image Verification</span>
+                </span>
+            </a>
+            <p>AI image verification platform. 30 forensic signals. Fully explainable evidence reports. Built for accuracy, transparency, and trust.</p>
         </div>
         <div class="footer-col">
             <h4>Product</h4>
@@ -1251,58 +1588,68 @@ footer {
 <script>
 
 var _threeReady = false;
-var _tScene, _tCamera, _tRenderer, _tCubes, _tNodes, _tParticles;
+var _tScene, _tCamera, _tRenderer, _tNodeGroup, _tNodes, _tParticles;
 var _tMouseX = 0, _tMouseY = 0;
+var _tReduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function initThree() {
     if (_threeReady) return;
     _threeReady = true;
     var canvas = document.getElementById('bg-canvas');
     _tScene  = new THREE.Scene();
-    _tCamera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
-    _tCamera.position.z = 18;
+    _tCamera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
+    _tCamera.position.set(0, 0, 25);
     _tRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
     _tRenderer.setSize(innerWidth, innerHeight);
     _tRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    _tScene.add(new THREE.AmbientLight(0x00ffff, 0.6));
-    var pl = new THREE.PointLight(0x7a7aff, 2);
-    pl.position.set(10, 10, 10);
-    _tScene.add(pl);
-    var grid = new THREE.GridHelper(200, 60, 0x00ffee, 0x003344);
-    grid.position.y = -8;
-    _tScene.add(grid);
-    _tCubes = [];
-    for (var i = 0; i < 40; i++) {
-        var c = new THREE.Mesh(
-            new THREE.BoxGeometry(1.4, 1.4, 0.2),
-            new THREE.MeshStandardMaterial({ color: 0x00ffee, emissive: 0x002222, metalness: 0.7, roughness: 0.2 })
-        );
-        c.position.x = (Math.random() - 0.5) * 40;
-        c.position.y = (Math.random() - 0.5) * 20;
-        c.position.z = (Math.random() - 0.5) * 30;
-        c.rs = Math.random() * 0.02;
-        _tScene.add(c);
-        _tCubes.push(c);
-    }
+
+    var NODE_COUNT = 42;
+    var pts = [];
+    _tNodeGroup = new THREE.Group();
     _tNodes = [];
-    for (var j = 0; j < 25; j++) {
-        var n = new THREE.Mesh(
-            new THREE.SphereGeometry(0.35, 32, 32),
-            new THREE.MeshStandardMaterial({ color: 0x7a7aff, emissive: 0x2222ff })
+    for (var i = 0; i < NODE_COUNT; i++) {
+        var p = new THREE.Vector3(
+            (Math.random() - 0.5) * 34,
+            (Math.random() - 0.5) * 19,
+            (Math.random() - 0.5) * 18
         );
-        n.position.x = (Math.random() - 0.5) * 30;
-        n.position.y = (Math.random() - 0.5) * 15;
-        n.position.z = (Math.random() - 0.5) * 30;
-        n.vel = Math.random() * 0.01;
-        _tScene.add(n);
-        _tNodes.push(n);
+        pts.push(p);
+        var isSeal = Math.random() > 0.8;
+        var node = new THREE.Mesh(
+            new THREE.SphereGeometry(isSeal ? 0.16 : (Math.random() * 0.07 + 0.07), 10, 10),
+            new THREE.MeshBasicMaterial({ color: isSeal ? 0xd9a94a : 0x6f93c2, transparent: true, opacity: isSeal ? 0.95 : 0.75 })
+        );
+        node.position.copy(p);
+        node.userData.drift  = Math.random() * 0.35 + 0.1;
+        node.userData.offset = Math.random() * Math.PI * 2;
+        node.userData.baseOpacity = isSeal ? 0.95 : 0.75;
+        node.userData.isSeal = isSeal;
+        _tNodeGroup.add(node);
+        _tNodes.push(node);
     }
-    var pg = new THREE.BufferGeometry();
-    var pa = new Float32Array(1200 * 3);
-    for (var k = 0; k < 3600; k++) pa[k] = (Math.random() - 0.5) * 80;
-    pg.setAttribute('position', new THREE.BufferAttribute(pa, 3));
-    _tParticles = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.05, color: 0x00ffff }));
+
+    var edgePositions = [];
+    var THRESH = 8.25;
+    for (var a = 0; a < pts.length; a++) {
+        for (var b = a + 1; b < pts.length; b++) {
+            if (pts[a].distanceTo(pts[b]) < THRESH) {
+                edgePositions.push(pts[a].x, pts[a].y, pts[a].z, pts[b].x, pts[b].y, pts[b].z);
+            }
+        }
+    }
+    var edgeGeo = new THREE.BufferGeometry();
+    edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
+    _tNodeGroup.add(new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0x2f4568, transparent: true, opacity: 0.32 })));
+    _tScene.add(_tNodeGroup);
+
+    var dustCount = 420;
+    var dustPos = new Float32Array(dustCount * 3);
+    for (var k = 0; k < dustPos.length; k++) dustPos[k] = (Math.random() - 0.5) * 64;
+    var dustGeo = new THREE.BufferGeometry();
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+    _tParticles = new THREE.Points(dustGeo, new THREE.PointsMaterial({ size: 0.04, color: 0x3e5674, transparent: true, opacity: 0.45 }));
     _tScene.add(_tParticles);
+
     document.addEventListener('mousemove', function(e) {
         _tMouseX = (e.clientX / innerWidth - 0.5) * 2;
         _tMouseY = (e.clientY / innerHeight - 0.5) * 2;
@@ -1312,18 +1659,26 @@ function initThree() {
         _tCamera.updateProjectionMatrix();
         _tRenderer.setSize(innerWidth, innerHeight);
     });
+
+    if (_tReduceMotion) { _tRenderer.render(_tScene, _tCamera); return; }
+
     (function loop() {
         requestAnimationFrame(loop);
-        var t = Date.now();
-        _tCubes.forEach(function(c) {
-            c.rotation.x += c.rs;
-            c.rotation.y += c.rs;
-            c.position.y += Math.sin(t * 0.001 + c.position.x) * 0.002;
+        var t = Date.now() * 0.001;
+        _tNodes.forEach(function(n) {
+            n.position.y += Math.sin(t * n.userData.drift + n.userData.offset) * 0.0022;
+            // A "seal" node occasionally pulses brighter — a quiet nod to a
+            // signal firing, without competing with the hero seal for attention.
+            if (n.userData.isSeal) {
+                var pulse = (Math.sin(t * 0.6 + n.userData.offset) + 1) / 2;
+                n.material.opacity = n.userData.baseOpacity * (0.55 + 0.45 * pulse);
+            }
         });
-        _tNodes.forEach(function(n) { n.position.y += Math.sin(t * 0.002) * n.vel; });
-        _tParticles.rotation.y += 0.0008;
-        _tCamera.position.x += (_tMouseX * 3 - _tCamera.position.x) * 0.05;
-        _tCamera.position.y += (-_tMouseY * 2 - _tCamera.position.y) * 0.05;
+        _tNodeGroup.rotation.y += 0.0007;
+        _tNodeGroup.rotation.x = Math.sin(t * 0.05) * 0.04;
+        _tParticles.rotation.y += 0.00035;
+        _tCamera.position.x += (_tMouseX * 3 - _tCamera.position.x) * 0.04;
+        _tCamera.position.y += (-_tMouseY * 2 - _tCamera.position.y) * 0.04;
         _tCamera.lookAt(_tScene.position);
         _tRenderer.render(_tScene, _tCamera);
     })();
@@ -1343,7 +1698,73 @@ function setTheme(theme) {
     setTheme(saved);
 })();
 
-/* ── DETECTION LOGIC ─────────────────────────────── */
+/* ── SCROLL REVEAL ────────────────────────────────── */
+(function initReveal() {
+    var els = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window) || _tReduceMotion) {
+        els.forEach(function(el) { el.classList.add('is-visible'); });
+        return;
+    }
+    var io = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                io.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15 });
+    els.forEach(function(el) { io.observe(el); });
+})();
+
+/* ── STAT COUNT-UP ────────────────────────────────── */
+(function initCountUp() {
+    var els = document.querySelectorAll('[data-count-to]');
+    if (!els.length) return;
+    function run(el) {
+        var target = parseInt(el.getAttribute('data-count-to'), 10);
+        if (_tReduceMotion) { el.textContent = target; return; }
+        var start = null;
+        var DURATION = 900;
+        function step(ts) {
+            if (!start) start = ts;
+            var progress = Math.min((ts - start) / DURATION, 1);
+            var eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(eased * target);
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+    if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) { run(entry.target); io.unobserve(entry.target); }
+            });
+        }, { threshold: 0.6 });
+        els.forEach(function(el) { io.observe(el); });
+    } else {
+        els.forEach(run);
+    }
+})();
+
+/* ── 3D TILT ON FEATURE CARDS ─────────────────────── */
+(function initTilt() {
+    if (_tReduceMotion) return;
+    var cards = document.querySelectorAll('.tilt-card');
+    cards.forEach(function(card) {
+        card.style.perspective = '700px';
+        card.addEventListener('mousemove', function(e) {
+            var r = card.getBoundingClientRect();
+            var px = (e.clientX - r.left) / r.width - 0.5;
+            var py = (e.clientY - r.top) / r.height - 0.5;
+            card.style.transform = 'translateY(-6px) rotateY(' + (px * 6).toFixed(2) + 'deg) rotateX(' + (-py * 6).toFixed(2) + 'deg)';
+        });
+        card.addEventListener('mouseleave', function() {
+            card.style.transform = 'translateY(0) rotateY(0deg) rotateX(0deg)';
+        });
+    });
+})();
+
+/* ── DETECTION LOGIC (unchanged from prior version) ─ */
 
 const API_URL = window.location.hostname.includes('github.io') || window.location.hostname.includes('abinaze')
     ? 'https://abinazebinoy-verifile-x-api.hf.space'
@@ -1354,6 +1775,33 @@ const API_URL = window.location.hostname.includes('github.io') || window.locatio
 const fileInput  = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
 const loading    = document.getElementById('loading');
+
+// Real signal names, cycled during the loading state so the wait itself
+// demonstrates the "no black box" claim rather than just asserting it.
+const LOADING_SIGNAL_NAMES = [
+    'Running DIRE diffusion reconstruction…',
+    'Computing CLIP embedding distance…',
+    'Checking PRNU sensor-noise residual…',
+    'Analysing CFA Bayer correlation…',
+    'Scanning ELA compression levels…',
+    'Checking JPEG ghost artifacts…',
+    'Running 19-signal statistical ensemble…',
+    'Cross-checking EXIF and GPS metadata…',
+    'Calibrating MCMC confidence interval…',
+];
+var _loadingTickerTimer = null;
+function startLoadingTicker() {
+    var el = document.getElementById('loadingTicker');
+    var i = 0;
+    el.textContent = LOADING_SIGNAL_NAMES[0];
+    _loadingTickerTimer = setInterval(function() {
+        i = (i + 1) % LOADING_SIGNAL_NAMES.length;
+        el.textContent = LOADING_SIGNAL_NAMES[i];
+    }, 1100);
+}
+function stopLoadingTicker() {
+    if (_loadingTickerTimer) { clearInterval(_loadingTickerTimer); _loadingTickerTimer = null; }
+}
 
 function showError(message) {
     const banner = document.getElementById('errorBanner');
@@ -1389,22 +1837,19 @@ function resetUI() {
 
 async function analyzeFile(file) {
     hideError();
-    // Validate BEFORE any UI changes — prevents flicker of broken loading state
     if (file.size > 10 * 1024 * 1024) { showError('File too large. Maximum 10MB.'); return; }
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/tiff', 'image/heic', 'image/heif'];
     if (!allowed.includes(file.type)) { showError('Unsupported format. Use JPEG, PNG, WebP, TIFF, or HEIC.'); return; }
 
     uploadZone.style.display = 'none';
     loading.classList.add('active');
+    startLoadingTicker();
     results.classList.remove('active');
     const formData = new FormData();
     formData.append('file', file);
 
     try {
         const controller = new AbortController();
-        // 90s timeout — DIRE (Stable Diffusion reconstruction) on CPU can take
-        // 60-120s; the previous 30s timeout aborted the request before DIRE
-        // finished, making slow-but-successful analyses look like failures.
         const timeoutId = setTimeout(() => controller.abort(), 90000);
         const response = await fetch(`${API_URL}/api/v1/analyze/image`, {
             signal: controller.signal, method: 'POST', body: formData
@@ -1416,9 +1861,6 @@ async function analyzeFile(file) {
         }
         const data = await response.json();
         window._lastReport = data;
-        // Generate a thumbnail of the uploaded image once, reused by both
-        // the results view and the PDF export (fixes #14/#15 — previously
-        // there was no visual confirmation of which image was analysed).
         try {
             window._lastThumbnail = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -1430,9 +1872,11 @@ async function analyzeFile(file) {
             window._lastThumbnail = null;
         }
         renderResults(data);
+        stopLoadingTicker();
         loading.classList.remove('active');
         results.classList.add('active');
     } catch (error) {
+        stopLoadingTicker();
         loading.classList.remove('active');
         uploadZone.style.display = 'block';
         if (error.name === 'AbortError') {
@@ -1443,12 +1887,25 @@ async function analyzeFile(file) {
     }
 }
 
+function animateProbability(target) {
+    const el = document.getElementById('aiProb');
+    if (_tReduceMotion) { el.textContent = target + '%'; return; }
+    var start = null;
+    var DURATION = 1100;
+    function step(ts) {
+        if (!start) start = ts;
+        var progress = Math.min((ts - start) / DURATION, 1);
+        var eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(eased * target) + '%';
+        if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
 function renderResults(data) {
     const ai   = data.ai_detection;
     const prob = Math.round(ai.ai_probability * 100);
 
-    // Show a preview of the analysed image so users can confirm which
-    // file the results below correspond to (fix #15).
     const thumbWrap = document.getElementById('resultThumbnailWrap');
     const thumbImg  = document.getElementById('resultThumbnail');
     if (window._lastThumbnail) {
@@ -1460,8 +1917,8 @@ function renderResults(data) {
 
     const probEl = document.getElementById('aiProb');
     document.getElementById('evidenceId').textContent = 'Evidence ID: ' + (data.evidence_id || 'N/A');
-    probEl.textContent  = prob + '%';
-    probEl.className    = 'probability-number ' + (prob >= 70 ? 'prob-ai' : prob >= 40 ? 'prob-maybe' : 'prob-human');
+    probEl.className = 'probability-number ' + (prob >= 70 ? 'prob-ai' : prob >= 40 ? 'prob-maybe' : 'prob-human');
+    animateProbability(prob);
 
     const badge = document.getElementById('classificationBadge');
     const cls   = ai.classification.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -1474,9 +1931,6 @@ function renderResults(data) {
     document.getElementById('confidenceLevel').textContent = (ai.confidence || 'N/A').replace(/_/g, ' ');
 
     const fi = data.file_info;
-    // Escape untrusted backend-supplied strings before HTML interpolation.
-    // filename, EXIF values, and tampering-flag text all originate from the
-    // uploaded file's own metadata and must never be treated as safe HTML.
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
@@ -1527,9 +1981,16 @@ function renderResults(data) {
                 <span class="signal-name">${esc(s.signal_name || s.name || 'Signal')}</span>
                 <span class="signal-score ${scoreCls}">${pct}%</span>
             </div>
-            <div class="signal-bar"><div class="signal-fill ${fillCls}" style="width:${pct}%"></div></div>
+            <div class="signal-bar"><div class="signal-fill ${fillCls}" data-w="${pct}" style="width:0%"></div></div>
         </div>`;
     }).join('');
+    // Animate signal bars in on the next frame (width:0 -> width:N%) so the
+    // breakdown reads as being measured live rather than appearing pre-set.
+    requestAnimationFrame(() => {
+        document.querySelectorAll('.signal-fill[data-w]').forEach(function(bar) {
+            bar.style.width = bar.getAttribute('data-w') + '%';
+        });
+    });
 }
 
 function downloadPDF() {
@@ -1542,8 +2003,7 @@ function downloadPDF() {
     const prob = Math.round(ai.ai_probability * 100);
     const ts   = data.metadata.analysis_timestamp;
 
-    // Header bar
-    doc.setFillColor(10, 22, 40);
+    doc.setFillColor(18, 27, 42);
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
@@ -1560,19 +2020,12 @@ function downloadPDF() {
     doc.setTextColor(0, 0, 0);
     let y = 38;
 
-    // Thumbnail: add the analysed image at top-right of the first page.
-    // This lets the reader immediately confirm which image the report covers
-    // without having to cross-reference by filename alone (fix #14).
     if (window._lastThumbnail) {
         try {
-            // Detect format from data-URL header
             const fmt = window._lastThumbnail.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-            // Place thumbnail at top-right: x=150, y=33, 46×34 mm
             doc.addImage(window._lastThumbnail, fmt, 150, 33, 46, 34);
-            // Reserve space on left side only — thumbnail lives on the right
             doc.setFontSize(9);
         } catch (e) {
-            // If thumbnail embedding fails (e.g. CORS/HEIC), silently skip it
             console.warn('PDF thumbnail embedding failed:', e);
         }
     }
@@ -1587,19 +2040,38 @@ function downloadPDF() {
     doc.setFont('helvetica', 'normal');
     doc.text('Analysis Timestamp: ' + ts, 14, y + 12);
     doc.text('File: ' + data.file_info.filename + '  |  ' + data.file_info.width + 'x' + data.file_info.height + 'px  |  ' + (data.file_info.file_size_bytes / 1024).toFixed(1) + ' KB', 14, y + 19);
-    // If thumbnail present, shift y down past it (thumbnail bottom = 33+34 = 67mm)
     y = window._lastThumbnail ? Math.max(y + 30, 72) : y + 30;
 
-    const verdictColor = prob >= 70 ? [220, 38, 38] : prob >= 40 ? [234, 88, 12] : [16, 185, 129];
+    // BUG FIX: this line was previously rendered with a single doc.text(...,
+    // {align:'center'}) call with no width constraint. jsPDF does not wrap
+    // or shrink text to fit — a longer methods_used list (several detector
+    // names joined by commas) rendered wider than the 182mm colored box and
+    // spilled onto the plain white page background. Since this text is set
+    // to white (to read against the colored box), the overflowing portion
+    // became invisible white-on-white. Fix: wrap to the box's inner width
+    // with splitTextToSize, and size the box to fit however many lines that
+    // produces, instead of a fixed height.
+    const verdictColor = prob >= 70 ? [179, 38, 30] : prob >= 40 ? [180, 114, 10] : [30, 122, 76];
+    const boxX = 14, boxW = 182;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const detailText = 'Confidence: ' + (ai.confidence || 'N/A') + '  |  Methods: ' + (ai.methods_used || []).join(', ') + '  |  Signals: ' + ai.suspicious_signals_count + '/' + ai.total_signals;
+    const detailLines = doc.splitTextToSize(detailText, boxW - 16);
+    const detailLineHeight = 4.5;
+    const boxH = 17 + (detailLines.length - 1) * detailLineHeight + 5;
+
     doc.setFillColor(...verdictColor);
-    doc.roundedRect(14, y, 182, 22, 3, 3, 'F');
+    doc.roundedRect(boxX, y, boxW, boxH, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text('VERDICT: ' + ai.classification.replace(/_/g, ' ').toUpperCase() + ' — ' + prob + '%', 105, y + 10, { align: 'center' });
     doc.setFontSize(9);
-    doc.text('Confidence: ' + (ai.confidence || 'N/A') + '  |  Methods: ' + (ai.methods_used || []).join(', ') + '  |  Signals: ' + ai.suspicious_signals_count + '/' + ai.total_signals, 105, y + 17, { align: 'center' });
-    y += 30;
+    doc.setFont('helvetica', 'normal');
+    detailLines.forEach((line, i) => {
+        doc.text(line, 105, y + 17 + (i * detailLineHeight), { align: 'center' });
+    });
+    y += boxH + 8;
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
@@ -1620,10 +2092,10 @@ function downloadPDF() {
     doc.setFont('helvetica', 'normal');
     const flags = data.tampering_analysis.suspicious_flags;
     if (flags.length === 0) {
-        doc.setTextColor(16, 185, 129);
+        doc.setTextColor(30, 122, 76);
         doc.text('No tampering indicators detected. Authenticity confidence: ' + data.tampering_analysis.confidence, 14, y);
     } else {
-        doc.setTextColor(220, 38, 38);
+        doc.setTextColor(179, 38, 30);
         flags.forEach(f => { doc.text('- ' + f, 14, y); y += 5; });
     }
     doc.setTextColor(0, 0, 0);
@@ -1637,7 +2109,7 @@ function downloadPDF() {
     signals.forEach((s) => {
         if (y > 270) { doc.addPage(); y = 20; }
         const pct = Math.round(s.score * 100);
-        const col = pct >= 70 ? [220, 38, 38] : pct >= 40 ? [234, 88, 12] : [16, 185, 129];
+        const col = pct >= 70 ? [179, 38, 30] : pct >= 40 ? [180, 114, 10] : [30, 122, 76];
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
         doc.text((s.signal_name || s.name || 'Signal'), 14, y);
