@@ -1,3 +1,6 @@
+
+
+Index · HTML
 <!DOCTYPE html>
 <html lang="en" data-theme="animated">
 <head>
@@ -14,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-
+ 
 /* ═══════════════════════════════════════════════════════════════════
    VeriFile-X — Forensic AI Image Verification
    Design system: an evidence-room reading of a security product.
@@ -25,18 +28,18 @@
    Signature element — an interactive 3D evidence seal (CSS 3D, mouse-
             tilt) stands in for a conventional flat logo.
    ═══════════════════════════════════════════════════════════════════ */
-
+ 
 /* ─── RESET ───────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
+ 
 /* ─── THEME VARIABLES ─────────────────────────────── */
-
+ 
 :root {
     /* Brass "seal" — the authenticity accent, held constant across every
        theme so it reads as the brand mark rather than a mode-dependent color. */
     --gradient: linear-gradient(135deg, #6b4e1f, #7f5f27);
 }
-
+ 
 [data-theme="light"] {
     --bg:          #f5f4ee;
     --bg2:         #fbfaf6;
@@ -59,7 +62,7 @@
     --green:       #1e7a4c;
     --grid-line:   rgba(27,42,74,0.05);
 }
-
+ 
 [data-theme="dark"] {
     --bg:          #0b0e13;
     --bg2:         #12161d;
@@ -82,7 +85,7 @@
     --green:       #34c08a;
     --grid-line:   rgba(169,194,224,0.055);
 }
-
+ 
 [data-theme="animated"] {
     --bg:          #080b10;
     --bg2:         #0e121a;
@@ -105,10 +108,10 @@
     --green:       #34c08a;
     --grid-line:   rgba(143,180,222,0.05);
 }
-
+ 
 /* ─── BASE ────────────────────────────────────────── */
 html { scroll-behavior: smooth; }
-
+ 
 body {
     font-family: 'IBM Plex Sans', sans-serif;
     background: var(--bg);
@@ -117,10 +120,10 @@ body {
     overflow-x: hidden;
     transition: background 0.3s ease, color 0.3s ease;
 }
-
+ 
 .font-serif { font-family: 'IBM Plex Serif', Georgia, serif; }
 .font-mono  { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
-
+ 
 /* ─── GRID TEXTURE (light & dark only) ────────────── */
 [data-theme="light"] body::before,
 [data-theme="dark"] body::before {
@@ -134,7 +137,7 @@ body {
     pointer-events: none;
     z-index: 0;
 }
-
+ 
 /* ─── THREE.JS CANVAS ─────────────────────────────── */
 #bg-canvas {
     position: fixed;
@@ -144,12 +147,12 @@ body {
     opacity: 0;
     transition: opacity 0.6s ease;
 }
-
+ 
 [data-theme="animated"] #bg-canvas { opacity: 1; }
-
+ 
 /* ─── PAGE WRAPPER ────────────────────────────────── */
 .page { position: relative; z-index: 2; }
-
+ 
 /* ─── NAVBAR ──────────────────────────────────────── */
 nav {
     position: sticky;
@@ -164,14 +167,14 @@ nav {
     backdrop-filter: blur(18px);
     transition: background 0.3s ease, border-color 0.3s ease;
 }
-
+ 
 .nav-left {
     display: flex;
     align-items: center;
     gap: 14px;
     text-decoration: none;
 }
-
+ 
 .nav-mark {
     width: 34px;
     height: 34px;
@@ -186,20 +189,20 @@ nav {
     color: var(--seal);
     flex-shrink: 0;
 }
-
+ 
 .nav-wordmark {
     display: flex;
     flex-direction: column;
     line-height: 1.15;
 }
-
+ 
 .nav-logo-text {
     font-size: 17px;
     font-weight: 700;
     letter-spacing: 0.01em;
     color: var(--text);
 }
-
+ 
 .nav-tagline {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 9.5px;
@@ -207,13 +210,13 @@ nav {
     text-transform: uppercase;
     color: var(--subtext);
 }
-
+ 
 .nav-right {
     display: flex;
     align-items: center;
     gap: 1.1rem;
 }
-
+ 
 .theme-switcher {
     display: flex;
     align-items: center;
@@ -223,7 +226,7 @@ nav {
     border-radius: 9px;
     padding: 3px;
 }
-
+ 
 .theme-btn {
     padding: 6px 13px;
     border: none;
@@ -237,16 +240,16 @@ nav {
     transition: all 0.2s;
     letter-spacing: 0.04em;
 }
-
+ 
 .theme-btn:hover { color: var(--text); }
-
+ 
 .theme-btn.active {
     background: var(--primary);
     color: var(--bg);
 }
-
+ 
 [data-theme="light"] .theme-btn.active { color: #fff; }
-
+ 
 .live-indicator {
     display: flex;
     align-items: center;
@@ -258,7 +261,7 @@ nav {
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
-
+ 
 .live-dot {
     width: 6px;
     height: 6px;
@@ -266,9 +269,9 @@ nav {
     background: var(--green);
     animation: blink 2.2s infinite;
 }
-
+ 
 @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
-
+ 
 /* ─── HERO ────────────────────────────────────────── */
 .hero {
     display: flex;
@@ -277,7 +280,7 @@ nav {
     min-height: 82vh;
     padding: 56px 40px 0;
 }
-
+ 
 .hero-inner {
     background: var(--card);
     border-radius: 16px;
@@ -293,9 +296,9 @@ nav {
     transition: background 0.3s ease, border-color 0.3s ease;
     position: relative;
 }
-
+ 
 .hero-text-col { width: 100%; max-width: 640px; margin: 0 auto; }
-
+ 
 .hero-badge {
     display: inline-flex;
     align-items: center;
@@ -312,9 +315,9 @@ nav {
     border-radius: 4px;
     margin-bottom: 22px;
 }
-
+ 
 .hero-badge::before { content: "▸"; }
-
+ 
 .hero-text-col h1 {
     font-family: 'IBM Plex Serif', Georgia, serif;
     font-size: 46px;
@@ -324,12 +327,12 @@ nav {
     margin-bottom: 18px;
     letter-spacing: -0.01em;
 }
-
+ 
 .hero-text-col h1 em {
     font-style: italic;
     color: var(--seal);
 }
-
+ 
 .hero-text-col p {
     font-size: 16px;
     color: var(--subtext);
@@ -337,9 +340,9 @@ nav {
     margin-bottom: 34px;
     max-width: 46ch;
 }
-
+ 
 .hero-cta-row { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-
+ 
 .hero-cta {
     display: inline-flex;
     align-items: center;
@@ -360,7 +363,7 @@ nav {
     position: relative;
     overflow: hidden;
 }
-
+ 
 .hero-cta::after {
     content: "";
     position: absolute;
@@ -370,10 +373,10 @@ nav {
     transform: skewX(-20deg);
     transition: left 0.6s ease;
 }
-
+ 
 .hero-cta:hover::after { left: 130%; }
 .hero-cta:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-
+ 
 .hero-cta-arrow {
     width: 16px;
     height: 16px;
@@ -384,16 +387,16 @@ nav {
     stroke-linejoin: round;
     transition: transform 0.2s;
 }
-
+ 
 .hero-cta:hover .hero-cta-arrow { transform: translateX(3px); }
-
+ 
 .hero-cta-note {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11.5px;
     color: var(--subtext);
     letter-spacing: 0.03em;
 }
-
+ 
 /* Signature theme keeps its own backdrop treatment; layout is now shared. */
 [data-theme="animated"] .hero { min-height: 78vh; }
 [data-theme="animated"] .hero-inner {
@@ -402,7 +405,7 @@ nav {
 }
 [data-theme="animated"] .hero-text-col h1 { font-size: 50px; }
 [data-theme="animated"] .hero-text-col p { font-size: 17px; }
-
+ 
 /* ─── LEDGER STRIP (signature marquee) ────────────── */
 .ledger-strip {
     overflow: hidden;
@@ -411,20 +414,20 @@ nav {
     background: var(--bg2);
     margin-top: 48px;
 }
-
+ 
 .ledger-track {
     display: flex;
     width: max-content;
     animation: ledgerScroll 42s linear infinite;
 }
-
+ 
 .ledger-half {
     display: flex;
     align-items: center;
     flex-shrink: 0;
     padding: 13px 0;
 }
-
+ 
 .ledger-item {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
@@ -436,16 +439,16 @@ nav {
     padding: 0 26px;
     border-right: 1px solid var(--border);
 }
-
+ 
 .ledger-item::before {
     content: "✓";
     color: var(--seal);
     margin-right: 10px;
     font-weight: 700;
 }
-
+ 
 @keyframes ledgerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-
+ 
 /* ─── STATS BAR ───────────────────────────────────── */
 .stats-bar {
     padding: 0 60px 0;
@@ -453,7 +456,7 @@ nav {
     display: flex;
     justify-content: center;
 }
-
+ 
 .stats-inner {
     max-width: 980px;
     width: 100%;
@@ -466,17 +469,17 @@ nav {
     overflow: hidden;
     box-shadow: var(--shadow);
 }
-
+ 
 .stat-item {
     padding: 30px 24px;
     text-align: center;
     border-right: 1px solid var(--border);
     transition: background 0.2s;
 }
-
+ 
 .stat-item:last-child { border-right: none; }
 .stat-item:hover { background: var(--bg2); }
-
+ 
 .stat-number {
     font-family: 'IBM Plex Mono', monospace;
     font-variant-numeric: tabular-nums;
@@ -486,14 +489,14 @@ nav {
     line-height: 1;
     margin-bottom: 8px;
 }
-
+ 
 .stat-label {
     font-size: 12.5px;
     letter-spacing: 0.02em;
     color: var(--subtext);
     font-weight: 500;
 }
-
+ 
 /* ─── SCROLL REVEAL ───────────────────────────────── */
 .reveal {
     opacity: 0;
@@ -501,19 +504,19 @@ nav {
     transition: opacity 0.7s ease, transform 0.7s ease;
 }
 .reveal.is-visible { opacity: 1; transform: translateY(0); }
-
+ 
 /* ─── SECTION LAYOUT ──────────────────────────────── */
 .section {
     padding: 88px 60px;
     max-width: 1180px;
     margin: 0 auto;
 }
-
+ 
 .section-header {
     text-align: center;
     margin-bottom: 56px;
 }
-
+ 
 .section-label {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -523,7 +526,7 @@ nav {
     color: var(--seal);
     margin-bottom: 14px;
 }
-
+ 
 .section-title {
     font-family: 'IBM Plex Serif', Georgia, serif;
     font-size: 32px;
@@ -532,7 +535,7 @@ nav {
     letter-spacing: -0.01em;
     margin-bottom: 16px;
 }
-
+ 
 .section-sub {
     font-size: 15.5px;
     color: var(--subtext);
@@ -540,14 +543,14 @@ nav {
     margin: 0 auto;
     line-height: 1.75;
 }
-
+ 
 /* ─── FEATURE CARDS ("EXHIBITS") ──────────────────── */
 .features-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
 }
-
+ 
 .feature-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -560,7 +563,7 @@ nav {
     transform-style: preserve-3d;
     will-change: transform;
 }
-
+ 
 .feature-card::before {
     content: "";
     position: absolute;
@@ -570,10 +573,10 @@ nav {
     opacity: 0;
     transition: opacity 0.3s;
 }
-
+ 
 .feature-card:hover { box-shadow: var(--shadow-lg); }
 .feature-card:hover::before { opacity: 1; }
-
+ 
 .feature-exhibit {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -583,7 +586,7 @@ nav {
     color: var(--seal);
     margin-bottom: 16px;
 }
-
+ 
 .feature-icon {
     width: 44px;
     height: 44px;
@@ -595,7 +598,7 @@ nav {
     justify-content: center;
     margin-bottom: 18px;
 }
-
+ 
 .feature-icon svg {
     width: 22px;
     height: 22px;
@@ -605,7 +608,7 @@ nav {
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-
+ 
 .feature-card h3 {
     font-size: 17px;
     font-weight: 700;
@@ -613,13 +616,13 @@ nav {
     margin-bottom: 10px;
     letter-spacing: -0.01em;
 }
-
+ 
 .feature-card p {
     font-size: 13.5px;
     color: var(--subtext);
     line-height: 1.7;
 }
-
+ 
 /* ─── HOW IT WORKS ────────────────────────────────── */
 .how-grid {
     display: grid;
@@ -627,7 +630,7 @@ nav {
     gap: 20px;
     position: relative;
 }
-
+ 
 .how-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -636,7 +639,7 @@ nav {
     box-shadow: var(--shadow);
     position: relative;
 }
-
+ 
 .how-step {
     display: inline-block;
     padding: 4px 10px;
@@ -649,39 +652,39 @@ nav {
     letter-spacing: 0.08em;
     margin-bottom: 16px;
 }
-
+ 
 .how-card h4 {
     font-size: 14.5px;
     font-weight: 700;
     color: var(--text);
     margin-bottom: 8px;
 }
-
+ 
 .how-card p {
     font-size: 12.5px;
     color: var(--subtext);
     line-height: 1.65;
 }
-
+ 
 /* ─── DIVIDER ─────────────────────────────────────── */
 .divider {
     border: none;
     border-top: 1px solid var(--border);
     margin: 0 60px;
 }
-
+ 
 /* ─── UPLOAD AREA ─────────────────────────────────── */
 .upload-section {
     padding: 88px 60px;
     max-width: 1180px;
     margin: 0 auto;
 }
-
+ 
 .upload-section-header {
     text-align: center;
     margin-bottom: 40px;
 }
-
+ 
 .upload-zone {
     max-width: 640px;
     margin: 0 auto;
@@ -695,7 +698,7 @@ nav {
     transition: all 0.25s;
     position: relative;
 }
-
+ 
 .upload-zone-corner {
     position: absolute;
     width: 18px;
@@ -708,7 +711,7 @@ nav {
 .upload-zone-corner.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
 .upload-zone-corner.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
 .upload-zone-corner.br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
-
+ 
 .upload-zone:hover,
 .upload-zone.dragover {
     border-color: var(--border);
@@ -720,7 +723,7 @@ nav {
     border-color: var(--seal);
     opacity: 1;
 }
-
+ 
 .upload-zone-icon {
     width: 46px;
     height: 46px;
@@ -732,7 +735,7 @@ nav {
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-
+ 
 .upload-zone h2 {
     font-family: 'IBM Plex Serif', Georgia, serif;
     font-size: 19px;
@@ -740,7 +743,7 @@ nav {
     color: var(--text);
     margin-bottom: 8px;
 }
-
+ 
 .upload-zone p {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
@@ -748,7 +751,7 @@ nav {
     color: var(--subtext);
     margin-bottom: 26px;
 }
-
+ 
 .btn-upload {
     display: inline-flex;
     align-items: center;
@@ -765,20 +768,20 @@ nav {
     transition: all 0.2s;
     box-shadow: var(--shadow);
 }
-
+ 
 .btn-upload:hover { opacity: 0.92; transform: translateY(-1px); }
-
+ 
 #fileInput { display: none; }
-
+ 
 /* ─── LOADING ─────────────────────────────────────── */
 .loading {
     display: none;
     text-align: center;
     padding: 50px 20px 70px;
 }
-
+ 
 .loading.active { display: block; }
-
+ 
 .scan-panel {
     position: relative;
     width: 240px;
@@ -789,7 +792,7 @@ nav {
     overflow: hidden;
     background: var(--bg3);
 }
-
+ 
 .scan-grid {
     position: absolute;
     inset: 0;
@@ -799,7 +802,7 @@ nav {
     background-size: 20px 20px;
     opacity: 0.6;
 }
-
+ 
 .scan-corner {
     position: absolute;
     width: 12px;
@@ -809,7 +812,7 @@ nav {
 }
 .scan-corner.tl { top: 6px; left: 6px; border-right: none; border-bottom: none; }
 .scan-corner.br { bottom: 6px; right: 6px; border-left: none; border-top: none; }
-
+ 
 .scan-line {
     position: absolute;
     left: 0; top: 0;
@@ -818,9 +821,9 @@ nav {
     box-shadow: 0 0 14px var(--seal);
     animation: scanMove 1.9s ease-in-out infinite;
 }
-
+ 
 @keyframes scanMove { 0% { top: 2%; } 50% { top: 96%; } 100% { top: 2%; } }
-
+ 
 .loading h3 {
     font-family: 'IBM Plex Serif', Georgia, serif;
     font-size: 19px;
@@ -834,7 +837,7 @@ nav {
     color: var(--subtext);
     min-height: 1.4em;
 }
-
+ 
 /* ─── RESULTS ─────────────────────────────────────── */
 .results {
     display: none;
@@ -842,9 +845,9 @@ nav {
     margin: 0 auto 88px;
     padding: 0 60px;
 }
-
+ 
 .results.active { display: block; }
-
+ 
 .verdict-card {
     background: var(--card);
     border: 1px solid var(--border2);
@@ -856,7 +859,7 @@ nav {
     position: relative;
     overflow: hidden;
 }
-
+ 
 .verdict-card::before {
     content: "";
     position: absolute;
@@ -864,7 +867,7 @@ nav {
     height: 3px;
     background: var(--gradient);
 }
-
+ 
 .verdict-card::after {
     content: "VERIFILE-X";
     position: absolute;
@@ -879,7 +882,7 @@ nav {
     pointer-events: none;
     white-space: nowrap;
 }
-
+ 
 .verdict-card-label {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -889,7 +892,7 @@ nav {
     color: var(--subtext);
     margin-bottom: 12px;
 }
-
+ 
 .evidence-tag {
     display: inline-flex;
     align-items: center;
@@ -904,7 +907,7 @@ nav {
     margin-bottom: 22px;
     word-break: break-all;
 }
-
+ 
 .probability-number {
     font-family: 'IBM Plex Mono', monospace;
     font-variant-numeric: tabular-nums;
@@ -914,11 +917,11 @@ nav {
     margin-bottom: 14px;
     letter-spacing: -0.03em;
 }
-
+ 
 .prob-ai    { color: var(--red); }
 .prob-maybe { color: var(--orange); }
 .prob-human { color: var(--green); }
-
+ 
 .classification-badge {
     position: relative;
     display: inline-flex;
@@ -937,13 +940,13 @@ nav {
     outline-offset: 3px;
     transform: rotate(-1.5deg);
 }
-
+ 
 .badge-ai    { color: var(--red);    background: rgba(179,38,30,0.07); }
 .badge-maybe { color: var(--orange); background: rgba(180,114,10,0.07); }
 .badge-human { color: var(--green);  background: rgba(30,122,76,0.07); }
-
+ 
 .methods-used { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--subtext); margin-bottom: 20px; margin-top: 18px; }
-
+ 
 .confidence-row {
     display: flex;
     justify-content: center;
@@ -953,17 +956,17 @@ nav {
     padding-top: 22px;
     border-top: 1px solid var(--border);
 }
-
+ 
 .confidence-item { text-align: center; }
 .confidence-value { font-family: 'IBM Plex Mono', monospace; font-size: 21px; font-weight: 700; color: var(--text); }
 .confidence-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--subtext); margin-top: 5px; }
-
+ 
 .result-thumbnail-wrap {
     display: flex;
     justify-content: center;
     margin: 0 auto 20px;
 }
-
+ 
 .result-thumbnail {
     max-width: 200px;
     max-height: 200px;
@@ -972,14 +975,14 @@ nav {
     box-shadow: var(--shadow-lg);
     object-fit: contain;
 }
-
+ 
 .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 18px;
     margin-bottom: 18px;
 }
-
+ 
 .result-card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -987,7 +990,7 @@ nav {
     padding: 24px;
     box-shadow: var(--shadow);
 }
-
+ 
 .result-card h3 {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -999,7 +1002,7 @@ nav {
     padding-bottom: 12px;
     border-bottom: 1px solid var(--border);
 }
-
+ 
 .info-row {
     display: flex;
     justify-content: space-between;
@@ -1009,24 +1012,24 @@ nav {
     font-size: 13px;
     gap: 12px;
 }
-
+ 
 .info-row:last-child { border-bottom: none; }
 .info-label { color: var(--subtext); flex-shrink: 0; }
 .info-value { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); text-align: right; }
-
+ 
 .hash-item { margin-bottom: 12px; }
 .hash-item:last-child { margin-bottom: 0; }
 .hash-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtext); margin-bottom: 5px; }
 .hash-value { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text); word-break: break-all; background: var(--bg3); padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); }
-
+ 
 .flag-item { display: flex; align-items: center; gap: 9px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
 .flag-item:last-child { border-bottom: none; }
 .flag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); flex-shrink: 0; }
 .no-flags { font-size: 13px; color: var(--green); }
 .exif-empty { font-size: 13px; color: var(--subtext); font-style: italic; }
-
+ 
 .card-full { margin-bottom: 18px; }
-
+ 
 .signal-item { margin-bottom: 13px; break-inside: avoid; }
 .signal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .signal-name { font-size: 12.5px; font-weight: 500; color: var(--text); }
@@ -1039,7 +1042,7 @@ nav {
 .fill-high { background: linear-gradient(90deg, var(--orange), var(--red)); }
 .fill-mid  { background: linear-gradient(90deg, var(--yellow), var(--orange)); }
 .fill-low  { background: linear-gradient(90deg, var(--green), var(--green)); }
-
+ 
 .analyze-again {
     text-align: center;
     margin-top: 30px;
@@ -1048,7 +1051,7 @@ nav {
     gap: 14px;
     flex-wrap: wrap;
 }
-
+ 
 .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -1064,9 +1067,9 @@ nav {
     transition: all 0.2s;
     box-shadow: var(--shadow);
 }
-
+ 
 .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); }
-
+ 
 .btn-secondary {
     display: inline-flex;
     align-items: center;
@@ -1082,16 +1085,16 @@ nav {
     transition: all 0.2s;
     box-shadow: var(--shadow);
 }
-
+ 
 .btn-secondary:hover { background: var(--bg3); transform: translateY(-1px); }
-
+ 
 /* ─── FOOTER ──────────────────────────────────────── */
 footer {
     background: var(--bg2);
     border-top: 1px solid var(--border);
     margin-top: 40px;
 }
-
+ 
 .footer-inner {
     max-width: 1180px;
     margin: 0 auto;
@@ -1100,16 +1103,16 @@ footer {
     grid-template-columns: 1.6fr 1fr 1fr 1fr;
     gap: 48px;
 }
-
+ 
 .footer-brand .nav-left { margin-bottom: 14px; }
-
+ 
 .footer-brand p {
     font-size: 13.5px;
     color: var(--subtext);
     line-height: 1.75;
     max-width: 280px;
 }
-
+ 
 .footer-col h4 {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -1119,23 +1122,23 @@ footer {
     color: var(--text);
     margin-bottom: 16px;
 }
-
+ 
 .footer-col ul {
     list-style: none;
     display: flex;
     flex-direction: column;
     gap: 11px;
 }
-
+ 
 .footer-col ul li a {
     font-size: 13.5px;
     color: var(--subtext);
     text-decoration: none;
     transition: color 0.2s;
 }
-
+ 
 .footer-col ul li a:hover { color: var(--seal); }
-
+ 
 .footer-bottom {
     max-width: 1180px;
     margin: 0 auto;
@@ -1148,12 +1151,12 @@ footer {
     font-size: 11.5px;
     color: var(--subtext);
 }
-
+ 
 .footer-badges {
     display: flex;
     gap: 10px;
 }
-
+ 
 .footer-badge {
     padding: 4px 11px;
     border-radius: 20px;
@@ -1164,7 +1167,7 @@ footer {
     color: var(--seal);
     background: var(--bg3);
 }
-
+ 
 /* ─── ERROR BANNER ────────────────────────────────── */
 .error-banner {
     max-width: 640px;
@@ -1182,9 +1185,9 @@ footer {
     justify-content: space-between;
     gap: 12px;
 }
-
+ 
 .error-banner.active { display: flex; }
-
+ 
 .error-banner-close {
     cursor: pointer;
     background: none;
@@ -1194,13 +1197,13 @@ footer {
     line-height: 1;
     padding: 0 4px;
 }
-
+ 
 /* ─── ACCESSIBILITY ───────────────────────────────── */
 a:focus-visible, button:focus-visible, input:focus-visible {
     outline: 2px solid var(--seal);
     outline-offset: 2px;
 }
-
+ 
 /* ─── RESPONSIVE ──────────────────────────────────── */
 @media (max-width: 900px) {
     nav { padding: 14px 20px; }
@@ -1225,14 +1228,14 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     [data-theme="animated"] .hero-text-col h1 { font-size: 36px; }
     .nav-tagline { display: none; }
 }
-
+ 
 @media (max-width: 600px) {
     .how-grid { grid-template-columns: 1fr; }
     .theme-btn { font-size: 10px; padding: 5px 9px; }
     .probability-number { font-size: 60px; }
     .verdict-card { padding: 34px 22px; }
 }
-
+ 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.001ms !important;
@@ -1247,9 +1250,9 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 </head>
 <body>
 <canvas id="bg-canvas"></canvas>
-
+ 
 <div class="page">
-
+ 
 <!-- NAV -->
 <nav>
     <a href="#" class="nav-left">
@@ -1271,7 +1274,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         </div>
     </div>
 </nav>
-
+ 
 <!-- HERO -->
 <section class="hero">
     <div class="hero-inner">
@@ -1291,7 +1294,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         </div>
     </div>
 </section>
-
+ 
 <!-- LEDGER STRIP -->
 <div class="ledger-strip" aria-hidden="true">
     <div class="ledger-track">
@@ -1323,7 +1326,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         </div>
     </div>
 </div>
-
+ 
 <!-- STATS BAR -->
 <div class="stats-bar">
     <div class="stats-inner">
@@ -1341,7 +1344,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         </div>
     </div>
 </div>
-
+ 
 <!-- WHY VERIFILE-X -->
 <section class="section" id="features">
     <div class="section-header reveal">
@@ -1385,9 +1388,9 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         </div>
     </div>
 </section>
-
+ 
 <hr class="divider">
-
+ 
 <!-- HOW IT WORKS -->
 <section class="section">
     <div class="section-header reveal">
@@ -1418,9 +1421,9 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         </div>
     </div>
 </section>
-
+ 
 <hr class="divider">
-
+ 
 <!-- UPLOAD -->
 <div id="upload-section" class="upload-section">
     <div class="upload-section-header reveal">
@@ -1450,7 +1453,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
     </div>
 </div>
-
+ 
 <!-- LOADING -->
 <div class="loading" id="loading">
     <div class="scan-panel">
@@ -1462,14 +1465,14 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     <h3>Running the Forensic Ensemble</h3>
     <p id="loadingTicker">DIRE reconstruction, CLIP embeddings, PRNU noise mapping — 30 signals in parallel</p>
 </div>
-
+ 
 <!-- RESULTS -->
 <div class="results" id="results">
-
+ 
     <div class="result-thumbnail-wrap" id="resultThumbnailWrap" style="display:none;">
         <img id="resultThumbnail" class="result-thumbnail" alt="Analysed image preview" />
     </div>
-
+ 
     <div class="verdict-card">
         <div class="verdict-card-label">AI Generation Probability</div>
         <p class="evidence-tag" id="evidenceId">Evidence ID: —</p>
@@ -1491,7 +1494,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
             </div>
         </div>
     </div>
-
+ 
     <div class="grid-2">
         <div class="result-card">
             <h3>File Information</h3>
@@ -1502,7 +1505,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
             <div id="hashInfo"></div>
         </div>
     </div>
-
+ 
     <div class="grid-2">
         <div class="result-card">
             <h3>Tampering Indicators</h3>
@@ -1513,23 +1516,23 @@ a:focus-visible, button:focus-visible, input:focus-visible {
             <div id="exifInfo"></div>
         </div>
     </div>
-
+ 
     <div class="result-card card-full">
         <h3>Detection Signals (sorted by AI likelihood)</h3>
         <div id="signalsGrid" style="columns: 2; column-gap: 2rem; margin-top: 8px;"></div>
     </div>
-
+ 
     <div class="analyze-again">
         <button class="btn-primary"   onclick="resetUI()">Analyse Another Image</button>
         <button class="btn-secondary" onclick="downloadPDF()">Download PDF Report</button>
     </div>
-
+ 
     <p style="text-align:center;font-size:12px;color:var(--subtext);margin-top:12px;font-family:'IBM Plex Mono',monospace;">
         Every verdict includes a full per-signal breakdown, not a single opaque score. Not intended as sole evidence in legal proceedings.
     </p>
-
+ 
 </div>
-
+ 
 <!-- FOOTER -->
 <footer>
     <div class="footer-inner">
@@ -1580,18 +1583,18 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         </div>
     </div>
 </footer>
-
+ 
 </div>
-
+ 
 <!-- THREE.JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-
+ 
 var _threeReady = false;
 var _tScene, _tCamera, _tRenderer, _tNodeGroup, _tNodes, _tParticles;
 var _tMouseX = 0, _tMouseY = 0;
 var _tReduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
+ 
 function initThree() {
     if (_threeReady) return;
     _threeReady = true;
@@ -1602,7 +1605,7 @@ function initThree() {
     _tRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
     _tRenderer.setSize(innerWidth, innerHeight);
     _tRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-
+ 
     var NODE_COUNT = 42;
     var pts = [];
     _tNodeGroup = new THREE.Group();
@@ -1627,7 +1630,7 @@ function initThree() {
         _tNodeGroup.add(node);
         _tNodes.push(node);
     }
-
+ 
     var edgePositions = [];
     var THRESH = 8.25;
     for (var a = 0; a < pts.length; a++) {
@@ -1641,7 +1644,7 @@ function initThree() {
     edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
     _tNodeGroup.add(new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0x2f4568, transparent: true, opacity: 0.32 })));
     _tScene.add(_tNodeGroup);
-
+ 
     var dustCount = 420;
     var dustPos = new Float32Array(dustCount * 3);
     for (var k = 0; k < dustPos.length; k++) dustPos[k] = (Math.random() - 0.5) * 64;
@@ -1649,7 +1652,7 @@ function initThree() {
     dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
     _tParticles = new THREE.Points(dustGeo, new THREE.PointsMaterial({ size: 0.04, color: 0x3e5674, transparent: true, opacity: 0.45 }));
     _tScene.add(_tParticles);
-
+ 
     document.addEventListener('mousemove', function(e) {
         _tMouseX = (e.clientX / innerWidth - 0.5) * 2;
         _tMouseY = (e.clientY / innerHeight - 0.5) * 2;
@@ -1659,9 +1662,9 @@ function initThree() {
         _tCamera.updateProjectionMatrix();
         _tRenderer.setSize(innerWidth, innerHeight);
     });
-
+ 
     if (_tReduceMotion) { _tRenderer.render(_tScene, _tCamera); return; }
-
+ 
     (function loop() {
         requestAnimationFrame(loop);
         var t = Date.now() * 0.001;
@@ -1683,7 +1686,7 @@ function initThree() {
         _tRenderer.render(_tScene, _tCamera);
     })();
 }
-
+ 
 function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     ['animated','dark','light'].forEach(function(t) {
@@ -1692,12 +1695,12 @@ function setTheme(theme) {
     localStorage.setItem('vfx-theme', theme);
     if (theme === 'animated') initThree();
 }
-
+ 
 (function() {
     var saved = localStorage.getItem('vfx-theme') || 'animated';
     setTheme(saved);
 })();
-
+ 
 /* ── SCROLL REVEAL ────────────────────────────────── */
 (function initReveal() {
     var els = document.querySelectorAll('.reveal');
@@ -1715,7 +1718,7 @@ function setTheme(theme) {
     }, { threshold: 0.15 });
     els.forEach(function(el) { io.observe(el); });
 })();
-
+ 
 /* ── STAT COUNT-UP ────────────────────────────────── */
 (function initCountUp() {
     var els = document.querySelectorAll('[data-count-to]');
@@ -1745,7 +1748,7 @@ function setTheme(theme) {
         els.forEach(run);
     }
 })();
-
+ 
 /* ── 3D TILT ON FEATURE CARDS ─────────────────────── */
 (function initTilt() {
     if (_tReduceMotion) return;
@@ -1763,19 +1766,19 @@ function setTheme(theme) {
         });
     });
 })();
-
+ 
 /* ── DETECTION LOGIC (unchanged from prior version) ─ */
-
+ 
 const API_URL = window.location.hostname.includes('github.io') || window.location.hostname.includes('abinaze')
     ? 'https://abinazebinoy-verifile-x-api.hf.space'
     : window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
     : 'https://abinazebinoy-verifile-x-api.hf.space';
-
+ 
 const fileInput  = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
 const loading    = document.getElementById('loading');
-
+ 
 // Real signal names, cycled during the loading state so the wait itself
 // demonstrates the "no black box" claim rather than just asserting it.
 const LOADING_SIGNAL_NAMES = [
@@ -1802,19 +1805,19 @@ function startLoadingTicker() {
 function stopLoadingTicker() {
     if (_loadingTickerTimer) { clearInterval(_loadingTickerTimer); _loadingTickerTimer = null; }
 }
-
+ 
 function showError(message) {
     const banner = document.getElementById('errorBanner');
     const text   = document.getElementById('errorBannerText');
     text.textContent = message;
     banner.classList.add('active');
 }
-
+ 
 function hideError() {
     document.getElementById('errorBanner').classList.remove('active');
 }
 const results    = document.getElementById('results');
-
+ 
 uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
 uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
 uploadZone.addEventListener('drop', (e) => {
@@ -1823,31 +1826,31 @@ uploadZone.addEventListener('drop', (e) => {
     const file = e.dataTransfer.files[0];
     if (file) analyzeFile(file);
 });
-
+ 
 fileInput.addEventListener('change', (e) => {
     if (e.target.files[0]) analyzeFile(e.target.files[0]);
 });
-
+ 
 function resetUI() {
     results.classList.remove('active');
     uploadZone.style.display = 'block';
     fileInput.value = '';
     document.getElementById('upload-section').scrollIntoView({ behavior: 'smooth' });
 }
-
+ 
 async function analyzeFile(file) {
     hideError();
     if (file.size > 10 * 1024 * 1024) { showError('File too large. Maximum 10MB.'); return; }
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/tiff', 'image/heic', 'image/heif'];
     if (!allowed.includes(file.type)) { showError('Unsupported format. Use JPEG, PNG, WebP, TIFF, or HEIC.'); return; }
-
+ 
     uploadZone.style.display = 'none';
     loading.classList.add('active');
     startLoadingTicker();
     results.classList.remove('active');
     const formData = new FormData();
     formData.append('file', file);
-
+ 
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 90000);
@@ -1886,7 +1889,7 @@ async function analyzeFile(file) {
         }
     }
 }
-
+ 
 function animateProbability(target) {
     const el = document.getElementById('aiProb');
     if (_tReduceMotion) { el.textContent = target + '%'; return; }
@@ -1901,11 +1904,11 @@ function animateProbability(target) {
     }
     requestAnimationFrame(step);
 }
-
+ 
 function renderResults(data) {
     const ai   = data.ai_detection;
     const prob = Math.round(ai.ai_probability * 100);
-
+ 
     const thumbWrap = document.getElementById('resultThumbnailWrap');
     const thumbImg  = document.getElementById('resultThumbnail');
     if (window._lastThumbnail) {
@@ -1914,27 +1917,27 @@ function renderResults(data) {
     } else {
         thumbWrap.style.display = 'none';
     }
-
+ 
     const probEl = document.getElementById('aiProb');
     document.getElementById('evidenceId').textContent = 'Evidence ID: ' + (data.evidence_id || 'N/A');
     probEl.className = 'probability-number ' + (prob >= 70 ? 'prob-ai' : prob >= 40 ? 'prob-maybe' : 'prob-human');
     animateProbability(prob);
-
+ 
     const badge = document.getElementById('classificationBadge');
     const cls   = ai.classification.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     badge.textContent = cls;
     badge.className   = 'classification-badge ' + (prob >= 70 ? 'badge-ai' : prob >= 40 ? 'badge-maybe' : 'badge-human');
-
+ 
     document.getElementById('methods').textContent       = 'Detection methods: ' + (ai.methods_used || []).join(', ');
     document.getElementById('suspiciousCount').textContent = ai.suspicious_signals_count + '/' + ai.total_signals;
     document.getElementById('totalSignals').textContent  = ai.total_signals;
     document.getElementById('confidenceLevel').textContent = (ai.confidence || 'N/A').replace(/_/g, ' ');
-
+ 
     const fi = data.file_info;
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
-
+ 
     document.getElementById('fileInfo').innerHTML = `
         <div class="info-row"><span class="info-label">Filename</span><span class="info-value">${esc(fi.filename)}</span></div>
         <div class="info-row"><span class="info-label">Format</span><span class="info-value">${esc(fi.format || 'Unknown')}</span></div>
@@ -1943,7 +1946,7 @@ function renderResults(data) {
         <div class="info-row"><span class="info-label">File Size</span><span class="info-value">${(fi.file_size_bytes / 1024).toFixed(1)} KB</span></div>
         <div class="info-row"><span class="info-label">Analyzer Version</span><span class="info-value">${esc(data.metadata.analyzer_version)}</span></div>
     `;
-
+ 
     const h = data.hashes;
     document.getElementById('hashInfo').innerHTML = `
         <div class="hash-item"><div class="hash-label">SHA-256</div><div class="hash-value">${h.sha256}</div></div>
@@ -1952,7 +1955,7 @@ function renderResults(data) {
         <div class="hash-item"><div class="hash-label">Average Hash</div><div class="hash-value">${h.average_hash}</div></div>
         <div class="hash-item"><div class="hash-label">Difference Hash</div><div class="hash-value">${h.difference_hash}</div></div>
     `;
-
+ 
     const t     = data.tampering_analysis;
     const flags = t.suspicious_flags || [];
     document.getElementById('tamperingInfo').innerHTML = flags.length === 0
@@ -1960,7 +1963,7 @@ function renderResults(data) {
            <div class="info-row" style="margin-top:12px"><span class="info-label">Authenticity Confidence</span><span class="info-value" style="color:var(--green)">${t.confidence}</span></div>`
         : flags.map(f => `<div class="flag-item"><div class="flag-dot"></div>${esc(f)}</div>`).join('')
           + `<div class="info-row" style="margin-top:8px"><span class="info-label">Confidence</span><span class="info-value" style="color:var(--orange)">${t.confidence}</span></div>`;
-
+ 
     const exif = data.exif_data || {};
     if (!exif.has_exif || Object.keys(exif).length <= 1) {
         document.getElementById('exifInfo').innerHTML = '<p class="exif-empty">No EXIF metadata found in this image.</p>';
@@ -1970,7 +1973,7 @@ function renderResults(data) {
             .map(([k, v]) => `<div class="info-row"><span class="info-label">${esc(k)}</span><span class="info-value" style="max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v)}</span></div>`).join('');
         document.getElementById('exifInfo').innerHTML = rows || '<p class="exif-empty">No readable EXIF fields.</p>';
     }
-
+ 
     const signals = (ai.all_signals || []).sort((a, b) => b.score - a.score);
     document.getElementById('signalsGrid').innerHTML = signals.map(s => {
         const pct = Math.round(s.score * 100);
@@ -1992,17 +1995,17 @@ function renderResults(data) {
         });
     });
 }
-
+ 
 function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const doc  = new jsPDF();
     const data = window._lastReport;
     if (!data) { showError('No report to download'); return; }
-
+ 
     const ai   = data.ai_detection;
     const prob = Math.round(ai.ai_probability * 100);
     const ts   = data.metadata.analysis_timestamp;
-
+ 
     doc.setFillColor(18, 27, 42);
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
@@ -2016,10 +2019,10 @@ function downloadPDF() {
     doc.text('VeriFile-X Forensic Analysis Report', 105, 14, { align: 'center' });
     doc.setFontSize(9);
     doc.text('AI-Generated Image Detection Platform v' + (data.metadata.analyzer_version || 'unknown'), 105, 22, { align: 'center' });
-
+ 
     doc.setTextColor(0, 0, 0);
     let y = 38;
-
+ 
     if (window._lastThumbnail) {
         try {
             const fmt = window._lastThumbnail.startsWith('data:image/png') ? 'PNG' : 'JPEG';
@@ -2029,7 +2032,7 @@ function downloadPDF() {
             console.warn('PDF thumbnail embedding failed:', e);
         }
     }
-
+ 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
@@ -2041,7 +2044,7 @@ function downloadPDF() {
     doc.text('Analysis Timestamp: ' + ts, 14, y + 12);
     doc.text('File: ' + data.file_info.filename + '  |  ' + data.file_info.width + 'x' + data.file_info.height + 'px  |  ' + (data.file_info.file_size_bytes / 1024).toFixed(1) + ' KB', 14, y + 19);
     y = window._lastThumbnail ? Math.max(y + 30, 72) : y + 30;
-
+ 
     // BUG FIX: this line was previously rendered with a single doc.text(...,
     // {align:'center'}) call with no width constraint. jsPDF does not wrap
     // or shrink text to fit — a longer methods_used list (several detector
@@ -2059,7 +2062,7 @@ function downloadPDF() {
     const detailLines = doc.splitTextToSize(detailText, boxW - 16);
     const detailLineHeight = 4.5;
     const boxH = 17 + (detailLines.length - 1) * detailLineHeight + 5;
-
+ 
     doc.setFillColor(...verdictColor);
     doc.roundedRect(boxX, y, boxW, boxH, 3, 3, 'F');
     doc.setTextColor(255, 255, 255);
@@ -2072,7 +2075,7 @@ function downloadPDF() {
         doc.text(line, 105, y + 17 + (i * detailLineHeight), { align: 'center' });
     });
     y += boxH + 8;
-
+ 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -2084,7 +2087,7 @@ function downloadPDF() {
     doc.text('SHA-256:  ' + h.sha256, 14, y); y += 5;
     doc.text('MD5:      ' + h.md5, 14, y); y += 5;
     doc.text('pHash:    ' + h.perceptual_hash + '   aHash: ' + h.average_hash + '   dHash: ' + h.difference_hash, 14, y); y += 10;
-
+ 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('Tampering Analysis', 14, y); y += 6;
@@ -2100,7 +2103,7 @@ function downloadPDF() {
     }
     doc.setTextColor(0, 0, 0);
     y += 8;
-
+ 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('Detection Signals (' + ai.total_signals + ' total)', 14, y); y += 6;
@@ -2118,7 +2121,7 @@ function downloadPDF() {
         doc.setTextColor(0, 0, 0);
         y += 5;
     });
-
+ 
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -2126,9 +2129,10 @@ function downloadPDF() {
         doc.setTextColor(150, 150, 150);
         doc.text('VeriFile-X | Evidence ID: ' + (data.evidence_id || 'N/A') + ' | Page ' + i + ' of ' + pageCount, 105, 290, { align: 'center' });
     }
-
+ 
     doc.save('VeriFileX-Report-' + (data.evidence_id || 'report').substring(0, 8) + '.pdf');
 }
 </script>
 </body>
 </html>
+ 
