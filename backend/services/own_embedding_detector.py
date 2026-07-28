@@ -8,14 +8,9 @@ logger = setup_logger(__name__)
 
 CENTROIDS_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "own_centroids.pkl"
 
-# BUG FIX: this detector previously never used the shared ModelCache
-# singleton (backend/core/model_cache.py) that dire_detector.py and
-# clip_detector.py both correctly use. Combined with a fresh
-# OwnEmbeddingDetector() being constructed on EVERY analysis request
-# (AdvancedEnsembleDetector.__init__ does self.own_detector =
-# OwnEmbeddingDetector()), the instance-scoped _model_loaded flag provided
-# zero benefit across requests — every single request reloaded the full
-# model from disk. Now cached under this key, same pattern as its siblings.
+# Cached under the shared ModelCache singleton (same pattern as
+# dire_detector.py/clip_detector.py), since a fresh OwnEmbeddingDetector
+# is constructed on every analysis request.
 _CACHE_KEY = "own-embedding-model"
 
 
