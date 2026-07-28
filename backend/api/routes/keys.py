@@ -5,6 +5,7 @@ from slowapi.util import get_remote_address
 from pydantic import BaseModel, Field
 from typing import Optional
 from backend.core.logger import setup_logger
+from backend.core.auth import require_admin as _require_admin
 
 logger = setup_logger(__name__)
 # BUG FIX: previously no default_limits — settings.RATE_LIMIT_PER_MINUTE
@@ -16,18 +17,6 @@ logger = setup_logger(__name__)
 from backend.core.config import settings as _settings
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 router  = APIRouter(prefix="/api/v1/keys", tags=["API Key Management"])
-
-
-def _require_admin(authorization: Optional[str]) -> dict:
-    from backend.services.api_key_manager import verify_key
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Authorization header required.")
-    entry = verify_key(authorization.removeprefix("Bearer ").strip())
-    if not entry:
-        raise HTTPException(status_code=401, detail="Invalid or inactive API key.")
-    if entry.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required.")
-    return entry
 
 
 class CreateKeyRequest(BaseModel):
