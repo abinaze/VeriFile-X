@@ -71,61 +71,76 @@ class DIREDetector:
             logger.info("Loaded from cache in <1s")
             return
 
-        # Cache miss - load from disk
-        try:
-            from diffusers import StableDiffusionPipeline, DDIMScheduler
+        # Cache miss - load from disk. Guarded by a per-key lock (F-7):
+        # without it, two concurrent cold-start requests can both observe
+        # the miss above and both independently load the full ~4-5GB
+        # Stable Diffusion 2.1 pipeline.
+        with self.cache.get_load_lock(self.cache_key):
+            # Double-check: another thread may have finished loading and
+            # populated the cache while we were waiting for the lock.
+            cached_model = self.cache.get(self.cache_key)
+            if cached_model is not None:
+                logger.info("Loading Stable Diffusion from cache (loaded by a concurrent request)")
+                self.pipe = cached_model['pipe']
+                self.scheduler = cached_model['scheduler']
+                self._model_loaded = True
+                self._from_cache = True
+                return
 
-            logger.info("Loading Stable Diffusion 2.1 model from disk...")
-            logger.info("First load may take time if model not cached locally")
+            try:
+                from diffusers import StableDiffusionPipeline, DDIMScheduler
 
-            # Use SD 2.1 (best balance of speed/accuracy)
-            model_id = "stabilityai/stable-diffusion-2-1-base"
+                logger.info("Loading Stable Diffusion 2.1 model from disk...")
+                logger.info("First load may take time if model not cached locally")
 
-            # Load with DDIM scheduler (deterministic, faster)
-            self.scheduler = DDIMScheduler.from_pretrained(
-                model_id,
-                subfolder="scheduler"
-            )
+                # Use SD 2.1 (best balance of speed/accuracy)
+                model_id = "stabilityai/stable-diffusion-2-1-base"
 
-            self.pipe = StableDiffusionPipeline.from_pretrained(
-                model_id,
-                scheduler=self.scheduler,
-                torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
-                safety_checker=None,  # Disable for forensics
-                requires_safety_checker=False
-            ).to(self.device)
+                # Load with DDIM scheduler (deterministic, faster)
+                self.scheduler = DDIMScheduler.from_pretrained(
+                    model_id,
+                    subfolder="scheduler"
+                )
 
-            # Enable memory optimizations
-            if self.device == "cuda":
-                self.pipe.enable_attention_slicing()
+                self.pipe = StableDiffusionPipeline.from_pretrained(
+                    model_id,
+                    scheduler=self.scheduler,
+                    torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+                    safety_checker=None,  # Disable for forensics
+                    requires_safety_checker=False
+                ).to(self.device)
 
-            self._from_cache = False
-            logger.info("Stable Diffusion model loaded successfully")
+                # Enable memory optimizations
+                if self.device == "cuda":
+                    self.pipe.enable_attention_slicing()
 
-            # Store in cache for future use
-            self.cache.set(
-                self.cache_key,
-                {
-                    'pipe': self.pipe,
-                    'scheduler': self.scheduler
-                },
-                self.model_size_mb
-            )
-            logger.info(f"Cached model ({self.model_size_mb}MB) for future use")
+                self._from_cache = False
+                logger.info("Stable Diffusion model loaded successfully")
 
-        except Exception as e:
-            # Do NOT re-raise. Cache the failure so every subsequent request
-            # is not forced to retry a potential ~4-5 GB SD 2.1 download.
-            logger.error(
-                "Failed to load Stable Diffusion model (%s) — DIRE will return "
-                "neutral results for all subsequent requests. Run: "
-                "git lfs pull && check diffusers install.", e,
-            )
-            self.pipe      = None
-            self.scheduler = None
-        finally:
-            # Always set — prevents per-request retry on failure
-            self._model_loaded = True
+                # Store in cache for future use
+                self.cache.set(
+                    self.cache_key,
+                    {
+                        'pipe': self.pipe,
+                        'scheduler': self.scheduler
+                    },
+                    self.model_size_mb
+                )
+                logger.info(f"Cached model ({self.model_size_mb}MB) for future use")
+
+            except Exception as e:
+                # Do NOT re-raise. Cache the failure so every subsequent request
+                # is not forced to retry a potential ~4-5 GB SD 2.1 download.
+                logger.error(
+                    "Failed to load Stable Diffusion model (%s) — DIRE will return "
+                    "neutral results for all subsequent requests. Run: "
+                    "git lfs pull && check diffusers install.", e,
+                )
+                self.pipe      = None
+                self.scheduler = None
+            finally:
+                # Always set — prevents per-request retry on failure
+                self._model_loaded = True
 
     def _preprocess_image(self, image_bytes: bytes) -> torch.Tensor:
         """
@@ -188,16 +203,9 @@ class DIREDetector:
         Args:
             image:     Clean latent tensor (1, 4, 64, 64).
             timestep:  Scalar timestep value or tensor.
-            generator: Optional torch.Generator for reproducible noise.
-                       BUG FIX: previously no generator= was passed at all,
-                       drawing from PyTorch's shared GLOBAL default RNG.
-                       main.py seeds that RNG once at process start
-                       (torch.manual_seed(42)) — only the FIRST DIRE call
-                       after startup got that seed; every subsequent call
-                       (any image, any request) drew different noise,
-                       producing a different score for the SAME image
-                       analyzed twice. Passing a per-image seeded
-                       generator (see detect()) restores determinism.
+            generator: Per-image seeded torch.Generator (see detect()) for
+                       reproducible noise across repeated analyses of the
+                       same image.
 
         Returns:
             Noised latent tensor.

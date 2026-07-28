@@ -35,6 +35,8 @@ class ModelCache:
         
         self._cache: OrderedDictType[str, Dict[str, Any]] = OrderedDict()
         self._lock = threading.Lock()
+        self._load_locks: Dict[str, threading.Lock] = {}
+        self._load_locks_lock = threading.Lock()
         self._stats = {
             'hits': 0,
             'misses': 0,
@@ -50,6 +52,31 @@ class ModelCache:
         self._initialized = True
         logger.info("ModelCache initialized")
     
+    def get_load_lock(self, key: str) -> threading.Lock:
+        """Return a per-key lock for the full get-load-set sequence (F-7).
+
+        get()/set() are each individually thread-safe, but the classic
+        check-then-act pattern around them (check cache -> miss -> load
+        from disk, unlocked -> set cache) is not: two concurrent
+        cold-start requests for the same key can both observe a miss and
+        both independently perform a full model load (for DIREDetector,
+        a ~4-5GB Stable Diffusion 2.1 load each). Callers should hold
+        this lock for the entire sequence, with a second cache check
+        immediately after acquiring it (double-checked locking), e.g.:
+
+            model = cache.get(key)
+            if model is None:
+                with cache.get_load_lock(key):
+                    model = cache.get(key)          # re-check under lock
+                    if model is None:
+                        model = load_from_disk()
+                        cache.set(key, model, size_mb)
+        """
+        with self._load_locks_lock:
+            if key not in self._load_locks:
+                self._load_locks[key] = threading.Lock()
+            return self._load_locks[key]
+
     def get(self, key: str) -> Optional[Any]:
         """
         Get model from cache.

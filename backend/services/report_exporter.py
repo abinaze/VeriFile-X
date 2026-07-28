@@ -32,6 +32,26 @@ from typing import Dict, Any
 
 logger = setup_logger(__name__)
 
+# Characters that Excel/LibreOffice Calc/Google Sheets treat as the start
+# of a formula when a CSV cell is opened in a spreadsheet (CWE-1236).
+_CSV_FORMULA_CHARS = ("=", "+", "-", "@")
+
+
+def _csv_safe(value: Any) -> str:
+    """Neutralize CSV/formula injection (F-2).
+
+    Any cell whose first character is one of _CSV_FORMULA_CHARS is
+    prefixed with a leading apostrophe, which spreadsheet applications
+    treat as "force this cell to plain text" rather than a formula.
+    Filenames and EXIF-derived text (e.g. metadata_forensics.py's
+    "Software: <exif value>" explanation) are attacker-influenceable and
+    flow into this export unescaped otherwise.
+    """
+    s = str(value)
+    if s and s[0] in _CSV_FORMULA_CHARS:
+        return "'" + s
+    return s
+
 
 # ── JSON export ───────────────────────────────────────────────────────────────
 
@@ -69,24 +89,24 @@ def export_csv(report: Dict[str, Any]) -> bytes:
     signals = report.get("ai_detection", {}).get("all_signals", [])
     if not signals:
         writer.writerow([
-            evidence_id, filename, timestamp,
-            ai_prob, ai_class,
+            _csv_safe(evidence_id), _csv_safe(filename), _csv_safe(timestamp),
+            ai_prob, _csv_safe(ai_class),
             "no_signals", "", "", "", "", "",
         ])
     else:
         for sig in signals:
             writer.writerow([
-                evidence_id,
-                filename,
-                timestamp,
+                _csv_safe(evidence_id),
+                _csv_safe(filename),
+                _csv_safe(timestamp),
                 ai_prob,
-                ai_class,
-                sig.get("signal_name", ""),
+                _csv_safe(ai_class),
+                _csv_safe(sig.get("signal_name", "")),
                 sig.get("score", ""),
                 sig.get("confidence", ""),
-                sig.get("explanation", "").replace("\n", " "),
+                _csv_safe(sig.get("explanation", "").replace("\n", " ")),
                 sig.get("raw_value", ""),
-                sig.get("expected_range", ""),
+                _csv_safe(sig.get("expected_range", "")),
             ])
 
     return buf.getvalue().encode("utf-8")
@@ -95,12 +115,6 @@ def export_csv(report: Dict[str, Any]) -> bytes:
 # ── PDF export ────────────────────────────────────────────────────────────────
 # Minimal PDF/1.4 built from scratch using only stdlib.
 # No external PDF library required — CI compatible.
-
-def _pdf_string(s: str) -> bytes:
-    """Encode string as PDF literal string."""
-    escaped = s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-    return f"({escaped})".encode("latin-1", errors="replace")
-
 
 def _pdf_stream(content: bytes) -> tuple:
     """Compress content with zlib, return (compressed_bytes, length)."""

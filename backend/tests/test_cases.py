@@ -207,10 +207,12 @@ def test_api_add_evidence(client):
     assert len(response.json()["evidence"]) == 1
 
 
-def test_api_update_status(client):
+def test_api_update_status(client, admin_client):
     case_resp = client.post("/api/v1/cases/", json={"name": "Status Test"})
     case_id   = case_resp.json()["case_id"]
-    response  = client.patch(
+    # F-5: cases.py's PATCH is now restricted to admin per ROLES["analyst"]
+    # = {"GET", "POST"} -- an analyst key correctly gets 403 here now.
+    response  = admin_client.patch(
         f"/api/v1/cases/{case_id}/status",
         json={"status": "closed"}
     )
@@ -218,13 +220,38 @@ def test_api_update_status(client):
     assert response.json()["status"] == "closed"
 
 
-def test_api_delete_archives(client):
+def test_api_update_status_rejects_analyst_role(client):
+    """F-5 regression test: an analyst key must NOT be able to PATCH a
+    case's status -- this was the exact over-permission the audit found
+    (ROLES["analyst"] = {"GET", "POST"}, no PATCH, but nothing enforced
+    it)."""
+    case_resp = client.post("/api/v1/cases/", json={"name": "Analyst Patch Test"})
+    case_id   = case_resp.json()["case_id"]
+    response  = client.patch(
+        f"/api/v1/cases/{case_id}/status",
+        json={"status": "closed"}
+    )
+    assert response.status_code == 403
+
+
+def test_api_delete_archives(client, admin_client):
     case_resp = client.post("/api/v1/cases/", json={"name": "Delete Test"})
     case_id   = case_resp.json()["case_id"]
-    response  = client.delete(f"/api/v1/cases/{case_id}")
+    # F-5: cases.py's DELETE is now restricted to admin per ROLES["analyst"]
+    # = {"GET", "POST"} -- an analyst key correctly gets 403 here now.
+    response  = admin_client.delete(f"/api/v1/cases/{case_id}")
     assert response.status_code == 200
     get_resp  = client.get(f"/api/v1/cases/{case_id}")
     assert get_resp.json()["status"] == "archived"
+
+
+def test_api_delete_rejects_analyst_role(client):
+    """F-5 regression test: an analyst key must NOT be able to DELETE
+    (archive) a case -- same over-permission as the PATCH test above."""
+    case_resp = client.post("/api/v1/cases/", json={"name": "Analyst Delete Test"})
+    case_id   = case_resp.json()["case_id"]
+    response  = client.delete(f"/api/v1/cases/{case_id}")
+    assert response.status_code == 403
 
 
 def test_api_search(client):

@@ -1,18 +1,22 @@
 """
-Nash Equilibrium Adaptive Detection — Phase 29.
+Analyst Feedback Weight Adaptation — Phase 29.
 
 When an analyst marks a forensic result as incorrect, the signals that
 were most responsible for the wrong prediction receive a weight penalty.
-Over time, consistently misleading signals converge to lower weights —
-a Nash equilibrium where no single signal benefits from further change.
+Over time, consistently misleading signals converge to lower weights.
+This is a straightforward per-signal weight penalty on incorrect
+predictions, not a game-theoretic equilibrium computation -- previously
+called "Nash Equilibrium Adaptive Detection" here, the same overclaim
+already corrected in PHASE_ROADMAP.md's Phase 29 entry and the README,
+just never propagated to this file until now.
 
 Storage
 -------
 data/feedback.jsonl         — append-only analyst feedback log
 data/signal_weights.json    — current adaptive weight overrides
 
-Algorithm (gradient-based Nash update)
----------------------------------------
+Algorithm (gradient-based weight update)
+-----------------------------------------
 For each feedback record:
   1. Identify which signals were "guilty" — score agreed with the wrong
      prediction (e.g. signal said AI, true label is real).

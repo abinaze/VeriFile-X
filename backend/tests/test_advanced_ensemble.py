@@ -54,3 +54,35 @@ def test_advanced_ensemble_forensics_integration(sample_image_bytes):
     assert "analyzer_version" in report["metadata"]
     assert "methods_used" in report["ai_detection"]
     assert len(report["ai_detection"]["methods_used"]) == 12
+
+
+class TestStatBundleConfidence:
+    """F-13 regression tests: the statistical bundle's confidence must
+    reflect how many of its 19 sub-signals actually succeeded, not be
+    hardcoded to 1.0 regardless."""
+
+    def test_all_high_confidence_signals_average_high(self):
+        from backend.services.advanced_ensemble_detector import _aggregate_stat_confidence
+        signals = [{"confidence": 0.92} for _ in range(19)]
+        assert _aggregate_stat_confidence(signals) == pytest.approx(0.92)
+
+    def test_some_failed_signals_drag_average_down(self):
+        """This is the exact scenario F-13 fixes: several sub-signals
+        hit their 'Analysis failed - insufficient data' fallback
+        (confidence 0.3) -- the old hardcoded 1.0 ignored this entirely."""
+        from backend.services.advanced_ensemble_detector import _aggregate_stat_confidence
+        signals = [{"confidence": 0.9} for _ in range(10)] + [{"confidence": 0.3} for _ in range(9)]
+        result = _aggregate_stat_confidence(signals)
+        assert result < 0.9, "failed sub-signals should measurably reduce the aggregate"
+        assert result == pytest.approx((0.9 * 10 + 0.3 * 9) / 19)
+
+    def test_empty_signals_list_is_zero_confidence(self):
+        from backend.services.advanced_ensemble_detector import _aggregate_stat_confidence
+        assert _aggregate_stat_confidence([]) == 0.0
+
+    def test_not_hardcoded_to_one(self):
+        """Direct regression check against the exact old behavior."""
+        from backend.services.advanced_ensemble_detector import _aggregate_stat_confidence
+        signals = [{"confidence": 0.3} for _ in range(19)]  # worst case: all failed
+        assert _aggregate_stat_confidence(signals) == pytest.approx(0.3)
+        assert _aggregate_stat_confidence(signals) != 1.0

@@ -1,5 +1,8 @@
 """
-Analyst feedback endpoint — Nash Equilibrium adaptive detection.
+Analyst feedback endpoint — signal weight adaptation from analyst
+corrections (see feedback_manager.py; previously mistitled "Nash
+Equilibrium adaptive detection" here, same overclaim already corrected
+in PHASE_ROADMAP.md/README/feedback_manager.py).
 
 Routes:
   POST /api/v1/feedback          — submit correction (analyst/admin)
@@ -12,29 +15,9 @@ from typing import Any, Dict, List, Optional
 
 router = APIRouter(prefix="/api/v1/feedback", tags=["Feedback"])
 
-
-def _require_analyst(authorization: Optional[str]) -> dict:
-    from backend.services.api_key_manager import verify_key
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required.")
-    entry = verify_key(authorization.removeprefix("Bearer ").strip())
-    if not entry:
-        raise HTTPException(status_code=401, detail="Invalid or inactive API key.")
-    if entry.get("role") not in ("admin", "analyst"):
-        raise HTTPException(status_code=403, detail="Analyst or admin role required.")
-    return entry
-
-
-def _require_admin(authorization: Optional[str]) -> dict:
-    from backend.services.api_key_manager import verify_key
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required.")
-    entry = verify_key(authorization.removeprefix("Bearer ").strip())
-    if not entry:
-        raise HTTPException(status_code=401, detail="Invalid or inactive API key.")
-    if entry.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required.")
-    return entry
+# F-4: use the shared core.auth implementation instead of local copies.
+from backend.core.auth import require_analyst as _require_analyst
+from backend.core.auth import require_admin as _require_admin
 
 
 class FeedbackRequest(BaseModel):
@@ -55,7 +38,8 @@ async def submit_feedback(
 
     When a result is wrong, submit the true label and the signal list
     from the forensic report.  Signal weights are updated automatically
-    using the Nash gradient update rule.
+    using the per-signal weight-penalty update rule (see
+    feedback_manager.py).
     """
     _require_analyst(authorization)
     from backend.services.feedback_manager import record_feedback

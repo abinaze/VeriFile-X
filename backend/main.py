@@ -37,13 +37,9 @@ from backend.api.routes import feedback
 
 logger = setup_logger(__name__)
 
-# Shared rate limiter — imported by all routes
-# BUG FIX: previously no default_limits — settings.RATE_LIMIT_PER_MINUTE
-# (declared in .env.example/render.yaml) had no effect anywhere. Wired
-# here as the DEFAULT limit for any endpoint without its own explicit
-# @limiter.limit(...) decorator — the 24 existing per-endpoint
-# decorators are intentionally tuned differently per endpoint cost and
-# are NOT touched by this change.
+# Shared rate limiter — imported by all routes.
+# Wires RATE_LIMIT_PER_MINUTE as the default limit for any endpoint
+# without its own explicit @limiter.limit(...) decorator.
 from backend.core.config import settings as _settings
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 shared_limiter = limiter  # alias for explicit import
@@ -239,7 +235,7 @@ async def health_check(request: Request):
     # identify exactly which detectors are running in fallback mode.
     _degraded_detectors = []
     if not _clip_ok:
-        _degraded_detectors.append("clip_database — CLIP scores will be random placeholders")
+        _degraded_detectors.append("clip_database — CLIP signal will report confidence=0.0 and be excluded from the ensemble")
     if not _own_ok:
         _degraded_detectors.append("own_embedding — EfficientNet embedding scores will be 0.5")
     if not _xgb_ok:

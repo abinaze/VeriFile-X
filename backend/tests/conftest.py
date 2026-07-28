@@ -34,18 +34,31 @@ def pytest_configure(config):
 
 
 @pytest.fixture
-def _test_api_key(tmp_path, monkeypatch):
+def _test_keys(tmp_path, monkeypatch):
+    """
+    Shared per-test keys file holding one analyst key and one admin key.
+    Both `client` and `admin_client` below are built from this so a case
+    created via one is visible/modifiable via the other in the same test
+    (case storage itself is unrelated to which client made the call --
+    only the auth check differs).
+    """
+    from backend.services import api_key_manager
+    temp_keys = tmp_path / "test_api_keys.jsonl"
+    monkeypatch.setattr(api_key_manager, "KEYS_PATH", temp_keys)
+    analyst = api_key_manager.create_key("pytest-analyst", role="analyst")
+    admin   = api_key_manager.create_key("pytest-admin", role="admin")
+    return {"analyst": analyst["key"], "admin": admin["key"]}
+
+
+@pytest.fixture
+def _test_api_key(_test_keys):
     """
     Auth was added to analyze.py/cases.py (see backend/core/auth.py).
     Every existing test that hits those routers via the `client` fixture
     needs a valid analyst-role key — this creates one against an isolated,
     per-test keys file so tests never touch the real data/api_keys.jsonl.
     """
-    from backend.services import api_key_manager
-    temp_keys = tmp_path / "test_api_keys.jsonl"
-    monkeypatch.setattr(api_key_manager, "KEYS_PATH", temp_keys)
-    result = api_key_manager.create_key("pytest-analyst", role="analyst")
-    return result["key"]
+    return _test_keys["analyst"]
 
 
 @pytest.fixture
@@ -59,6 +72,19 @@ def client(_test_api_key):
     """
     test_client = TestClient(app)
     test_client.headers.update({"Authorization": f"Bearer {_test_api_key}"})
+    return test_client
+
+
+@pytest.fixture
+def admin_client(_test_keys):
+    """
+    Same shared keys file as `client`, authenticated as admin instead of
+    analyst. Needed for endpoints F-5 restricts to admin-only per
+    api_key_manager.ROLES (e.g. cases.py's PATCH/DELETE routes -- an
+    analyst key is intentionally rejected there now).
+    """
+    test_client = TestClient(app)
+    test_client.headers.update({"Authorization": f"Bearer {_test_keys['admin']}"})
     return test_client
 
 

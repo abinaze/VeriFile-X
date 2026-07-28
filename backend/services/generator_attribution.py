@@ -285,6 +285,8 @@ def attribute_generator(
         if _ATTRIBUTION_MODEL_PATH.exists():
             try:
                 import pickle
+                from backend.core.model_integrity import verify_integrity, ModelIntegrityError
+                verify_integrity(_ATTRIBUTION_MODEL_PATH)
                 with open(_ATTRIBUTION_MODEL_PATH, "rb") as f:
                     pkg = pickle.load(f)
                 model      = pkg["model"]
@@ -297,6 +299,8 @@ def attribute_generator(
                 conf       = scores[best]
                 method     = "xgboost"
                 logger.info(f"XGBoost attribution: {best} ({conf:.3f}) for {filename}")
+            except ModelIntegrityError:
+                raise
             except Exception:
                 logger.warning("XGBoost attribution failed — falling back to rule-based",
                                exc_info=True)

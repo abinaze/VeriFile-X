@@ -126,7 +126,14 @@ class ImageForensics:
         attribution  = attribute_generator(self.image_bytes, self.filename)
         platform     = detect_platform(self.image_bytes, self.filename)
         c2pa         = verify_c2pa(self.image_bytes, self.filename)
-        img_type     = classify_image_type(self.image_bytes, self.filename)
+        # F-26: classify_image_type() was being called a second time here
+        # with identical inputs -- AdvancedEnsembleDetector.combine_signals()
+        # already computes it (to gate PRNU/ELA/metadata by content type)
+        # and now attaches it to its result as "image_type_info" when
+        # available. Falls back to a fresh call only if that key is
+        # absent (e.g. the safe neutral fallback dict returned when the
+        # ensemble detector raised unexpectedly, above).
+        img_type = ai_detection.get("image_type_info") or classify_image_type(self.image_bytes, self.filename)
 
         width, height  = self.pil_image.size
         image_format   = self.pil_image.format or "Unknown"

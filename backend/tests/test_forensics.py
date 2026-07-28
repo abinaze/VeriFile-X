@@ -55,6 +55,39 @@ def test_generate_forensic_report(sample_image_bytes):
     assert "summary" in report
 
 
+def test_classify_image_type_called_once_per_report(sample_image_bytes, monkeypatch):
+    """F-26 regression test: classify_image_type() used to run once inside
+    AdvancedEnsembleDetector.combine_signals() (to gate PRNU/ELA/metadata
+    by content type) and AGAIN inside generate_forensic_report() for the
+    top-level report's own image_type field -- same function, same
+    input, computed twice. Now the second call reuses the first's
+    result via ai_detection["image_type_info"]."""
+    import backend.services.image_forensics as forensics_mod
+    call_count = []
+    real_classify = forensics_mod.classify_image_type
+
+    def _counting_classify(*args, **kwargs):
+        call_count.append(1)
+        return real_classify(*args, **kwargs)
+
+    monkeypatch.setattr(forensics_mod, "classify_image_type", _counting_classify)
+    # Also patch it where AdvancedEnsembleDetector's module imports it,
+    # since that's a separate local import inside its own method.
+    import backend.services.advanced_ensemble_detector as ensemble_mod
+    monkeypatch.setattr(
+        "backend.services.image_type_classifier.classify_image_type",
+        _counting_classify,
+    )
+
+    forensics = ImageForensics(sample_image_bytes, "test.png")
+    forensics.generate_forensic_report()
+
+    assert len(call_count) == 1, (
+        f"expected classify_image_type() to run exactly once per report, "
+        f"got {len(call_count)} calls"
+    )
+
+
 def test_analyze_endpoint(client, sample_image_bytes):
     """Test the analyze endpoint."""
     files = {"file": ("test.png", sample_image_bytes, "image/png")}

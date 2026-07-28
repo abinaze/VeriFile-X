@@ -30,12 +30,8 @@ def detect_ela(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
     _ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     _is_lossless = _ext in ("png", "webp", "gif", "bmp", "tiff", "tif")
 
-    # BUG FIX: this lossless check previously ran only near the END of the
-    # function — AFTER a full JPEG re-encode, pixel-diff, and block-scan had
-    # already executed and been thrown away. Since PNG is a very common
-    # AI-generator output format, a large fraction of real-world requests
-    # were paying this cost for nothing. Moved to the top, before any image
-    # processing begins.
+    # Lossless formats skip the expensive JPEG re-encode/pixel-diff/
+    # block-scan entirely -- checked first, before any image processing.
     if _is_lossless:
         return {
             "signal_name": "ELA Compression Analysis",

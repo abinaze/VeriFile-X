@@ -1,0 +1,29 @@
+# F-24: no .dockerignore existed, so `COPY . .` in the Dockerfile bundled
+# the full .git history (including anything ever committed and later
+# removed), the test suite, and the sample dataset tree into every
+# production image -- increasing image size and shipping content that
+# was never meant to end up in a deployed container.
+
+.git
+.github
+.gitignore
+.gitattributes
+
+backend/tests
+backend/.pytest_cache
+backend/__pycache__
+**/__pycache__
+**/*.pyc
+
+data/ai
+data/real
+*.ipynb
+
+.env
+.env.*
+!.env.example
+
+.vscode
+.idea
+*.md
+!README.md

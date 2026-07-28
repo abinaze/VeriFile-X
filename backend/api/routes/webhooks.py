@@ -18,28 +18,16 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from backend.core.config import settings as _settings
 
-# BUG FIX: this router had NO rate limiting on any endpoint at all —
-# unlike keys.py, which correctly has one. This compounds the SSRF
-# webhook-registration surface (see webhook_manager.py's
-# _reject_unsafe_webhook_target fix): send_test in particular triggers
-# an on-demand outbound HTTP request with no throttling whatsoever.
+# Rate limits every webhook endpoint (send_test in particular triggers
+# an on-demand outbound HTTP request).
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
 router = APIRouter(prefix="/api/v1/webhooks", tags=["Webhooks"])
 
 
-# ── Auth helper (mirrors keys.py pattern) ────────────────────────────────────
+# ── Auth (F-4: now the real shared core.auth implementation, not a local copy) ──
 
-def _require_admin(authorization: Optional[str]) -> dict:
-    from backend.services.api_key_manager import verify_key
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required.")
-    entry = verify_key(authorization.removeprefix("Bearer ").strip())
-    if not entry:
-        raise HTTPException(status_code=401, detail="Invalid or inactive API key.")
-    if entry.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required.")
-    return entry
+from backend.core.auth import require_admin as _require_admin
 
 
 # ── Request bodies ────────────────────────────────────────────────────────────

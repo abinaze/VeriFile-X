@@ -72,6 +72,61 @@ def test_list_keys_excludes_revoked():
     assert active[0]["key_id"] == c1["key_id"]
 
 
+# ── F-6: real per-key salting, with backward compatibility ─────────────────
+
+def test_new_keys_are_salted():
+    """create_key() must generate a real, non-empty, per-key salt, and it
+    must never appear in any response (same treatment as key_hash)."""
+    from backend.services.api_key_manager import create_key, _load_keys
+    created = create_key("Salt Test")
+    assert "salt" not in created or created["salt"] == "[hidden]"
+    stored = _load_keys()[created["key_id"]]
+    assert stored.get("salt"), "expected a non-empty salt to be persisted"
+    assert len(stored["salt"]) >= 16
+
+
+def test_two_keys_get_different_salts():
+    from backend.services.api_key_manager import create_key, _load_keys
+    a = create_key("Salt A")
+    b = create_key("Salt B")
+    keys = _load_keys()
+    assert keys[a["key_id"]]["salt"] != keys[b["key_id"]]["salt"]
+
+
+def test_legacy_unsalted_key_still_verifies():
+    """A record written before F-6 (no "salt" field, hash = sha256(raw_key)
+    with no salt prefix) must keep verifying -- this is the whole point of
+    defaulting entry.get("salt", "") to an empty string rather than
+    requiring a migration of already-issued keys."""
+    import hashlib
+    from backend.services.api_key_manager import verify_key, _save_key, _now
+
+    raw_key = "vfx_legacy_test_key_1234567890"
+    legacy_entry = {
+        "key_id": "legacy-1", "name": "Legacy Key", "description": "",
+        "role": "analyst",
+        "key_hash": hashlib.sha256(raw_key.encode("utf-8")).hexdigest(),  # no salt
+        "created_at": _now(), "created_by": "system",
+        "last_used": None, "use_count": 0, "active": True,
+    }
+    _save_key(legacy_entry)
+
+    result = verify_key(raw_key)
+    assert result is not None, "legacy unsalted key must still verify after F-6"
+    assert result["role"] == "analyst"
+    assert "salt" not in result
+    assert "key_hash" not in result
+
+
+def test_salt_never_leaks_from_verify_or_list():
+    from backend.services.api_key_manager import create_key, verify_key, list_keys
+    created = create_key("No Leak Test")
+    result  = verify_key(created["key"])
+    assert "salt" not in result
+    for k in list_keys():
+        assert "salt" not in k
+
+
 
 
 def test_api_create_key_without_auth():

@@ -15,8 +15,16 @@ _xgb_cache: dict = {}
 def _load_xgb():
     if "model" not in _xgb_cache and _XGB_MODEL_PATH.exists():
         try:
+            from backend.core.model_integrity import verify_integrity, ModelIntegrityError
+            verify_integrity(_XGB_MODEL_PATH)
             with open(_XGB_MODEL_PATH, "rb") as _f:
                 _xgb_cache.update(pickle.load(_f))
+        except ModelIntegrityError:
+            # A hash mismatch is a materially different, higher-severity
+            # signal than "file missing/corrupt" -- let it propagate
+            # rather than silently falling back to the weighted-sum
+            # ensemble as if nothing were wrong.
+            raise
         except Exception as _e:
             # Corrupt file or Git LFS pointer stub — log and skip gracefully
             import logging as _log
@@ -30,7 +38,7 @@ def _load_xgb():
         _xgb_cache.get("explainer"),
     )
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from backend.core.logger import setup_logger
 from backend.services.statistical_detector import StatisticalDetector
 from backend.services.dire_detector import DIREDetector
@@ -48,6 +56,21 @@ from backend.services.cfa_detector import detect_cfa_artifacts
 logger = setup_logger(__name__)
 
 
+def _aggregate_stat_confidence(all_sub_signals: list) -> float:
+    """Aggregate confidence for the 19-signal statistical bundle (F-13).
+
+    Previously hardcoded to 1.0 regardless of how many of the 19
+    sub-signals actually succeeded. Each sub-signal already reports its
+    own real confidence (e.g. 0.92 on success, a 0.3 fallback on
+    "Analysis failed - insufficient data") -- averaging those gives the
+    outer ensemble something real to gate on, instead of always fully
+    trusting the bundle.
+    """
+    if not all_sub_signals:
+        return 0.0
+    return sum(s.get("confidence", 0.0) for s in all_sub_signals) / len(all_sub_signals)
+
+
 class AdvancedEnsembleDetector(StatisticalDetector):
     """
     State-of-the-art ensemble combining:
@@ -56,7 +79,11 @@ class AdvancedEnsembleDetector(StatisticalDetector):
     - CLIP (universal detection)
     - Own EfficientNet embedding detector
 
-    Validated accuracy: 85-92%
+    No accuracy percentage is published here deliberately -- see
+    README.md's "Accuracy, Validation, and Honest Limitations" section.
+    This docstring previously claimed "Validated accuracy: 85-92%", the
+    same unverified figure already removed from the README and frontend
+    marketing copy; it was simply never propagated to this file.
     """
 
     def __init__(self, image_bytes: bytes, filename: str):
@@ -129,6 +156,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             base_report, dire_result, clip_result, own_result, prnu_result,
             ela_result, metadata_result, dct_result, jpeg_ghost_result,
             noise_map_result, noiseprint_result, cfa_result,
+            image_type_info=_img_type,
         )
 
     def combine_signals(
@@ -145,6 +173,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         noise_map_result:  Dict[str, Any],
         noiseprint_result: Dict[str, Any],
         cfa_result:        Dict[str, Any],
+        image_type_info:   Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Combine pre-computed signal results into the final ensemble report.
@@ -196,9 +225,22 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             return base_weight * max(0.05, min(2.0, m))
 
         # Base weights sum to 1.00 across all 12 top-level ensemble inputs.
+        # F-13: the top-level ensemble excludes any of the 11 named
+        # signals when their confidence == 0 (see "_active" filter below),
+        # but the "stat" bundle folding in all 19 statistical sub-signals
+        # used to be hardcoded to confidence=1.0 regardless of how many
+        # of those 19 actually succeeded. Each sub-signal method already
+        # reports its own real confidence (e.g. 0.92 on success, a 0.3
+        # fallback on "Analysis failed - insufficient data") -- this
+        # averages those into one aggregate confidence for the bundle, so
+        # a bad edge case in several sub-signals now measurably reduces
+        # how much the outer ensemble trusts the bundle as a whole,
+        # instead of it always being fully trusted.
+        _stat_confidence = _aggregate_stat_confidence(base_report.get("all_signals", []))
+
         _raw_signals = [
             ("dire",       _fw("dire reconstruction error",   0.21), dire_result["score"],       dire_result.get("confidence", 0)),
-            ("stat",       _fw("statistical analysis",        0.20), base_report["ai_probability"], 1.0),
+            ("stat",       _fw("statistical analysis",        0.20), base_report["ai_probability"], _stat_confidence),
             ("clip",       _fw("clip embedding analysis",      0.14), clip_result["score"],       clip_result.get("confidence", 0)),
             ("own",        _fw("own embedding detection",      0.08), own_result["score"],       own_result.get("confidence", 0)),
             ("prnu",       _fw("prnu camera fingerprint",       0.08), prnu_result["score"],       prnu_result.get("confidence", 0)),
@@ -329,6 +371,13 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 "jpeg_ghost", "noise_map", "noiseprint", "cfa",
             ],
         }
+        if image_type_info is not None:
+            # F-26: classify_image_type() was being called a second time,
+            # with identical inputs, inside ImageForensics.generate_
+            # forensic_report() for the top-level report's own image_type
+            # field. Attaching it here lets that caller reuse this result
+            # instead of recomputing the same thing.
+            result["image_type_info"] = image_type_info
 
         # MCMC probabilistic distribution
         from backend.services.mcmc_engine import run_mcmc as _run_mcmc
@@ -346,9 +395,15 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         )
         result["probability_distribution"] = probability_distribution
 
-        # Platt Wilson interval for calibration confidence
-        from backend.services.platt_calibrator import calibrate_with_interval as _cwi
-        result["calibration"] = _cwi(weighted_score, signals=all_signals)
+        # Wilson interval around the already-calibrated score (F-3).
+        # weighted_score is already final here -- either XGBoost's own
+        # predict_proba (xgb branch) or a single Platt application
+        # (fallback branch, above) -- so re-running it through Platt's
+        # sigmoid a second time would double-transform it, causing
+        # result["calibration"]["calibrated"] to silently disagree with
+        # the headline result["ai_probability"] for the same report.
+        from backend.services.platt_calibrator import interval_around_calibrated as _iac
+        result["calibration"] = _iac(weighted_score, signals=all_signals)
 
         logger.info(
             f"Advanced ensemble complete: {classification} "

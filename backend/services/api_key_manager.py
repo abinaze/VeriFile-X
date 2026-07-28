@@ -35,8 +35,14 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _hash_key(raw_key: str) -> str:
-    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+def _hash_key(raw_key: str, salt: str = "") -> str:
+    """SHA-256 hash of a raw key, with an optional per-key salt (F-6).
+
+    salt="" reproduces the exact legacy unsalted hash, so existing
+    records created before this fix (which have no "salt" field) keep
+    verifying correctly -- see verify_key() below.
+    """
+    return hashlib.sha256((salt + raw_key).encode("utf-8")).hexdigest()
 
 
 def _load_keys() -> Dict[str, Dict[str, Any]]:
@@ -76,34 +82,41 @@ def create_key(name: str, role: str = "analyst",
         return {"error": "Key name is required."}
 
     raw_key  = f"vfx_{secrets.token_urlsafe(32)}"
-    key_hash = _hash_key(raw_key)
+    salt     = secrets.token_hex(16)
+    key_hash = _hash_key(raw_key, salt)
     key_id   = str(uuid.uuid4())
 
     entry = {
         "key_id": key_id, "name": name.strip()[:100],
         "description": description.strip()[:500], "role": role,
-        "key_hash": key_hash, "created_at": _now(), "created_by": created_by,
+        "key_hash": key_hash, "salt": salt, "created_at": _now(), "created_by": created_by,
         "last_used": None, "use_count": 0, "active": True,
     }
     _save_key(entry)
     logger.info(f"API key created: {key_id} name={name} role={role}")
     return {**entry, "key": raw_key,
             "warning": "Save this key now. It will not be shown again.",
-            "key_hash": "[hidden]"}
+            "key_hash": "[hidden]", "salt": "[hidden]"}
 
 
 def verify_key(raw_key: str) -> Optional[Dict[str, Any]]:
     if not raw_key or not raw_key.startswith("vfx_"):
         return None
-    key_hash = _hash_key(raw_key)
-    keys     = _load_keys()
+    keys = _load_keys()
     for entry in keys.values():
-        if entry.get("key_hash") == key_hash and entry.get("active", False):
+        # salt defaults to "" for legacy records created before F-6, which
+        # reproduces the exact old unsalted hash -- so already-issued keys
+        # keep verifying correctly with no migration step required.
+        expected_hash = _hash_key(raw_key, entry.get("salt", ""))
+        if (
+            secrets.compare_digest(entry.get("key_hash", ""), expected_hash)
+            and entry.get("active", False)
+        ):
             entry["last_used"] = _now()
             entry["use_count"] = entry.get("use_count", 0) + 1
             with _key_write_lock:
                 _save_key(entry)
-            return {k: v for k, v in entry.items() if k != "key_hash"}
+            return {k: v for k, v in entry.items() if k not in ("key_hash", "salt")}
     return None
 
 
@@ -118,7 +131,7 @@ def revoke_key(key_id: str, revoked_by: str = "system") -> Dict[str, Any]:
     entry["revoked_by"] = revoked_by
     _save_key(entry)
     logger.info(f"API key revoked: {key_id}")
-    return {k: v for k, v in entry.items() if k != "key_hash"}
+    return {k: v for k, v in entry.items() if k not in ("key_hash", "salt")}
 
 
 def list_keys(include_inactive: bool = False) -> List[Dict[str, Any]]:
@@ -127,5 +140,5 @@ def list_keys(include_inactive: bool = False) -> List[Dict[str, Any]]:
     for entry in keys.values():
         if not include_inactive and not entry.get("active", False):
             continue
-        result.append({k: v for k, v in entry.items() if k != "key_hash"})
+        result.append({k: v for k, v in entry.items() if k not in ("key_hash", "salt")})
     return sorted(result, key=lambda x: x.get("created_at", ""), reverse=True)

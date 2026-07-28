@@ -8,14 +8,9 @@ logger = setup_logger(__name__)
 
 CENTROIDS_PATH = Path(__file__).parent.parent.parent / "data" / "reference" / "own_centroids.pkl"
 
-# BUG FIX: this detector previously never used the shared ModelCache
-# singleton (backend/core/model_cache.py) that dire_detector.py and
-# clip_detector.py both correctly use. Combined with a fresh
-# OwnEmbeddingDetector() being constructed on EVERY analysis request
-# (AdvancedEnsembleDetector.__init__ does self.own_detector =
-# OwnEmbeddingDetector()), the instance-scoped _model_loaded flag provided
-# zero benefit across requests — every single request reloaded the full
-# model from disk. Now cached under this key, same pattern as its siblings.
+# Cached under the shared ModelCache singleton (same pattern as
+# dire_detector.py/clip_detector.py), since a fresh OwnEmbeddingDetector
+# is constructed on every analysis request.
 _CACHE_KEY = "own-embedding-model"
 
 
@@ -44,18 +39,31 @@ class OwnEmbeddingDetector:
             logger.info("OwnEmbeddingDetector: reused cached model (no reload)")
             return
 
-        from backend.services.own_detector.model import load_model
-        self.model  = load_model(self.device)
-        self._model_loaded = True
-        if self.model is not None:
-            self.model.eval()
-            # Estimate ~20MB for the trained EfficientNet-B0 checkpoint —
-            # matches the ballpark used in config/cache_config.py's
-            # MODEL_SIZES table for similarly-sized models.
-            self.cache.set(_CACHE_KEY, self.model, size_mb=20)
-            logger.info(f"OwnEmbeddingDetector loaded on {self.device} and cached")
-        else:
-            logger.warning("OwnEmbeddingDetector: no trained model found, signal will return neutral 0.5")
+        # Cache miss - load from disk. Guarded by a per-key lock (F-7):
+        # without it, two concurrent cold-start requests can both observe
+        # the miss above and both independently load the model.
+        with self.cache.get_load_lock(_CACHE_KEY):
+            # Double-check: another thread may have finished loading and
+            # populated the cache while we were waiting for the lock.
+            cached = self.cache.get(_CACHE_KEY)
+            if cached is not None:
+                self.model = cached
+                self._model_loaded = True
+                logger.info("OwnEmbeddingDetector: reused cached model (loaded by a concurrent request)")
+                return
+
+            from backend.services.own_detector.model import load_model
+            self.model  = load_model(self.device)
+            self._model_loaded = True
+            if self.model is not None:
+                self.model.eval()
+                # Estimate ~20MB for the trained EfficientNet-B0 checkpoint —
+                # matches the ballpark used in config/cache_config.py's
+                # MODEL_SIZES table for similarly-sized models.
+                self.cache.set(_CACHE_KEY, self.model, size_mb=20)
+                logger.info(f"OwnEmbeddingDetector loaded on {self.device} and cached")
+            else:
+                logger.warning("OwnEmbeddingDetector: no trained model found, signal will return neutral 0.5")
 
     def _load_centroids(self):
         if self._centroid_loaded:
@@ -67,6 +75,8 @@ class OwnEmbeddingDetector:
             self._centroid_loaded = True
             return
         try:
+            from backend.core.model_integrity import verify_integrity, ModelIntegrityError
+            verify_integrity(CENTROIDS_PATH)
             with open(CENTROIDS_PATH, "rb") as f:
                 db = pickle.load(f)
             self.real_centroid = db["real_centroid"]
@@ -75,6 +85,12 @@ class OwnEmbeddingDetector:
                 "Loaded centroids: %d real, %d AI, sep=%.4f",
                 db["real_count"], db["ai_count"], db["separation"],
             )
+        except ModelIntegrityError:
+            # A hash mismatch is a materially different, higher-severity
+            # signal than "file absent" or "file is an LFS pointer stub" --
+            # let it propagate rather than silently falling back to
+            # neutral scoring as if nothing were wrong.
+            raise
         except Exception as exc:
             # Handles Git LFS pointer stubs (tiny ASCII text) and corrupt files.
             # Always set _centroid_loaded=True so we don't re-attempt on every

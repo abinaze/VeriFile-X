@@ -1760,6 +1760,13 @@ const API_URL = window.location.hostname.includes('github.io') || window.locatio
     : window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:8000'
     : 'https://abinazebinoy-verifile-x-api.hf.space';
+
+// F-1: public demo token. The backend's /api/v1/analyze/* router requires
+// authentication; this well-known token is the fail-closed public-demo
+// path (see require_analyst_or_demo in backend/core/auth.py). If this
+// value is ever changed, backend PUBLIC_DEMO_KEY must be updated to match
+// or the public demo will start receiving 401s again.
+const PUBLIC_DEMO_KEY = 'vfx_public_demo_2026';
  
 const fileInput  = document.getElementById('fileInput');
 const uploadZone = document.getElementById('uploadZone');
@@ -1841,7 +1848,8 @@ async function analyzeFile(file) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 90000);
         const response = await fetch(`${API_URL}/api/v1/analyze/image`, {
-            signal: controller.signal, method: 'POST', body: formData
+            signal: controller.signal, method: 'POST', body: formData,
+            headers: { 'Authorization': `Bearer ${PUBLIC_DEMO_KEY}` }
         });
         clearTimeout(timeoutId);
         if (!response.ok) {
@@ -1935,11 +1943,11 @@ function renderResults(data) {
  
     const h = data.hashes;
     document.getElementById('hashInfo').innerHTML = `
-        <div class="hash-item"><div class="hash-label">SHA-256</div><div class="hash-value">${h.sha256}</div></div>
-        <div class="hash-item"><div class="hash-label">MD5</div><div class="hash-value">${h.md5}</div></div>
-        <div class="hash-item"><div class="hash-label">Perceptual Hash</div><div class="hash-value">${h.perceptual_hash}</div></div>
-        <div class="hash-item"><div class="hash-label">Average Hash</div><div class="hash-value">${h.average_hash}</div></div>
-        <div class="hash-item"><div class="hash-label">Difference Hash</div><div class="hash-value">${h.difference_hash}</div></div>
+        <div class="hash-item"><div class="hash-label">SHA-256</div><div class="hash-value">${esc(h.sha256)}</div></div>
+        <div class="hash-item"><div class="hash-label">MD5</div><div class="hash-value">${esc(h.md5)}</div></div>
+        <div class="hash-item"><div class="hash-label">Perceptual Hash</div><div class="hash-value">${esc(h.perceptual_hash)}</div></div>
+        <div class="hash-item"><div class="hash-label">Average Hash</div><div class="hash-value">${esc(h.average_hash)}</div></div>
+        <div class="hash-item"><div class="hash-label">Difference Hash</div><div class="hash-value">${esc(h.difference_hash)}</div></div>
     `;
  
     const t     = data.tampering_analysis;

@@ -105,12 +105,31 @@ def calibrate(raw_score: float) -> float:
     return _sigmoid(A * raw_score + B)
 
 
+def _wilson_interval(p: float, n_eff: float) -> tuple:
+    """Shared Wilson score 90% interval math around a final probability p."""
+    z = _WILSON_Z
+    z2 = z * z
+    centre = (p + z2 / (2 * n_eff)) / (1 + z2 / n_eff)
+    half_w = (z * math.sqrt(p * (1 - p) / n_eff + z2 / (4 * n_eff * n_eff))) / (
+        1 + z2 / n_eff
+    )
+    lower = max(0.0, centre - half_w)
+    upper = min(1.0, centre + half_w)
+    return lower, upper
+
+
 def calibrate_with_interval(
     raw_score: float,
     signals: Optional[list] = None,
 ) -> Dict[str, Any]:
     """
     Calibrate a raw score and compute Wilson score 90% confidence interval.
+
+    Use only with a genuinely raw/uncalibrated ensemble score (i.e. a score
+    that has NOT already had Platt scaling or an XGBoost predict_proba
+    applied to it). For an already-final probability, use
+    interval_around_calibrated() instead -- re-applying the sigmoid here to
+    an already-calibrated input double-transforms it (F-3).
 
     Args:
         raw_score: Raw ensemble weighted sum.
@@ -123,16 +142,47 @@ def calibrate_with_interval(
     p = _sigmoid(A * raw_score + B)
 
     n_eff = max(1.0, sum(s.get("confidence", 0.0) for s in signals)) if signals else 10.0
+    lower, upper = _wilson_interval(p, n_eff)
 
-    z = _WILSON_Z
-    z2 = z * z
-    centre = (p + z2 / (2 * n_eff)) / (1 + z2 / n_eff)
-    half_w = (z * math.sqrt(p * (1 - p) / n_eff + z2 / (4 * n_eff * n_eff))) / (
-        1 + z2 / n_eff
-    )
+    return {
+        "calibrated":  round(p, 4),
+        "interval_90": [round(lower, 4), round(upper, 4)],
+        "A":           round(A, 4),
+        "B":           round(B, 4),
+    }
 
-    lower = max(0.0, centre - half_w)
-    upper = min(1.0, centre + half_w)
+
+def interval_around_calibrated(
+    calibrated_score: float,
+    signals: Optional[list] = None,
+) -> Dict[str, Any]:
+    """
+    Compute a Wilson score 90% confidence interval around a probability
+    that is ALREADY final (F-3) -- no further sigmoid/Platt transform is
+    applied. This is what advanced_ensemble_detector.py's combine_signals()
+    calls, because by the time it builds the calibration block,
+    weighted_score has already been calibrated once (either via Platt in
+    the fallback branch, or via XGBoost's own predict_proba). Passing that
+    already-final score into calibrate_with_interval() re-applied the
+    sigmoid a second time, so result["calibration"]["calibrated"] silently
+    disagreed with the headline result["ai_probability"] -- the gap grew
+    largest at the high-confidence extremes, which is exactly where a
+    forensics tool's credibility matters most.
+
+    Args:
+        calibrated_score: An already-final probability in [0, 1].
+        signals:          List of signal dicts with 'confidence' for effective n.
+
+    Returns:
+        {"calibrated": float, "interval_90": [lower, upper], "A": float, "B": float}
+        "A"/"B" are still reported (current Platt params) for observability,
+        even though they are not applied to calibrated_score itself.
+    """
+    A, B = _load_params()
+    p = max(1e-6, min(1 - 1e-6, float(calibrated_score)))
+
+    n_eff = max(1.0, sum(s.get("confidence", 0.0) for s in signals)) if signals else 10.0
+    lower, upper = _wilson_interval(p, n_eff)
 
     return {
         "calibrated":  round(p, 4),

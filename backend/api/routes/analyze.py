@@ -8,10 +8,13 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 import hashlib
 import time
+import math as _math
+import numpy as _np
 from typing import List
 
 from backend.services.image_forensics import ImageForensics
 from backend.utils.validators import validate_file, FileValidationError
+from backend.utils.image_quality import assess_image_quality
 from backend.core.logger import setup_logger
 from backend.core.cache import forensics_cache
 from backend.services.metrics_collector import record_analysis
@@ -20,22 +23,49 @@ from backend.core.config import settings
 
 logger = setup_logger(__name__)
 
+
+def _sanitize(obj):
+    """Recursively replace NaN/Infinity floats with 0.0 (F-8, F-27).
+
+    json.dumps() happily emits the literal tokens NaN/Infinity, which
+    are not valid per RFC 8259 and many non-Python JSON parsers reject
+    outright. Division-by-zero guards throughout the signal detectors
+    (e.g. "+ 1e-8" denominators in several cosine-similarity calcs)
+    mean a signal can legitimately produce a non-finite float.
+
+    This single shared helper replaces the two near-duplicate copies
+    that used to live inline in analyze_image() -- one for the
+    cache-miss path, one for the cache-hit path (_sanitize_hit) -- which
+    is exactly the kind of drift risk this project has been bitten by
+    before (see F-4). It is now called ONCE, immediately after
+    generate_forensic_report() returns and before the report is cached,
+    sent to any webhook, or written to the audit log -- previously all
+    three saw the raw, unsanitized report, and only the direct HTTP
+    response (sanitized too late, right before returning) was
+    guaranteed clean.
+    """
+    if isinstance(obj, _np.generic):
+        return obj.item()
+    if isinstance(obj, float):
+        return 0.0 if (_math.isnan(obj) or _math.isinf(obj)) else obj
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    return obj
+
 # Standalone limiter for this router — same config as main.py
-# BUG FIX: previously no default_limits — settings.RATE_LIMIT_PER_MINUTE
-# (declared in .env.example/render.yaml) had no effect anywhere. Wired
-# here as the DEFAULT limit for any endpoint without its own explicit
-# @limiter.limit(...) decorator — the 24 existing per-endpoint
-# decorators are intentionally tuned differently per endpoint cost and
-# are NOT touched by this change.
+# Wires RATE_LIMIT_PER_MINUTE as the default limit for any endpoint
+# without its own explicit @limiter.limit(...) decorator.
 from backend.core.config import settings as _settings
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
-from backend.core.auth import require_analyst
+from backend.core.auth import require_analyst_or_demo
 from fastapi import Depends
 
 router = APIRouter(
     prefix="/api/v1/analyze",
-    dependencies=[Depends(require_analyst)],
+    dependencies=[Depends(require_analyst_or_demo)],
     tags=["Forensic Analysis"]
 )
 
@@ -160,7 +190,6 @@ async def analyze_image(
             )
 
         # Quality gate — reject images too small or unreadable for forensics
-        from backend.utils.image_quality import assess_image_quality
         quality = assess_image_quality(file_bytes, file.filename)
         if not quality["suitable"]:
             raise HTTPException(
@@ -175,22 +204,10 @@ async def analyze_image(
                 f"Cache HIT: Returning cached result for {file.filename} "
                 f"(saved ~2-5 seconds of processing)"
             )
-            # Sanitize on cache hit too — cached entries may predate sanitizer
-            import math as _math_cache
-            import numpy as _np_hit
-            def _sanitize_hit(obj):
-                # Handle numpy scalar types explicitly (bool, int, float variants)
-                if isinstance(obj, _np_hit.generic):
-                    return obj.item()
-                if isinstance(obj, (float, _np_hit.floating)):
-                    v = float(obj)
-                    return 0.0 if (_math_cache.isnan(v) or _math_cache.isinf(v)) else v
-                if isinstance(obj, _np_hit.integer):
-                    return int(obj)
-                if isinstance(obj, dict): return {k: _sanitize_hit(v) for k, v in obj.items()}
-                if isinstance(obj, list): return [_sanitize_hit(v) for v in obj]
-                return obj
-            return _sanitize_hit(cached_result)
+            # No re-sanitization needed here (F-8/F-27): every report that
+            # enters forensics_cache has already been through _sanitize()
+            # before caching, below.
+            return cached_result
 
         logger.info(f"Cache MISS: Running full analysis for {file.filename}")
         import asyncio as _asyncio
@@ -200,6 +217,13 @@ async def analyze_image(
             None, forensics.generate_forensic_report
         )
         _latency_ms = round((time.perf_counter() - _t0) * 1000, 1)
+
+        # Sanitize any NaN/Inf float values BEFORE this report is cached,
+        # sent to any webhook, or written to the audit log (F-8) -- moved
+        # here from just before the return statement, where it protected
+        # only the direct HTTP response. forensics_cache.set(), fire_webhooks(),
+        # and log_analysis() below used to all see the raw, unsanitized report.
+        report = _sanitize(report)
 
         forensics_cache.set(file_hash, report)
 
@@ -238,23 +262,9 @@ async def analyze_image(
             f"classification={report['summary']['ai_classification']}"
         )
 
-        # Sanitize any NaN/Inf float values before JSON serialization
-        import math
-        import numpy as _np_sanitize
-        def _sanitize(obj):
-            # Handle numpy scalar types (np.float64, np.int32, etc.)
-            if isinstance(obj, _np_sanitize.generic):
-                return obj.item()
-            if isinstance(obj, float):
-                if math.isnan(obj) or math.isinf(obj):
-                    return 0.0
-                return obj
-            if isinstance(obj, dict):
-                return {k: _sanitize(v) for k, v in obj.items()}
-            if isinstance(obj, list):
-                return [_sanitize(v) for v in obj]
-            return obj
-        report = _sanitize(report)
+        # (NaN/Infinity sanitization now happens immediately after report
+        # generation, above -- see F-8/F-27 -- so no second pass is needed
+        # here before returning.)
 
         # Record metrics
         try:
@@ -632,6 +642,12 @@ async def export_report(
         if not report:
             forensics = ImageForensics(file_bytes, file.filename)
             report = await _aio_export.to_thread(forensics.generate_forensic_report)
+            # Same sanitize-before-cache fix as F-8 above: this endpoint has
+            # its own separate cache lookup/report-generation path and was
+            # not sanitizing at all -- export_json()'s plain json.dumps()
+            # would emit the literal (invalid-per-RFC-8259) NaN/Infinity
+            # tokens for any non-finite signal score.
+            report = _sanitize(report)
             forensics_cache.set(_exp_hash, report)
 
         stem = file.filename.rsplit(".", 1)[0] if "." in file.filename else file.filename

@@ -26,15 +26,9 @@ class OwnEmbeddingModel(nn.Module):
         """
         Args:
             skip_pretrained: if True, skip the ImageNet-pretrained weight
-                download entirely. BUG FIX: load_model() (below) always
-                constructs this model and then IMMEDIATELY overwrites every
-                one of its weights with the real trained checkpoint from
-                own_embedding_model.pt — meaning the pretrained-weight
-                download was previously performed and then 100% discarded
-                on every single load, wasting a network round-trip (only
-                mitigated by torch hub's local disk cache, which won't
-                survive an ephemeral/container-restart deployment).
-                load_model() now passes skip_pretrained=True.
+                download entirely -- load_model() (below) always
+                overwrites every weight with the real trained checkpoint
+                anyway, so it passes skip_pretrained=True.
         """
         super().__init__()
 
