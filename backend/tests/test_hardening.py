@@ -124,6 +124,16 @@ def test_f8_sanitize_runs_before_cache_webhook_and_audit_log(client, monkeypatch
     import backend.api.routes.analyze as analyze_mod
     from backend.core.cache import forensics_cache
 
+    # This test calls /api/v1/analyze/image, which is rate-limited to
+    # 10/minute per client key. slowapi's default in-memory storage is
+    # shared for the whole pytest session (no reset between tests), so
+    # without this reset this test's call would consume budget from --
+    # or be starved by -- unrelated tests elsewhere in the suite that
+    # also hit this endpoint (confirmed while writing this test: running
+    # the full suite made test_performance.py::test_cache_speedup_is_significant
+    # flake with a 429, purely from accumulated cross-test call volume).
+    analyze_mod.limiter.limiter.storage.reset()
+
     monkeypatch.setattr(
         forensics_mod.ImageForensics, "generate_forensic_report",
         lambda self: _fake_report_with_nan(),
@@ -174,6 +184,9 @@ def test_f8_sanitize_runs_before_cache_webhook_and_audit_log(client, monkeypatch
     assert len(cache_writes) == 1
     assert cache_writes[0]["summary"]["ai_probability"] == 0.0
     assert cache_writes[0]["ai_detection"]["all_signals"][0]["score"] == 0.0
+
+    # Leave the shared limiter clean for whatever test runs next.
+    analyze_mod.limiter.limiter.storage.reset()
 
 
 def test_health_endpoint_returns_status(client):
