@@ -60,7 +60,7 @@ ftfy==6.1.1
 regex==2023.12.25
 
 # CLIP Detection
-clip @ git+https://github.com/openai/CLIP.git
+clip @ git+https://github.com/openai/CLIP.git@d05afc436d78f1c48dc0dbf8e5980a9d471f35f6
 
 # Dataset utilities
 tqdm==4.67.0
