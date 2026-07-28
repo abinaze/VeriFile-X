@@ -28,18 +28,9 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE
 router = APIRouter(prefix="/api/v1/webhooks", tags=["Webhooks"])
 
 
-# ── Auth helper (mirrors keys.py pattern) ────────────────────────────────────
+# ── Auth (F-4: now the real shared core.auth implementation, not a local copy) ──
 
-def _require_admin(authorization: Optional[str]) -> dict:
-    from backend.services.api_key_manager import verify_key
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required.")
-    entry = verify_key(authorization.removeprefix("Bearer ").strip())
-    if not entry:
-        raise HTTPException(status_code=401, detail="Invalid or inactive API key.")
-    if entry.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin role required.")
-    return entry
+from backend.core.auth import require_admin as _require_admin
 
 
 # ── Request bodies ────────────────────────────────────────────────────────────
