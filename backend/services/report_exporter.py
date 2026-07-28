@@ -116,12 +116,6 @@ def export_csv(report: Dict[str, Any]) -> bytes:
 # Minimal PDF/1.4 built from scratch using only stdlib.
 # No external PDF library required — CI compatible.
 
-def _pdf_string(s: str) -> bytes:
-    """Encode string as PDF literal string."""
-    escaped = s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-    return f"({escaped})".encode("latin-1", errors="replace")
-
-
 def _pdf_stream(content: bytes) -> tuple:
     """Compress content with zlib, return (compressed_bytes, length)."""
     compressed = zlib.compress(content)
