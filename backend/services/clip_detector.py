@@ -61,56 +61,71 @@ class CLIPDetector:
             self._load_reference_database()
             return
         
-        # Cache miss - load from disk
-        try:
-            import clip
-            
-            logger.info("Loading CLIP ViT-B/32 model from disk...")
-            
-            # Load CLIP model
-            self.model, self.preprocess = clip.load(
-                "ViT-B/32", 
-                device=self.device
-            )
-            
-            self._from_cache = False
-            logger.info("CLIP model loaded successfully")
-        except Exception as exc:
-            # Cache the failure so we don't retry a potentially expensive
-            # download (CLIP weights from OpenAI CDN) on every request.
-            logger.error(
-                "CLIP model load failed (%s) — will return neutral results "
-                "for all subsequent requests. Check clip package install and "
-                "network access to OpenAI CDN.", exc,
-            )
-            self.model       = None
-            self.preprocess  = None
-        finally:
-            self._model_loaded = True  # Always set — prevents per-request retry
-        if self.model is not None:
-            pass  # load succeeded, continue below
-        else:
-            return  # load failed, skip cache store and DB load
-        try:
-            import clip as _clip_store  # noqa: F811
-            
-            # Store in cache for future use
-            self.cache.set(
-                self.cache_key,
-                {
-                    'model': self.model,
-                    'preprocess': self.preprocess
-                },
-                self.model_size_mb
-            )
-            logger.info(f"Cached model ({self.model_size_mb}MB) for future use")
-            
-            # Load reference database
-            self._load_reference_database()
-            
-        except Exception as e:
-            logger.error(f"Failed to load CLIP model: {e}")
-            raise
+        # Cache miss - load from disk. Guarded by a per-key lock (F-7):
+        # without it, two concurrent cold-start requests can both observe
+        # the miss above and both independently load the full CLIP model.
+        with self.cache.get_load_lock(self.cache_key):
+            # Double-check: another thread may have finished loading and
+            # populated the cache while we were waiting for the lock.
+            cached_model = self.cache.get(self.cache_key)
+            if cached_model is not None:
+                logger.info("Loading CLIP from cache (loaded by a concurrent request)")
+                self.model = cached_model['model']
+                self.preprocess = cached_model['preprocess']
+                self._model_loaded = True
+                self._from_cache = True
+                self._load_reference_database()
+                return
+
+            try:
+                import clip
+
+                logger.info("Loading CLIP ViT-B/32 model from disk...")
+
+                # Load CLIP model
+                self.model, self.preprocess = clip.load(
+                    "ViT-B/32",
+                    device=self.device
+                )
+
+                self._from_cache = False
+                logger.info("CLIP model loaded successfully")
+            except Exception as exc:
+                # Cache the failure so we don't retry a potentially expensive
+                # download (CLIP weights from OpenAI CDN) on every request.
+                logger.error(
+                    "CLIP model load failed (%s) — will return neutral results "
+                    "for all subsequent requests. Check clip package install and "
+                    "network access to OpenAI CDN.", exc,
+                )
+                self.model       = None
+                self.preprocess  = None
+            finally:
+                self._model_loaded = True  # Always set — prevents per-request retry
+            if self.model is not None:
+                pass  # load succeeded, continue below
+            else:
+                return  # load failed, skip cache store and DB load
+            try:
+                import clip as _clip_store  # noqa: F811
+
+                # Store in cache for future use
+                self.cache.set(
+                    self.cache_key,
+                    {
+                        'model': self.model,
+                        'preprocess': self.preprocess
+                    },
+                    self.model_size_mb
+                )
+                logger.info(f"Cached model ({self.model_size_mb}MB) for future use")
+
+                # Load reference database
+                self._load_reference_database()
+
+            except Exception as e:
+                logger.error(f"Failed to load CLIP model: {e}")
+                raise
     
     def _load_reference_database(self):
         """Load pre-computed reference centroids."""
