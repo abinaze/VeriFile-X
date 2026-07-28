@@ -36,6 +36,22 @@ services:
 
 
   # Frontend Static Site
+  #
+  # F-25 (decision needed, not resolved this session): .github/workflows/
+  # deploy-pages.yml deploys ./frontend to GitHub Pages on every push to
+  # main, and the README/live links all point to the abinaze.github.io
+  # URL -- not this Render static site. This block may be dead
+  # configuration (nobody currently points here) rather than an active
+  # second deployment target. GitHub Pages also does not support custom
+  # response headers at all, so the X-Frame-Options/X-Content-Type-
+  # Options/Referrer-Policy headers below are currently not reaching the
+  # actual live frontend regardless. Left in place rather than deleted,
+  # since a static code snapshot can't confirm whether this Render
+  # service is actually provisioned/relied on in the real Render
+  # dashboard -- deleting it here would be a real infrastructure
+  # decision, not a code fix. Decide: either start actually using this
+  # as the real frontend deployment (getting real security headers in
+  # the process), or remove this block and rely on GitHub Pages alone.
   - type: web
     name: verifile-x
     runtime: static
