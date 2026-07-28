@@ -216,6 +216,52 @@ class TestPlattCalibrator:
         result = pc.calibrate(0.7)
         assert 0.0 <= result <= 1.0
 
+    # ── F-3: interval_around_calibrated() must NOT re-apply Platt's sigmoid ──
+
+    def test_interval_around_calibrated_does_not_retransform(self):
+        """An already-final probability must come back ~unchanged.
+
+        This is the regression test for F-3: advanced_ensemble_detector.py's
+        weighted_score is already a final probability (Platt or XGBoost)
+        by the time the calibration block is built. The old code path
+        (calibrate_with_interval) re-applied the sigmoid to it anyway,
+        so result["calibration"]["calibrated"] silently disagreed with
+        the headline result["ai_probability"] for the same report.
+        """
+        from backend.services.platt_calibrator import interval_around_calibrated
+        for p_final in (0.05, 0.5, 0.6, 0.92, 0.95):
+            r = interval_around_calibrated(p_final)
+            assert abs(r["calibrated"] - p_final) < 1e-3, (
+                f"interval_around_calibrated({p_final}) returned "
+                f"{r['calibrated']} -- input was re-transformed, not preserved"
+            )
+
+    def test_interval_around_calibrated_keys_and_bounds(self):
+        from backend.services.platt_calibrator import interval_around_calibrated
+        signals = _make_signals([0.8, 0.7], [0.8, 0.7])
+        r = interval_around_calibrated(0.75, signals=signals)
+        for key in ("calibrated", "interval_90", "A", "B"):
+            assert key in r
+        lo, hi = r["interval_90"]
+        assert lo <= r["calibrated"] <= hi
+        assert 0.0 <= lo and hi <= 1.0
+
+    def test_ensemble_calibration_matches_ai_probability(self, sample_image_bytes):
+        """End-to-end regression test for F-3: a single detect() call must
+        report the same probability in both result["ai_probability"] and
+        result["calibration"]["calibrated"] (up to the latter's rounding),
+        which is exactly the invariant the pre-fix double-calibration bug
+        violated -- and which no existing test checked before this fix.
+        """
+        from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
+        detector = AdvancedEnsembleDetector(sample_image_bytes, "test.png")
+        report = detector.detect()
+        detector.cleanup()
+        assert abs(report["ai_probability"] - report["calibration"]["calibrated"]) < 1e-3, (
+            "ai_probability and calibration.calibrated disagree -- "
+            "the score is being calibrated more than once (F-3)"
+        )
+
 
 # ═══════════════════════════════════════════════════════════════════════
 # Phase 26 — Stable Evidence IDs (UUID5)
