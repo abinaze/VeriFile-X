@@ -124,6 +124,38 @@ class TestMCMCEngine:
         assert r["n_samples"] > 0
 
 
+class TestBoundaryReflection:
+    """F-12 regression tests: boundary handling must be a true
+    reflection, not a clip -- a clip piles probability mass exactly at
+    the boundary and breaks the symmetric-proposal assumption behind
+    the plain Metropolis acceptance ratio used in run_mcmc()."""
+
+    def test_reflects_below_zero(self):
+        from backend.services.mcmc_engine import _reflect_at_boundaries
+        assert abs(_reflect_at_boundaries(-0.03) - 0.03) < 1e-9
+
+    def test_reflects_above_one(self):
+        from backend.services.mcmc_engine import _reflect_at_boundaries
+        assert abs(_reflect_at_boundaries(1.05) - 0.95) < 1e-9
+
+    def test_mid_range_unaffected(self):
+        from backend.services.mcmc_engine import _reflect_at_boundaries
+        assert abs(_reflect_at_boundaries(0.5) - 0.5) < 1e-9
+
+    def test_does_not_pile_up_at_boundary(self):
+        """A clip would pile every out-of-range draw at exactly 0 or 1.
+        Reflection spreads them back out -- check we don't see a spike
+        of exact-boundary values across many out-of-range draws."""
+        from backend.services.mcmc_engine import _reflect_at_boundaries
+        out_of_range_inputs = [-0.01 * i for i in range(1, 50)]
+        results = [_reflect_at_boundaries(x) for x in out_of_range_inputs]
+        at_boundary = sum(1 for r in results if r <= 1e-5 or r >= 1 - 1e-5)
+        assert at_boundary == 0, (
+            "reflected values piled up at the boundary -- this looks like "
+            "clipping, not reflection"
+        )
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # Phase 25 — Platt Scaling Calibration
 # ═══════════════════════════════════════════════════════════════════════
