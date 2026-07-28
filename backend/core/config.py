@@ -72,6 +72,17 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 10
 
     # =========================================================================
+    # PUBLIC DEMO ACCESS (F-1)
+    # =========================================================================
+
+    # Fail-closed by default. The public, sign-up-free frontend has nowhere
+    # safe to keep a real per-user secret, so it authenticates with this
+    # well-known bearer token instead (see require_analyst_or_demo in
+    # backend/core/auth.py). Leave unset to disable the public demo path
+    # entirely and require real per-user keys on every request.
+    PUBLIC_DEMO_KEY: str = ""
+
+    # =========================================================================
     # FILE UPLOAD LIMITS
     # =========================================================================
 
