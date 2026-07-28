@@ -15,8 +15,16 @@ _xgb_cache: dict = {}
 def _load_xgb():
     if "model" not in _xgb_cache and _XGB_MODEL_PATH.exists():
         try:
+            from backend.core.model_integrity import verify_integrity, ModelIntegrityError
+            verify_integrity(_XGB_MODEL_PATH)
             with open(_XGB_MODEL_PATH, "rb") as _f:
                 _xgb_cache.update(pickle.load(_f))
+        except ModelIntegrityError:
+            # A hash mismatch is a materially different, higher-severity
+            # signal than "file missing/corrupt" -- let it propagate
+            # rather than silently falling back to the weighted-sum
+            # ensemble as if nothing were wrong.
+            raise
         except Exception as _e:
             # Corrupt file or Git LFS pointer stub — log and skip gracefully
             import logging as _log
