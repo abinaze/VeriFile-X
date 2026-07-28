@@ -70,3 +70,19 @@ def require_analyst_or_demo(authorization: Optional[str] = Header(None)) -> dict
     ):
         return {"key_id": "public-demo", "name": "Public Demo", "role": "analyst"}
     return require_analyst(authorization)
+
+
+def require_analyst_or_demo(authorization: Optional[str] = Header(None)) -> dict:
+    """FastAPI dependency: require a real analyst/admin key, OR the public
+    demo token (F-1). The demo token is opt-in and fail-closed: it is only
+    accepted when settings.PUBLIC_DEMO_KEY is non-empty, so a deployment
+    that never sets it behaves exactly like require_analyst. Still subject
+    to normal per-IP rate limiting like any other request.
+    """
+    from backend.core.config import settings
+    if (
+        settings.PUBLIC_DEMO_KEY
+        and authorization == f"Bearer {settings.PUBLIC_DEMO_KEY}"
+    ):
+        return {"key_id": "public-demo", "name": "Public Demo", "role": "analyst"}
+    return require_analyst(authorization)
