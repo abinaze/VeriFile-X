@@ -135,6 +135,8 @@ class CLIPDetector:
             logger.info(f"Loading CLIP reference database from {database_path}")
             
             try:
+                from backend.core.model_integrity import verify_integrity, ModelIntegrityError
+                verify_integrity(database_path)
                 with open(database_path, 'rb') as f:
                     database = pickle.load(f)
                 
@@ -160,6 +162,11 @@ class CLIPDetector:
                 )
                 return
             
+            except ModelIntegrityError:
+                # A hash mismatch is a materially different, higher-severity
+                # signal than "file missing/corrupt" -- let it propagate
+                # rather than silently falling back to "signal disabled".
+                raise
             except Exception as e:
                 logger.warning(f"Failed to load reference database: {e}")
         
