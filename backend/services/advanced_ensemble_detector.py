@@ -79,7 +79,11 @@ class AdvancedEnsembleDetector(StatisticalDetector):
     - CLIP (universal detection)
     - Own EfficientNet embedding detector
 
-    Validated accuracy: 85-92%
+    No accuracy percentage is published here deliberately -- see
+    README.md's "Accuracy, Validation, and Honest Limitations" section.
+    This docstring previously claimed "Validated accuracy: 85-92%", the
+    same unverified figure already removed from the README and frontend
+    marketing copy; it was simply never propagated to this file.
     """
 
     def __init__(self, image_bytes: bytes, filename: str):
