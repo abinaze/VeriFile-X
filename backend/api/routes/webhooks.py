@@ -18,11 +18,8 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from backend.core.config import settings as _settings
 
-# BUG FIX: this router had NO rate limiting on any endpoint at all —
-# unlike keys.py, which correctly has one. This compounds the SSRF
-# webhook-registration surface (see webhook_manager.py's
-# _reject_unsafe_webhook_target fix): send_test in particular triggers
-# an on-demand outbound HTTP request with no throttling whatsoever.
+# Rate limits every webhook endpoint (send_test in particular triggers
+# an on-demand outbound HTTP request).
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
 router = APIRouter(prefix="/api/v1/webhooks", tags=["Webhooks"])
