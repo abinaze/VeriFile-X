@@ -69,24 +69,24 @@ def export_csv(report: Dict[str, Any]) -> bytes:
     signals = report.get("ai_detection", {}).get("all_signals", [])
     if not signals:
         writer.writerow([
-            evidence_id, filename, timestamp,
-            ai_prob, ai_class,
+            _csv_safe(evidence_id), _csv_safe(filename), _csv_safe(timestamp),
+            ai_prob, _csv_safe(ai_class),
             "no_signals", "", "", "", "", "",
         ])
     else:
         for sig in signals:
             writer.writerow([
-                evidence_id,
-                filename,
-                timestamp,
+                _csv_safe(evidence_id),
+                _csv_safe(filename),
+                _csv_safe(timestamp),
                 ai_prob,
-                ai_class,
-                sig.get("signal_name", ""),
+                _csv_safe(ai_class),
+                _csv_safe(sig.get("signal_name", "")),
                 sig.get("score", ""),
                 sig.get("confidence", ""),
-                sig.get("explanation", "").replace("\n", " "),
+                _csv_safe(sig.get("explanation", "").replace("\n", " ")),
                 sig.get("raw_value", ""),
-                sig.get("expected_range", ""),
+                _csv_safe(sig.get("expected_range", "")),
             ])
 
     return buf.getvalue().encode("utf-8")
