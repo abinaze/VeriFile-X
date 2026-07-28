@@ -44,18 +44,31 @@ class OwnEmbeddingDetector:
             logger.info("OwnEmbeddingDetector: reused cached model (no reload)")
             return
 
-        from backend.services.own_detector.model import load_model
-        self.model  = load_model(self.device)
-        self._model_loaded = True
-        if self.model is not None:
-            self.model.eval()
-            # Estimate ~20MB for the trained EfficientNet-B0 checkpoint —
-            # matches the ballpark used in config/cache_config.py's
-            # MODEL_SIZES table for similarly-sized models.
-            self.cache.set(_CACHE_KEY, self.model, size_mb=20)
-            logger.info(f"OwnEmbeddingDetector loaded on {self.device} and cached")
-        else:
-            logger.warning("OwnEmbeddingDetector: no trained model found, signal will return neutral 0.5")
+        # Cache miss - load from disk. Guarded by a per-key lock (F-7):
+        # without it, two concurrent cold-start requests can both observe
+        # the miss above and both independently load the model.
+        with self.cache.get_load_lock(_CACHE_KEY):
+            # Double-check: another thread may have finished loading and
+            # populated the cache while we were waiting for the lock.
+            cached = self.cache.get(_CACHE_KEY)
+            if cached is not None:
+                self.model = cached
+                self._model_loaded = True
+                logger.info("OwnEmbeddingDetector: reused cached model (loaded by a concurrent request)")
+                return
+
+            from backend.services.own_detector.model import load_model
+            self.model  = load_model(self.device)
+            self._model_loaded = True
+            if self.model is not None:
+                self.model.eval()
+                # Estimate ~20MB for the trained EfficientNet-B0 checkpoint —
+                # matches the ballpark used in config/cache_config.py's
+                # MODEL_SIZES table for similarly-sized models.
+                self.cache.set(_CACHE_KEY, self.model, size_mb=20)
+                logger.info(f"OwnEmbeddingDetector loaded on {self.device} and cached")
+            else:
+                logger.warning("OwnEmbeddingDetector: no trained model found, signal will return neutral 0.5")
 
     def _load_centroids(self):
         if self._centroid_loaded:
