@@ -391,9 +391,11 @@ way Phase 23 did.
   between the two
 - Add rotation/pruning to `data/api_keys.jsonl`, which currently grows by one line per successful
   authentication with no bound
-- Rename the four test files that still carry their original numbered-phase names
+- ~~Rename the four test files that still carry their original numbered-phase names
   (`test_phase20.py`, `test_phase21_22.py`, `test_phase24_26.py`, `test_phase27_29.py`) to
-  content-based names
+  content-based names~~ **Done** (second-audit remediation): renamed to
+  `test_jpeg_ghost_and_noise_map.py`, `test_noiseprint_and_cfa.py`, `test_mcmc_platt_evidence_ids.py`,
+  and `test_segment_format_feedback.py` respectively.
 - Address the pre-existing mypy/flake8 backlog, then remove `continue-on-error: true` from those
   CI steps so real findings can actually block a merge — deliberately sequenced after the backlog
   cleanup, not before, so this doesn't retroactively block unrelated work
