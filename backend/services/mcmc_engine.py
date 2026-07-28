@@ -46,6 +46,30 @@ _PRIOR_ALPHA   = 2.0   # Beta prior α
 _PRIOR_BETA    = 2.0   # Beta prior β
 
 
+def _reflect_at_boundaries(x: float, max_reflections: int = 10) -> float:
+    """Reflect x into [0, 1] instead of clipping it there (F-12).
+
+    A clip piles probability mass exactly at the boundary and is not
+    symmetric, which breaks the standard Metropolis acceptance ratio
+    used in run_mcmc() (log_alpha = log_post' - log_post, with no
+    proposal-density correction term -- that formula is only valid for
+    a symmetric proposal). Reflection preserves symmetry: bouncing off
+    a wall at x is exactly as likely to be proposed as landing at x
+    directly would be without the wall there.
+    """
+    reflections = 0
+    while (x < 0.0 or x > 1.0) and reflections < max_reflections:
+        if x < 0.0:
+            x = -x
+        if x > 1.0:
+            x = 2.0 - x
+        reflections += 1
+    # Final numerical safety net only (keeps log_posterior() away from
+    # exact 0/1, where its log terms would diverge) -- not where
+    # boundary handling actually happens; that's the reflection above.
+    return float(np.clip(x, 1e-6, 1.0 - 1e-6))
+
+
 def _log_prior(theta: float) -> float:
     """Log Beta(α, β) prior, returns -inf outside [0,1]."""
     if theta <= 0.0 or theta >= 1.0:
@@ -120,9 +144,7 @@ def run_mcmc(
     total_steps = _BURN_IN + _N_SAMPLES * _THINNING
 
     for step in range(total_steps):
-        # Gaussian proposal reflected at boundaries
-        proposal = theta + rng.normal(0.0, _PROPOSAL_STD)
-        proposal = float(np.clip(proposal, 1e-6, 1.0 - 1e-6))
+        proposal = _reflect_at_boundaries(theta + rng.normal(0.0, _PROPOSAL_STD))
 
         log_post_prop = _log_posterior(proposal, scores, sigmas)
         log_alpha     = log_post_prop - log_post
