@@ -30,12 +30,12 @@ logger = setup_logger(__name__)
 from backend.core.config import settings as _settings
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
-from backend.core.auth import require_analyst
+from backend.core.auth import require_analyst_or_demo
 from fastapi import Depends
 
 router = APIRouter(
     prefix="/api/v1/analyze",
-    dependencies=[Depends(require_analyst)],
+    dependencies=[Depends(require_analyst_or_demo)],
     tags=["Forensic Analysis"]
 )
 
