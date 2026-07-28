@@ -84,6 +84,98 @@ def test_analyze_rejects_tiny_image(client):
     assert response.status_code == 422
 
 
+def _fake_report_with_nan(evidence_id="evid-f8-test"):
+    """Minimal report shape matching everything analyze_image() reads,
+    with a NaN planted in a signal score -- exactly the kind of value a
+    division-by-zero guard elsewhere in the ensemble can legitimately
+    produce."""
+    return {
+        "evidence_id": evidence_id,
+        "summary": {
+            "ai_probability": float("nan"),
+            "ai_classification": "uncertain",
+            "total_detection_signals": 1,
+            "suspicious_detection_signals": 0,
+        },
+        "ai_detection": {
+            "methods_used": ["statistical analysis"],
+            "all_signals": [
+                {"signal_name": "test_signal", "score": float("nan"),
+                 "confidence": 0.9, "explanation": "x", "raw_value": float("inf"),
+                 "expected_range": "0-1"},
+            ],
+        },
+    }
+
+
+def test_f8_sanitize_runs_before_cache_webhook_and_audit_log(client, monkeypatch):
+    """F-8 regression test: the cache entry, the outbound webhook payload,
+    and the audit log must all see a sanitized report -- not just the
+    direct HTTP response.
+
+    Before the fix, forensics_cache.set() / fire_webhooks() / log_analysis()
+    ran on the raw report (still containing NaN/Infinity), and only the
+    return statement's late _sanitize() call protected the HTTP response
+    itself. This monkeypatches report generation to return a report with
+    a planted NaN/Infinity, then inspects what the cache and the webhook
+    call actually received.
+    """
+    import backend.services.image_forensics as forensics_mod
+    import backend.api.routes.analyze as analyze_mod
+    from backend.core.cache import forensics_cache
+
+    monkeypatch.setattr(
+        forensics_mod.ImageForensics, "generate_forensic_report",
+        lambda self: _fake_report_with_nan(),
+    )
+
+    webhook_payloads = []
+    monkeypatch.setattr(
+        "backend.services.webhook_manager.fire_webhooks",
+        lambda evidence_id, result, event: webhook_payloads.append(result),
+    )
+
+    # Capture exactly what gets written to the cache, rather than trying to
+    # independently recompute the file hash analyze_image() uses internally
+    # (it hashes the image AFTER an EXIF-transpose re-encode step, which is
+    # an implementation detail this test shouldn't need to replicate).
+    cache_writes = []
+    _real_cache_set = forensics_cache.set
+    def _spy_cache_set(key, value):
+        cache_writes.append(value)
+        return _real_cache_set(key, value)
+    monkeypatch.setattr(forensics_cache, "set", _spy_cache_set)
+
+    image_bytes = _make_image(256, 256, seed=99)
+    response = client.post(
+        "/api/v1/analyze/image",
+        files={"file": ("f8_test.jpg", image_bytes, "image/jpeg")}
+    )
+    assert response.status_code == 200
+
+    # 1) The HTTP response itself must be clean (this part already worked
+    #    before the fix, since JSON encoding NaN/Infinity would otherwise
+    #    either fail or emit invalid tokens).
+    body = response.json()
+    assert body["summary"]["ai_probability"] == 0.0
+    assert body["ai_detection"]["all_signals"][0]["score"] == 0.0
+    assert body["ai_detection"]["all_signals"][0]["raw_value"] == 0.0
+
+    # 2) The webhook payload must ALSO be sanitized -- this is what F-8
+    #    actually fixes (it was NOT true before the fix).
+    assert len(webhook_payloads) == 1
+    assert webhook_payloads[0]["summary"]["ai_probability"] == 0.0
+    assert webhook_payloads[0]["ai_detection"]["all_signals"][0]["score"] == 0.0
+
+    # 3) What actually gets written to the cache must ALSO be sanitized --
+    #    the cache-hit branch no longer runs its own separate sanitize copy
+    #    at all (F-27), so it can only return clean data if what was
+    #    stored was already clean.
+    assert len(cache_writes) == 1
+    assert cache_writes[0]["summary"]["ai_probability"] == 0.0
+    assert cache_writes[0]["ai_detection"]["all_signals"][0]["score"] == 0.0
+
+
 def test_health_endpoint_returns_status(client):
     response = client.get("/health")
     assert response.status_code == 200
