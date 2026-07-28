@@ -92,22 +92,11 @@ def detect_noiseprint(image_bytes: bytes, filename: str = "unknown") -> Dict[str
         residual_norm = (residual - float(np.mean(residual))) / r_std
 
         # ── Step 2: Global reference fingerprint ─────────────────────────────
-        # Average residual over all patches = reference camera fingerprint
-        # BUG FIX: this was previously `residual_norm.copy()` — an exact
-        # copy of the very same array every patch is compared against,
-        # meaning every patch-vs-reference cosine similarity was really
-        # patch-vs-itself, i.e. cosine(v, v) == 1.0 for every patch,
-        # unconditionally, regardless of image content. Verified by
-        # execution: this made the signal score exactly 0.0 ("strongly
-        # authentic") for every image, AI-generated or not.
-        #
-        # A genuine reference must be a smoothed/aggregated estimate that
-        # is NOT identical to any individual patch. Heavy Gaussian blur of
-        # the full residual approximates the "camera-wide" fixed-pattern
-        # component while removing each patch's own local content —
-        # closer in spirit to a true PRNU-style reference, though still
-        # not a multi-image camera-reference average (see docstring note
-        # on what this detector can and cannot claim to measure).
+        # Heavy Gaussian blur of the full residual approximates the
+        # "camera-wide" fixed-pattern component while removing each
+        # patch's own local content -- a genuine aggregate reference, not
+        # an exact copy of any individual patch (see docstring note on
+        # what this detector can and cannot claim to measure).
         import cv2 as _cv2
         _blur_ksize = max(31, (min(residual_norm.shape) // 4) | 1)  # odd kernel
         global_ref = _cv2.GaussianBlur(residual_norm, (_blur_ksize, _blur_ksize), 0)
