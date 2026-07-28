@@ -38,7 +38,7 @@ def _load_xgb():
         _xgb_cache.get("explainer"),
     )
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from backend.core.logger import setup_logger
 from backend.services.statistical_detector import StatisticalDetector
 from backend.services.dire_detector import DIREDetector
@@ -156,6 +156,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             base_report, dire_result, clip_result, own_result, prnu_result,
             ela_result, metadata_result, dct_result, jpeg_ghost_result,
             noise_map_result, noiseprint_result, cfa_result,
+            image_type_info=_img_type,
         )
 
     def combine_signals(
@@ -172,6 +173,7 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         noise_map_result:  Dict[str, Any],
         noiseprint_result: Dict[str, Any],
         cfa_result:        Dict[str, Any],
+        image_type_info:   Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Combine pre-computed signal results into the final ensemble report.
@@ -369,6 +371,13 @@ class AdvancedEnsembleDetector(StatisticalDetector):
                 "jpeg_ghost", "noise_map", "noiseprint", "cfa",
             ],
         }
+        if image_type_info is not None:
+            # F-26: classify_image_type() was being called a second time,
+            # with identical inputs, inside ImageForensics.generate_
+            # forensic_report() for the top-level report's own image_type
+            # field. Attaching it here lets that caller reuse this result
+            # instead of recomputing the same thing.
+            result["image_type_info"] = image_type_info
 
         # MCMC probabilistic distribution
         from backend.services.mcmc_engine import run_mcmc as _run_mcmc
