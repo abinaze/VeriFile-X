@@ -239,7 +239,7 @@ async def health_check(request: Request):
     # identify exactly which detectors are running in fallback mode.
     _degraded_detectors = []
     if not _clip_ok:
-        _degraded_detectors.append("clip_database — CLIP scores will be random placeholders")
+        _degraded_detectors.append("clip_database — CLIP signal will report confidence=0.0 and be excluded from the ensemble")
     if not _own_ok:
         _degraded_detectors.append("own_embedding — EfficientNet embedding scores will be 0.5")
     if not _xgb_ok:
