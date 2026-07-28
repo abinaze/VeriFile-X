@@ -13,8 +13,22 @@ Quality tiers:
 from backend.core.logger import setup_logger
 from typing import Dict, Any
 from io import BytesIO
+from PIL import Image
 
 logger = setup_logger(__name__)
+
+# Guard against decompression bombs (e.g. 1KB PNG -> 4GB bitmap), set at
+# import time (F-18) rather than inside assess_image_quality() -- this
+# module used to set it only when that function ran, but
+# analyze_image()'s EXIF-orientation-correction step (Image.open() +
+# exif_transpose() + .save(), which fully decodes and re-encodes pixel
+# data -- exactly the operation this limit exists to protect) ran
+# BEFORE assess_image_quality() in the request handler, under Pillow's
+# default ~89-megapixel ceiling instead of this module's intended,
+# tighter 50-megapixel one. Setting it here means it takes effect the
+# moment this module is imported, before any request is ever handled,
+# rather than only after the first call to assess_image_quality().
+Image.MAX_IMAGE_PIXELS = 50_000_000
 
 MIN_WIDTH  = 64
 MIN_HEIGHT = 64
@@ -25,10 +39,6 @@ RECOMMENDED_MIN_HEIGHT = 256
 
 def assess_image_quality(image_bytes: bytes, filename: str = "unknown") -> Dict[str, Any]:
     from PIL import Image
-    # Guard against decompression bombs (e.g. 1KB PNG → 4GB bitmap).
-    # We set a generous but finite limit; forensic analysis does not
-    # need images larger than ~50 MP.
-    Image.MAX_IMAGE_PIXELS = 50_000_000
     warnings = []
 
     try:

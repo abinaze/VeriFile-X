@@ -14,6 +14,7 @@ from typing import List
 
 from backend.services.image_forensics import ImageForensics
 from backend.utils.validators import validate_file, FileValidationError
+from backend.utils.image_quality import assess_image_quality
 from backend.core.logger import setup_logger
 from backend.core.cache import forensics_cache
 from backend.services.metrics_collector import record_analysis
@@ -193,7 +194,6 @@ async def analyze_image(
             )
 
         # Quality gate — reject images too small or unreadable for forensics
-        from backend.utils.image_quality import assess_image_quality
         quality = assess_image_quality(file_bytes, file.filename)
         if not quality["suitable"]:
             raise HTTPException(
