@@ -346,9 +346,15 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         )
         result["probability_distribution"] = probability_distribution
 
-        # Platt Wilson interval for calibration confidence
-        from backend.services.platt_calibrator import calibrate_with_interval as _cwi
-        result["calibration"] = _cwi(weighted_score, signals=all_signals)
+        # Wilson interval around the already-calibrated score (F-3).
+        # weighted_score is already final here -- either XGBoost's own
+        # predict_proba (xgb branch) or a single Platt application
+        # (fallback branch, above) -- so re-running it through Platt's
+        # sigmoid a second time would double-transform it, causing
+        # result["calibration"]["calibrated"] to silently disagree with
+        # the headline result["ai_probability"] for the same report.
+        from backend.services.platt_calibrator import interval_around_calibrated as _iac
+        result["calibration"] = _iac(weighted_score, signals=all_signals)
 
         logger.info(
             f"Advanced ensemble complete: {classification} "
