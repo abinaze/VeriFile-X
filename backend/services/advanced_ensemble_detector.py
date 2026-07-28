@@ -56,6 +56,21 @@ from backend.services.cfa_detector import detect_cfa_artifacts
 logger = setup_logger(__name__)
 
 
+def _aggregate_stat_confidence(all_sub_signals: list) -> float:
+    """Aggregate confidence for the 19-signal statistical bundle (F-13).
+
+    Previously hardcoded to 1.0 regardless of how many of the 19
+    sub-signals actually succeeded. Each sub-signal already reports its
+    own real confidence (e.g. 0.92 on success, a 0.3 fallback on
+    "Analysis failed - insufficient data") -- averaging those gives the
+    outer ensemble something real to gate on, instead of always fully
+    trusting the bundle.
+    """
+    if not all_sub_signals:
+        return 0.0
+    return sum(s.get("confidence", 0.0) for s in all_sub_signals) / len(all_sub_signals)
+
+
 class AdvancedEnsembleDetector(StatisticalDetector):
     """
     State-of-the-art ensemble combining:
@@ -204,9 +219,22 @@ class AdvancedEnsembleDetector(StatisticalDetector):
             return base_weight * max(0.05, min(2.0, m))
 
         # Base weights sum to 1.00 across all 12 top-level ensemble inputs.
+        # F-13: the top-level ensemble excludes any of the 11 named
+        # signals when their confidence == 0 (see "_active" filter below),
+        # but the "stat" bundle folding in all 19 statistical sub-signals
+        # used to be hardcoded to confidence=1.0 regardless of how many
+        # of those 19 actually succeeded. Each sub-signal method already
+        # reports its own real confidence (e.g. 0.92 on success, a 0.3
+        # fallback on "Analysis failed - insufficient data") -- this
+        # averages those into one aggregate confidence for the bundle, so
+        # a bad edge case in several sub-signals now measurably reduces
+        # how much the outer ensemble trusts the bundle as a whole,
+        # instead of it always being fully trusted.
+        _stat_confidence = _aggregate_stat_confidence(base_report.get("all_signals", []))
+
         _raw_signals = [
             ("dire",       _fw("dire reconstruction error",   0.21), dire_result["score"],       dire_result.get("confidence", 0)),
-            ("stat",       _fw("statistical analysis",        0.20), base_report["ai_probability"], 1.0),
+            ("stat",       _fw("statistical analysis",        0.20), base_report["ai_probability"], _stat_confidence),
             ("clip",       _fw("clip embedding analysis",      0.14), clip_result["score"],       clip_result.get("confidence", 0)),
             ("own",        _fw("own embedding detection",      0.08), own_result["score"],       own_result.get("confidence", 0)),
             ("prnu",       _fw("prnu camera fingerprint",       0.08), prnu_result["score"],       prnu_result.get("confidence", 0)),
