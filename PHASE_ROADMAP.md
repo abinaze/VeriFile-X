@@ -404,6 +404,90 @@ way Phase 23 did.
 
 ---
 
+### Phase 34 — Second Independent Audit (Audit 2) Remediation
+
+**Status:** DONE for F-1 through F-8 and F-12 through F-30 (branch `fix/second-audit-remediation`).
+F-9/F-10/F-11 remain intentionally unactioned (already tracked above, no new action taken).
+F-16/F-17/F-20 remain intentionally deferred (large-effort items needing their own dedicated
+session — see `REMAINING_FIXES.md`). F-5 is partially done: `cases.py` now fully enforces
+`ROLES` per HTTP method; extending the same enforcement to `analyze.py` was deliberately deferred
+since that router also carries the public-demo-key logic below, and combining both concerns
+safely deserves its own careful pass rather than being bundled here.
+
+**Summary:** A second, independent professional audit (`VeriFile-X_Security_Audit_Report.md`,
+30 findings F-1–F-30) found real regressions introduced *by* Phase 32's own fixes (most
+importantly: the auth fix broke the public frontend entirely) plus new issues Phase 32 didn't
+cover. This phase is the complete remediation for everything reasonably actionable in one
+session, verified fix-by-fix against a real, executed test suite (not just `py_compile`) —
+several fixes have dedicated regression tests that were confirmed to fail against the pre-fix
+code and pass against the fix.
+
+**Critical — public demo restored (F-1):**
+- Added an opt-in, fail-closed `PUBLIC_DEMO_KEY` setting and a `require_analyst_or_demo`
+  dependency so the public, sign-up-free frontend can authenticate against the now-secured
+  `analyze.py` router without exposing a real per-user key. `analyze.py` was requiring auth with
+  no mechanism in the shipped frontend to provide it — every analysis request was failing with 401.
+
+**High-severity (F-2 through F-8):**
+- Neutralized CSV/formula injection in `report_exporter.py` (filenames and EXIF-derived text
+  starting with `=`, `+`, `-`, `@` are now prefixed with a quote before being written)
+- Fixed double-calibration: `advanced_ensemble_detector.py` was re-applying Platt's sigmoid to an
+  already-final probability, so `ai_probability` and `calibration.calibrated` silently disagreed
+  in every report — added `interval_around_calibrated()` for already-final scores, left
+  `calibrate_with_interval()` unchanged for genuinely raw ones
+- Finished centralizing auth: `keys.py`, `webhooks.py`, `feedback.py` now import
+  `backend.core.auth`'s `require_admin`/`require_analyst` directly (verified via object-identity
+  tests) instead of carrying local copies that had already silently diverged
+- Enforced the `ROLES` per-method permission table on `cases.py` (was defined but never consulted
+  — an analyst key could PATCH/DELETE cases despite `ROLES["analyst"]` having no such permission,
+  and a viewer key got 403 on literally every endpoint including plain GETs)
+- Added real per-key salting to API key hashes (was plain unsalted SHA-256, contradicting
+  README/SECURITY.md's existing "salted hashes" claim) plus a constant-time comparison
+- Closed a TOCTOU race in lazy model loading (`ModelCache.get_load_lock()`, wired into
+  `clip_detector.py`, `dire_detector.py`, `own_embedding_detector.py`) — concurrent cold-start
+  requests were each independently loading full models, confirmed to exceed the cache's memory
+  limit and thrash via eviction
+- Moved NaN/Infinity sanitization to run immediately after report generation instead of right
+  before the HTTP response — `forensics_cache`, outbound webhooks, and the audit log were all
+  previously seeing the raw, unsanitized report
+
+**Medium/low findings (F-12 through F-30):**
+- Implemented true boundary reflection in the MCMC sampler (was clipping despite the docstring
+  claiming reflection, which biases credible intervals near 0/1)
+- Gave the 19-signal statistical bundle a real aggregate confidence instead of a hardcoded 1.0
+- Pinned the CLIP git dependency to a specific commit SHA, and added a SHA-256 integrity check in
+  front of every `pickle.load()` call site (mechanism only for now — this session's snapshot only
+  has Git-LFS pointer stubs for the reference files, so there's nothing real to hash yet; see
+  `scripts/generate_model_hashes.py`)
+- Added a Content-Length pre-check to `upload.py`, matching `analyze.py`'s existing one
+- Fixed decompression-bomb protection running after, not before, the EXIF-orientation
+  re-encode step
+- Removed a dead PDF-string-escaping helper never called anywhere
+- Corrected stale documentation: `/health`'s text about CLIP database fallback behavior, two
+  `.env.example` files (a stale `VERSION` and a CORS format that would have silently broken CORS
+  for anyone who copied it), and a stale "Validated accuracy: 85-92%" docstring in
+  `advanced_ensemble_detector.py` that Phase 32's README/frontend cleanup had missed
+- Aligned `httpx`'s version across `requirements*.txt` and the lock file
+- Added `.dockerignore`, a non-root `USER`, and a `HEALTHCHECK` to the Dockerfile
+- Deduplicated `classify_image_type()`, which ran twice per request with identical inputs
+- Applied the frontend's `esc()` escaping helper to the five hash-display fields for consistency
+
+**Documentation/dependency hygiene:**
+- Corrected "Nash Equilibrium" wording in `feedback_manager.py` and `feedback.py` (7 mentions
+  across both files) — the same overclaim Phase 32 already corrected in this file's Phase 29
+  entry, never propagated to the actual source files
+- Bumped Pillow 12.2.0 → 12.3.0 in response to ~20 new High-severity Dependabot alerts (a wave of
+  decompression-bomb-check bypasses, a PDF-parser infinite loop, and several heap OOB read/write
+  issues), verified against the real test suite
+
+**Campaign E (mechanical cleanup, requested alongside the audit remediation):**
+- Renamed the four remaining phase-numbered test files to content-based names (see Phase 33 above)
+- Trimmed the many verbose, multi-paragraph "here's what was wrong and why" comments accumulated
+  across 17 files down to concise 1-2 line comments, now that the underlying fixes are stable —
+  that narrative lives in commit history instead
+
+---
+
 ## GitHub Issue Template
 
 Use this when opening an issue for a new phase or bug fix:
