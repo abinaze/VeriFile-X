@@ -68,6 +68,45 @@ def test_analyst_auth_is_the_same_shared_object_everywhere():
     assert feedback_route._require_analyst is core_auth.require_analyst
 
 
+# ── F-5: ROLES per-method enforcement (cases.py) ────────────────────────────
+
+def test_viewer_role_can_reach_read_only_case_endpoints(tmp_path, monkeypatch):
+    """F-5 regression test: before this fix, a viewer-role key could
+    authenticate successfully but got 403 on literally every cases.py
+    endpoint, including plain GETs -- ROLES["viewer"] = {"GET"} was
+    defined but never consulted. A viewer key must now be able to list
+    cases (GET) ..."""
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    from backend.services import api_key_manager
+
+    monkeypatch.setattr(api_key_manager, "KEYS_PATH", tmp_path / "keys.jsonl")
+    viewer = api_key_manager.create_key("pytest-viewer", role="viewer")
+
+    viewer_client = TestClient(app)
+    viewer_client.headers.update({"Authorization": f"Bearer {viewer['key']}"})
+
+    response = viewer_client.get("/api/v1/cases/")
+    assert response.status_code == 200
+
+
+def test_viewer_role_cannot_create_cases(tmp_path, monkeypatch):
+    """... but still correctly cannot POST (create), matching
+    ROLES["viewer"] = {"GET"} having no "POST"."""
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    from backend.services import api_key_manager
+
+    monkeypatch.setattr(api_key_manager, "KEYS_PATH", tmp_path / "keys.jsonl")
+    viewer = api_key_manager.create_key("pytest-viewer", role="viewer")
+
+    viewer_client = TestClient(app)
+    viewer_client.headers.update({"Authorization": f"Bearer {viewer['key']}"})
+
+    response = viewer_client.post("/api/v1/cases/", json={"name": "Should Be Blocked"})
+    assert response.status_code == 403
+
+
 def test_analyze_rejects_invalid_key():
     client = _bare_client()
     client.headers.update({"Authorization": "Bearer vfx_not_a_real_key"})
