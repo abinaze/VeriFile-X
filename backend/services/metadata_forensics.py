@@ -81,14 +81,6 @@ def _dms_to_decimal(dms, ref: str) -> float:
     """
     Convert an EXIF (degrees, minutes, seconds) tuple to signed decimal
     degrees, applying the hemisphere reference ('N'/'S'/'E'/'W').
-
-    BUG FIX: the previous check read only dms[0] (the DEGREES component
-    of the DMS tuple — always positive, always in [0,90]/[0,180] by
-    construction) and never looked at GPSLatitudeRef/GPSLongitudeRef at
-    all. Since a DMS degrees component can mathematically never fall
-    outside its own valid range, the old "plausibility" check could
-    never fail on any real (or even carelessly faked) EXIF data — it
-    was dead logic that always said "plausible."
     """
     if isinstance(dms, tuple) and len(dms) >= 3:
         degrees, minutes, seconds = float(dms[0]), float(dms[1]), float(dms[2])
