@@ -80,6 +80,8 @@ class OwnEmbeddingDetector:
             self._centroid_loaded = True
             return
         try:
+            from backend.core.model_integrity import verify_integrity, ModelIntegrityError
+            verify_integrity(CENTROIDS_PATH)
             with open(CENTROIDS_PATH, "rb") as f:
                 db = pickle.load(f)
             self.real_centroid = db["real_centroid"]
@@ -88,6 +90,12 @@ class OwnEmbeddingDetector:
                 "Loaded centroids: %d real, %d AI, sep=%.4f",
                 db["real_count"], db["ai_count"], db["separation"],
             )
+        except ModelIntegrityError:
+            # A hash mismatch is a materially different, higher-severity
+            # signal than "file absent" or "file is an LFS pointer stub" --
+            # let it propagate rather than silently falling back to
+            # neutral scoring as if nothing were wrong.
+            raise
         except Exception as exc:
             # Handles Git LFS pointer stubs (tiny ASCII text) and corrupt files.
             # Always set _centroid_loaded=True so we don't re-attempt on every
