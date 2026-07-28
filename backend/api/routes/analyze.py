@@ -55,12 +55,8 @@ def _sanitize(obj):
     return obj
 
 # Standalone limiter for this router — same config as main.py
-# BUG FIX: previously no default_limits — settings.RATE_LIMIT_PER_MINUTE
-# (declared in .env.example/render.yaml) had no effect anywhere. Wired
-# here as the DEFAULT limit for any endpoint without its own explicit
-# @limiter.limit(...) decorator — the 24 existing per-endpoint
-# decorators are intentionally tuned differently per endpoint cost and
-# are NOT touched by this change.
+# Wires RATE_LIMIT_PER_MINUTE as the default limit for any endpoint
+# without its own explicit @limiter.limit(...) decorator.
 from backend.core.config import settings as _settings
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
