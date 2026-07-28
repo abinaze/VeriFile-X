@@ -1,5 +1,8 @@
 """
-Analyst feedback endpoint — Nash Equilibrium adaptive detection.
+Analyst feedback endpoint — signal weight adaptation from analyst
+corrections (see feedback_manager.py; previously mistitled "Nash
+Equilibrium adaptive detection" here, same overclaim already corrected
+in PHASE_ROADMAP.md/README/feedback_manager.py).
 
 Routes:
   POST /api/v1/feedback          — submit correction (analyst/admin)
@@ -35,7 +38,8 @@ async def submit_feedback(
 
     When a result is wrong, submit the true label and the signal list
     from the forensic report.  Signal weights are updated automatically
-    using the Nash gradient update rule.
+    using the per-signal weight-penalty update rule (see
+    feedback_manager.py).
     """
     _require_analyst(authorization)
     from backend.services.feedback_manager import record_feedback
