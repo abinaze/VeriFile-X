@@ -1943,11 +1943,11 @@ function renderResults(data) {
  
     const h = data.hashes;
     document.getElementById('hashInfo').innerHTML = `
-        <div class="hash-item"><div class="hash-label">SHA-256</div><div class="hash-value">${h.sha256}</div></div>
-        <div class="hash-item"><div class="hash-label">MD5</div><div class="hash-value">${h.md5}</div></div>
-        <div class="hash-item"><div class="hash-label">Perceptual Hash</div><div class="hash-value">${h.perceptual_hash}</div></div>
-        <div class="hash-item"><div class="hash-label">Average Hash</div><div class="hash-value">${h.average_hash}</div></div>
-        <div class="hash-item"><div class="hash-label">Difference Hash</div><div class="hash-value">${h.difference_hash}</div></div>
+        <div class="hash-item"><div class="hash-label">SHA-256</div><div class="hash-value">${esc(h.sha256)}</div></div>
+        <div class="hash-item"><div class="hash-label">MD5</div><div class="hash-value">${esc(h.md5)}</div></div>
+        <div class="hash-item"><div class="hash-label">Perceptual Hash</div><div class="hash-value">${esc(h.perceptual_hash)}</div></div>
+        <div class="hash-item"><div class="hash-label">Average Hash</div><div class="hash-value">${esc(h.average_hash)}</div></div>
+        <div class="hash-item"><div class="hash-label">Difference Hash</div><div class="hash-value">${esc(h.difference_hash)}</div></div>
     `;
  
     const t     = data.tampering_analysis;
