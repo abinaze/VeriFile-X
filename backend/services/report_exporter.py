@@ -32,6 +32,26 @@ from typing import Dict, Any
 
 logger = setup_logger(__name__)
 
+# Characters that Excel/LibreOffice Calc/Google Sheets treat as the start
+# of a formula when a CSV cell is opened in a spreadsheet (CWE-1236).
+_CSV_FORMULA_CHARS = ("=", "+", "-", "@")
+
+
+def _csv_safe(value: Any) -> str:
+    """Neutralize CSV/formula injection (F-2).
+
+    Any cell whose first character is one of _CSV_FORMULA_CHARS is
+    prefixed with a leading apostrophe, which spreadsheet applications
+    treat as "force this cell to plain text" rather than a formula.
+    Filenames and EXIF-derived text (e.g. metadata_forensics.py's
+    "Software: <exif value>" explanation) are attacker-influenceable and
+    flow into this export unescaped otherwise.
+    """
+    s = str(value)
+    if s and s[0] in _CSV_FORMULA_CHARS:
+        return "'" + s
+    return s
+
 
 # ── JSON export ───────────────────────────────────────────────────────────────
 
