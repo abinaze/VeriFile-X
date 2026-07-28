@@ -203,16 +203,9 @@ class DIREDetector:
         Args:
             image:     Clean latent tensor (1, 4, 64, 64).
             timestep:  Scalar timestep value or tensor.
-            generator: Optional torch.Generator for reproducible noise.
-                       BUG FIX: previously no generator= was passed at all,
-                       drawing from PyTorch's shared GLOBAL default RNG.
-                       main.py seeds that RNG once at process start
-                       (torch.manual_seed(42)) — only the FIRST DIRE call
-                       after startup got that seed; every subsequent call
-                       (any image, any request) drew different noise,
-                       producing a different score for the SAME image
-                       analyzed twice. Passing a per-image seeded
-                       generator (see detect()) restores determinism.
+            generator: Per-image seeded torch.Generator (see detect()) for
+                       reproducible noise across repeated analyses of the
+                       same image.
 
         Returns:
             Noised latent tensor.
