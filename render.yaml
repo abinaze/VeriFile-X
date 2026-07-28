@@ -24,6 +24,17 @@ services:
         value: 500
       - key: LOG_LEVEL
         value: INFO
+      - key: PUBLIC_DEMO_KEY
+        value: vfx_public_demo_2026
+        # Must exactly match the PUBLIC_DEMO_KEY JS constant in
+        # frontend/index.html (F-1). Not a secret -- it ships in the
+        # frontend's own plaintext JS source already, visible to anyone
+        # via view-source. Committing the same value here (rather than
+        # sync: false, which is reserved for genuinely secret values
+        # like ADMIN_KEY_HASH) is deliberate: this env var being unset
+        # is exactly what silently breaks the public demo again with
+        # "Authorization header required", since
+        # require_analyst_or_demo fails closed when it's empty.
       - key: ADMIN_KEY_HASH
         sync: false
         # Set this manually in the Render dashboard (Environment tab) to a
