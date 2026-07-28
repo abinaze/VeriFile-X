@@ -1,6 +1,6 @@
 """
 Tests for segment-level AI detection, TIFF/HEIC format support,
-and Nash Equilibrium adaptive feedback system.
+and the analyst feedback weight-adaptation system.
 """
 import io
 import json
@@ -181,7 +181,7 @@ class TestFormatSupport:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Phase 29 — Nash Equilibrium adaptive feedback
+# Phase 29 — Analyst feedback weight adaptation
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @pytest.fixture()
