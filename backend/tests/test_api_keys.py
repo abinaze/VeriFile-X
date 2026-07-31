@@ -149,3 +149,81 @@ def test_api_verify_endpoint_invalid(client):
     response = client.get("/api/v1/keys/verify",
                           headers={"Authorization": "Bearer vfx_invalid"})
     assert response.status_code == 401
+
+
+# ── F-10: compacted storage (no unbounded growth) + use_count race ─────────
+
+def test_repeated_auth_does_not_grow_the_file(temp_keys_file):
+    """F-10 regression test: the file must stay at exactly one line per
+    key regardless of how many times that key is used to authenticate --
+    previously _save_key() appended a full copy on every successful
+    verify_key() call, so a single key used 100 times produced 100+
+    lines instead of 1."""
+    from backend.services.api_key_manager import create_key, verify_key
+
+    created = create_key("Repeated Use Key", role="analyst")
+    for _ in range(25):
+        result = verify_key(created["key"])
+        assert result is not None
+
+    line_count = sum(1 for line in temp_keys_file.read_text().splitlines() if line.strip())
+    assert line_count == 1, (
+        f"expected exactly 1 line for 1 key after 25 authentications, got {line_count} -- "
+        f"the file is growing unbounded again (F-10)"
+    )
+
+
+def test_multiple_keys_stay_one_line_each(temp_keys_file):
+    from backend.services.api_key_manager import create_key, verify_key
+
+    keys = [create_key(f"Key {i}", role="analyst") for i in range(5)]
+    for k in keys:
+        verify_key(k["key"])
+        verify_key(k["key"])
+
+    line_count = sum(1 for line in temp_keys_file.read_text().splitlines() if line.strip())
+    assert line_count == 5, f"expected exactly 5 lines for 5 keys, got {line_count}"
+
+
+def test_use_count_accurate_under_concurrent_verification():
+    """F-10 regression test: concurrent requests using the SAME key must
+    not lose increments. Previously only the final _save_key() append
+    was lock-protected, not the read-and-increment before it, so two
+    threads could read the same stale use_count and one increment would
+    be silently lost.
+    """
+    import threading
+    from backend.services.api_key_manager import create_key, verify_key, list_keys
+
+    created = create_key("Concurrency Test Key", role="analyst")
+    raw_key = created["key"]
+
+    N_THREADS = 20
+    barrier = threading.Barrier(N_THREADS)
+
+    def _do_verify():
+        barrier.wait()  # maximize actual overlap
+        verify_key(raw_key)
+
+    threads = [threading.Thread(target=_do_verify) for _ in range(N_THREADS)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=5)
+
+    entries = list_keys(include_inactive=True)
+    entry = next(e for e in entries if e["key_id"] == created["key_id"])
+    assert entry["use_count"] == N_THREADS, (
+        f"expected use_count == {N_THREADS} after {N_THREADS} concurrent verifications, "
+        f"got {entry['use_count']} -- increments were lost to the race (F-10)"
+    )
+
+
+def test_revoke_does_not_duplicate_lines(temp_keys_file):
+    from backend.services.api_key_manager import create_key, revoke_key
+
+    created = create_key("Revoke Compaction Test", role="analyst")
+    revoke_key(created["key_id"])
+
+    line_count = sum(1 for line in temp_keys_file.read_text().splitlines() if line.strip())
+    assert line_count == 1, f"expected exactly 1 line after create+revoke, got {line_count}"
