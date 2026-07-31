@@ -202,3 +202,62 @@ class TestAPIAuth:
         """GET /api/v1/webhooks/deliveries without auth → 401."""
         resp = client.get("/api/v1/webhooks/deliveries")
         assert resp.status_code == 401
+
+
+class TestDeliveryTimeSSRFGuard:
+    """F-9 regression tests: the SSRF guard must run again immediately
+    before each delivery attempt, not just once at registration -- a
+    hostname can resolve to a safe address at registration time and to
+    an internal/metadata address later (DNS rebinding), especially
+    across the retry delays in _deliver_with_retry.
+    """
+
+    def test_attempt_delivery_blocks_when_target_becomes_unsafe(self, monkeypatch):
+        """Simulates DNS rebinding: the target was safe at registration,
+        but resolves to a disallowed address by the time delivery is
+        attempted. _attempt_delivery must reject it and must NOT reach
+        the network at all.
+        """
+        import backend.services.webhook_manager as wm
+
+        def _now_unsafe(url):
+            raise ValueError(f"Webhook URL resolves to a disallowed address (simulated rebinding to 169.254.169.254).")
+
+        monkeypatch.setattr(wm, "_reject_unsafe_webhook_target", _now_unsafe)
+
+        network_was_called = []
+        def _fail_if_called(*args, **kwargs):
+            network_was_called.append(True)
+            raise AssertionError("must not reach the network once the SSRF guard rejects the target")
+        monkeypatch.setattr(wm, "_URLRequest", _fail_if_called)
+
+        success, status_code, error = wm._attempt_delivery(
+            "https://example.com/hook", b"{}", "sig", "webhook-1", "delivery-1"
+        )
+
+        assert success is False
+        assert status_code is None
+        assert "SSRF" in error
+        assert network_was_called == [], "delivery attempted network access despite the SSRF guard rejecting it"
+
+    def test_attempt_delivery_proceeds_when_target_still_safe(self, monkeypatch):
+        """The common case: target is still safe at delivery time --
+        must not be blocked, and should reach the (mocked) network."""
+        import backend.services.webhook_manager as wm
+
+        monkeypatch.setattr(wm, "_reject_unsafe_webhook_target", lambda url: None)
+
+        class _FakeResponse:
+            status = 200
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        monkeypatch.setattr(wm, "urlopen", lambda req, timeout=10: _FakeResponse())
+
+        success, status_code, error = wm._attempt_delivery(
+            "https://example.com/hook", b"{}", "sig", "webhook-1", "delivery-1"
+        )
+
+        assert success is True
+        assert status_code == 200
+        assert error is None

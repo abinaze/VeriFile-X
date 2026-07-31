@@ -9,6 +9,7 @@ Roles:
   admin   - all methods including key management
 """
 import json
+import os
 import uuid
 import hashlib
 import secrets
@@ -74,6 +75,43 @@ def _save_key(entry: Dict[str, Any]) -> None:
         logger.error(f"Failed to save API key: {e}")
 
 
+def _rewrite_keys_file(keys: Dict[str, Dict[str, Any]]) -> None:
+    """Atomically rewrite the whole keys file with exactly one line per
+    key (F-10).
+
+    Replaces the previous append-only-forever behavior: _save_key() used
+    to append a full copy of an entry on every successful authentication
+    (not just on creation), so data/api_keys.jsonl grew by one line per
+    auth with no bound, and _load_keys() re-read and re-parsed every
+    accumulated line on every single call. Writes to a temp file first
+    and os.replace()'s it into place, which is atomic on both POSIX and
+    Windows -- a crash mid-write can never leave a corrupt/partial file
+    in KEYS_PATH.
+    """
+    KEYS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = KEYS_PATH.with_suffix(KEYS_PATH.suffix + ".tmp")
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        for entry in keys.values():
+            f.write(json.dumps(entry) + "\n")
+    os.replace(tmp_path, KEYS_PATH)
+
+
+def _upsert_key(entry: Dict[str, Any]) -> None:
+    """Insert or update a single key entry, compacted (F-10).
+
+    Performs the full load-merge-rewrite sequence under one lock
+    acquisition, so concurrent callers can no longer race on a stale
+    read -- this is also what closes the use_count undercount the audit
+    flagged alongside the plain unbounded-growth issue (previously only
+    the final _save_key() append was lock-protected, not the read and
+    increment before it).
+    """
+    with _key_write_lock:
+        keys = _load_keys()
+        keys[entry["key_id"]] = entry
+        _rewrite_keys_file(keys)
+
+
 def create_key(name: str, role: str = "analyst",
                description: str = "", created_by: str = "system") -> Dict[str, Any]:
     if role not in ROLES:
@@ -92,7 +130,7 @@ def create_key(name: str, role: str = "analyst",
         "key_hash": key_hash, "salt": salt, "created_at": _now(), "created_by": created_by,
         "last_used": None, "use_count": 0, "active": True,
     }
-    _save_key(entry)
+    _upsert_key(entry)
     logger.info(f"API key created: {key_id} name={name} role={role}")
     return {**entry, "key": raw_key,
             "warning": "Save this key now. It will not be shown again.",
@@ -103,7 +141,7 @@ def verify_key(raw_key: str) -> Optional[Dict[str, Any]]:
     if not raw_key or not raw_key.startswith("vfx_"):
         return None
     keys = _load_keys()
-    for entry in keys.values():
+    for key_id, entry in keys.items():
         # salt defaults to "" for legacy records created before F-6, which
         # reproduces the exact old unsalted hash -- so already-issued keys
         # keep verifying correctly with no migration step required.
@@ -112,24 +150,34 @@ def verify_key(raw_key: str) -> Optional[Dict[str, Any]]:
             secrets.compare_digest(entry.get("key_hash", ""), expected_hash)
             and entry.get("active", False)
         ):
-            entry["last_used"] = _now()
-            entry["use_count"] = entry.get("use_count", 0) + 1
+            # F-10: re-read the latest on-disk state and increment
+            # use_count inside the SAME lock as the write. Previously
+            # only the final _save_key() append was lock-protected, not
+            # the read-and-increment before it -- two concurrent
+            # requests using the same key could both read the same
+            # stale use_count, and one increment would be lost.
             with _key_write_lock:
-                _save_key(entry)
-            return {k: v for k, v in entry.items() if k not in ("key_hash", "salt")}
+                latest_keys = _load_keys()
+                latest_entry = latest_keys.get(key_id, entry)
+                latest_entry["last_used"] = _now()
+                latest_entry["use_count"] = latest_entry.get("use_count", 0) + 1
+                latest_keys[key_id] = latest_entry
+                _rewrite_keys_file(latest_keys)
+            return {k: v for k, v in latest_entry.items() if k not in ("key_hash", "salt")}
     return None
 
 
 
 def revoke_key(key_id: str, revoked_by: str = "system") -> Dict[str, Any]:
-    keys = _load_keys()
-    if key_id not in keys:
-        return {"error": f"Key not found: {key_id}"}
-    entry = keys[key_id]
-    entry["active"]     = False
-    entry["revoked_at"] = _now()
-    entry["revoked_by"] = revoked_by
-    _save_key(entry)
+    with _key_write_lock:
+        keys = _load_keys()
+        if key_id not in keys:
+            return {"error": f"Key not found: {key_id}"}
+        entry = keys[key_id]
+        entry["active"]     = False
+        entry["revoked_at"] = _now()
+        entry["revoked_by"] = revoked_by
+        _rewrite_keys_file(keys)
     logger.info(f"API key revoked: {key_id}")
     return {k: v for k, v in entry.items() if k not in ("key_hash", "salt")}
 
