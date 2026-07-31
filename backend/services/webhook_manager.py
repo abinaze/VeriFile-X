@@ -340,6 +340,25 @@ def _attempt_delivery(
     delivery_id: str,
 ) -> tuple[bool, Optional[int], Optional[str]]:
     """Perform a single HTTP POST. Returns (success, status_code, error)."""
+    # F-9: re-run the same SSRF guard used at registration, immediately
+    # before every delivery attempt (including each retry). The
+    # registration-time check alone leaves a DNS-rebinding window open --
+    # a hostname can resolve to a safe address at registration and to an
+    # internal/metadata address later, especially across the retry delays
+    # in _deliver_with_retry (up to _RETRY_DELAYS apart). Treated as a
+    # delivery failure (not a crash) so it flows through the existing
+    # retry/suspend/logging machinery, but logged distinctly so a real
+    # rebinding attempt is visible and not indistinguishable from an
+    # ordinary network failure.
+    try:
+        _reject_unsafe_webhook_target(url)
+    except ValueError as exc:
+        logger.error(
+            "Webhook %s delivery blocked at send-time SSRF check: %s",
+            webhook_id, exc,
+        )
+        return False, None, f"Blocked by delivery-time SSRF guard: {exc}"
+
     req = _URLRequest(
         url,
         data=body,
