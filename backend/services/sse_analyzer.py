@@ -12,7 +12,9 @@ Previously the SSE path ran all 30 signals twice:
 DIRE and OwnEmbedding were also missing from the individual events.
 
 New architecture:
-  1. Stream 19 statistical signals via super().detect() on the parent class
+  1. Stream 19 statistical signals via the composed StatisticalDetector
+     instance (detector._stat.detect()) -- F-16: AdvancedEnsembleDetector
+     composes this rather than inheriting from it
   2. Stream DIRE, CLIP, OwnEmbedding individually
   3. Stream 8 forensic signals individually
   4. Call combine_signals() ONCE on the already-computed results
@@ -78,10 +80,11 @@ async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[s
         try:
             # ── 19 statistical signals ─────────────────────────────────────
             def _run_statistical():
-                # Call the grandparent detect() — StatisticalDetector.detect()
-                # — which runs only the 19 statistical signals without
-                # invoking AdvancedEnsembleDetector.detect() recursively.
-                return super(AdvancedEnsembleDetector, detector).detect()
+                # F-16: AdvancedEnsembleDetector composes a StatisticalDetector
+                # instance (detector._stat) rather than inheriting from it, so
+                # this calls that composed instance directly instead of the
+                # old super(AdvancedEnsembleDetector, detector).detect().
+                return detector._stat.detect()
 
             base_report = await loop.run_in_executor(None, _run_statistical)
             for sig in base_report.get("all_signals", []):
