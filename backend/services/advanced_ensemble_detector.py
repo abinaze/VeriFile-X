@@ -71,7 +71,7 @@ def _aggregate_stat_confidence(all_sub_signals: list) -> float:
     return sum(s.get("confidence", 0.0) for s in all_sub_signals) / len(all_sub_signals)
 
 
-class AdvancedEnsembleDetector(StatisticalDetector):
+class AdvancedEnsembleDetector:
     """
     State-of-the-art ensemble combining:
     - Statistical methods (19 signals)
@@ -84,11 +84,27 @@ class AdvancedEnsembleDetector(StatisticalDetector):
     This docstring previously claimed "Validated accuracy: 85-92%", the
     same unverified figure already removed from the README and frontend
     marketing copy; it was simply never propagated to this file.
+
+    F-16: composes a StatisticalDetector instance (the 19-signal
+    statistical bundle) rather than inheriting from it. Previously this
+    class sat at the top of a 5-level inheritance chain
+    (AdvancedAIDetector -> UltraAdvancedDetector -> CovarianceDetector ->
+    StatisticalDetector -> AdvancedEnsembleDetector) -- the audit
+    specifically flagged this as confusing (a base class four levels
+    down and this, the actual production entry point, have similar
+    enough names to mix up while skimming file names) and hard to trace
+    (the confidence-gating contract F-13 fixes had to be traced through
+    all five files). Composition makes the relationship explicit:
+    self._stat is simply one input among the 12 this class combines,
+    not something this class secretly *is* via inheritance.
     """
 
     def __init__(self, image_bytes: bytes, filename: str):
         """Initialize ensemble detector."""
-        super().__init__(image_bytes, filename)
+        self.image_bytes = image_bytes
+        self.filename     = filename
+
+        self._stat = StatisticalDetector(image_bytes, filename)
 
         self.dire_detector = DIREDetector()
         self.clip_detector = CLIPDetector()
@@ -105,8 +121,8 @@ class AdvancedEnsembleDetector(StatisticalDetector):
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
 
-        # Run parent class methods (19 statistical signals)
-        base_report = super().detect()
+        # Run the composed statistical bundle (19 signals)
+        base_report = self._stat.detect()
 
         # Gate camera-forensic signals by image content type.
         # PRNU/ELA/metadata are designed for camera photos — running them on
