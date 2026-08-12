@@ -116,3 +116,49 @@ def test_sse_stream_signal_structure(client):
                     break
             except Exception:
                 pass
+
+
+def test_sse_stream_delivers_all_30_signals_with_no_error(client):
+    """F-16 regression test: the previous tests in this file use loose
+    assertions (an OR across event types, a soft break-on-first-match
+    with no final check) that let a real regression slip through --
+    AdvancedEnsembleDetector no longer inheriting from StatisticalDetector
+    broke the super(AdvancedEnsembleDetector, detector).detect() call
+    this module used to stream the 19 statistical signals, silently
+    routing every request into the error handler instead. This asserts
+    the stream actually contains all 30 signal events and never an
+    "error" event for a valid image -- the previous tests would still
+    have passed even with zero signal events delivered.
+    """
+    import json
+    img = _make_jpeg(seed=50)
+    response = client.post(
+        "/api/v1/analyze/image/stream",
+        files={"file": ("test.jpg", img, "image/jpeg")}
+    )
+    if response.status_code == 429:
+        return
+    assert response.status_code == 200
+
+    events = []
+    for line in response.text.split("\n\n"):
+        line = line.strip()
+        if line.startswith("data:"):
+            try:
+                events.append(json.loads(line[5:].strip()))
+            except Exception:
+                pass
+
+    error_events = [e for e in events if e.get("type") == "error"]
+    assert error_events == [], f"stream reported an error event: {error_events}"
+
+    signal_events = [e for e in events if e.get("type") == "signal"]
+    assert len(signal_events) == 30, (
+        f"expected all 30 signals to stream, got {len(signal_events)} -- "
+        f"the statistical-signals block likely failed silently into the "
+        f"error handler"
+    )
+
+    summary_events = [e for e in events if e.get("type") == "summary"]
+    assert len(summary_events) == 1
+    assert summary_events[0]["total_signals"] == 30
