@@ -60,12 +60,17 @@ def _sanitize(obj):
 from backend.core.config import settings as _settings
 limiter = Limiter(key_func=get_remote_address, default_limits=[f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"])
 
-from backend.core.auth import require_analyst_or_demo
+from backend.core.auth import require_role_for_method_or_demo
 from fastapi import Depends
 
 router = APIRouter(
     prefix="/api/v1/analyze",
-    dependencies=[Depends(require_analyst_or_demo)],
+    # F-5 extension: was require_analyst_or_demo (any analyst/admin key,
+    # any method) -- now the same per-method ROLES enforcement cases.py
+    # has, still with the F-1 public demo bypass. A viewer-role key can
+    # now reach GET-only endpoints here (/history, /stats) but still
+    # correctly gets 403 on the POST analysis endpoints.
+    dependencies=[Depends(require_role_for_method_or_demo)],
     tags=["Forensic Analysis"]
 )
 

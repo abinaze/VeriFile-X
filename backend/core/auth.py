@@ -82,3 +82,45 @@ def require_role_for_method(request: Request, authorization: Optional[str] = Hea
             detail=f"Role '{entry.get('role')}' is not permitted to {request.method} this endpoint.",
         )
     return entry
+
+
+def require_role_for_method_or_demo(request: Request, authorization: Optional[str] = Header(None)) -> dict:
+    """FastAPI dependency: require_role_for_method (F-5), extended with the
+    public demo bypass from require_analyst_or_demo (F-1) -- this is the
+    F-5 extension used by analyze.py, so that router gets the same
+    per-method ROLES enforcement cases.py has, without losing the public
+    demo path F-1 added.
+
+    Checks the demo token first, using the exact same fail-closed rule as
+    require_analyst_or_demo (only accepted when settings.PUBLIC_DEMO_KEY
+    is non-empty). A successful demo match is treated as role="analyst"
+    for the ROLES check below, so the demo key can GET/POST like a real
+    analyst key but still correctly gets 403 on PATCH/DELETE. Falling
+    through to a real key, this applies the identical
+    ROLES[entry["role"]] vs request.method check require_role_for_method
+    uses -- so analyze.py and cases.py now enforce identical per-method
+    semantics, instead of analyze.py using the coarser fixed-role check
+    require_analyst_or_demo has (any analyst/admin key, any method).
+    """
+    from backend.core.config import settings
+    from backend.services.api_key_manager import verify_key, ROLES
+
+    if (
+        settings.PUBLIC_DEMO_KEY
+        and authorization == f"Bearer {settings.PUBLIC_DEMO_KEY}"
+    ):
+        entry = {"key_id": "public-demo", "name": "Public Demo", "role": "analyst"}
+    else:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Authorization header required.")
+        entry = verify_key(authorization.removeprefix("Bearer ").strip())
+        if not entry:
+            raise HTTPException(status_code=401, detail="Invalid or inactive API key.")
+
+    allowed_methods = ROLES.get(entry.get("role"), set())
+    if request.method not in allowed_methods:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Role '{entry.get('role')}' is not permitted to {request.method} this endpoint.",
+        )
+    return entry
