@@ -113,3 +113,66 @@ def test_analyze_rejects_invalid_key():
     files = {"file": ("test.png", b"not a real image", "image/png")}
     response = client.post("/api/v1/analyze/image", files=files)
     assert response.status_code == 401
+
+
+# ── F-5 extension: ROLES per-method enforcement (analyze.py) ───────────────
+#
+# analyze.py previously used require_analyst_or_demo, which only checks a
+# fixed set of roles (any analyst/admin key, regardless of HTTP method) --
+# unlike cases.py, which got the stricter require_role_for_method in the
+# original F-5 fix. That meant a viewer-role key was 403'd on every
+# analyze.py endpoint including plain GETs, the same gap F-5 already fixed
+# for cases.py. These two tests mirror
+# test_viewer_role_can_reach_read_only_case_endpoints /
+# test_viewer_role_cannot_create_cases below, against analyze.py instead.
+
+def test_viewer_role_can_reach_read_only_analyze_endpoints(tmp_path, monkeypatch):
+    """A viewer-role key must be able to GET /analyze/history now that
+    analyze.py enforces ROLES per method instead of a fixed role set."""
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    from backend.services import api_key_manager
+
+    monkeypatch.setattr(api_key_manager, "KEYS_PATH", tmp_path / "keys.jsonl")
+    viewer = api_key_manager.create_key("pytest-viewer", role="viewer")
+
+    viewer_client = TestClient(app)
+    viewer_client.headers.update({"Authorization": f"Bearer {viewer['key']}"})
+
+    response = viewer_client.get("/api/v1/analyze/history")
+    assert response.status_code == 200
+
+
+def test_viewer_role_cannot_post_analyze_image(tmp_path, monkeypatch):
+    """... but still correctly cannot POST /analyze/image, matching
+    ROLES["viewer"] = {"GET"} having no "POST"."""
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    from backend.services import api_key_manager
+
+    monkeypatch.setattr(api_key_manager, "KEYS_PATH", tmp_path / "keys.jsonl")
+    viewer = api_key_manager.create_key("pytest-viewer", role="viewer")
+
+    viewer_client = TestClient(app)
+    viewer_client.headers.update({"Authorization": f"Bearer {viewer['key']}"})
+
+    files = {"file": ("test.png", b"not a real image", "image/png")}
+    response = viewer_client.post("/api/v1/analyze/image", files=files)
+    assert response.status_code == 403
+
+
+def test_analyze_demo_key_still_treated_as_analyst(monkeypatch):
+    """F-1's public demo bypass must still work post-F-5-extension: the
+    demo token should be accepted and treated as role="analyst" (GET and
+    POST both allowed), not silently broken by the new ROLES check."""
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "PUBLIC_DEMO_KEY", "pytest_demo_key")
+
+    demo_client = TestClient(app)
+    demo_client.headers.update({"Authorization": "Bearer pytest_demo_key"})
+
+    response = demo_client.get("/api/v1/analyze/history")
+    assert response.status_code == 200
