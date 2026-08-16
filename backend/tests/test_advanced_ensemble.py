@@ -86,3 +86,103 @@ class TestStatBundleConfidence:
         signals = [{"confidence": 0.3} for _ in range(19)]  # worst case: all failed
         assert _aggregate_stat_confidence(signals) == pytest.approx(0.3)
         assert _aggregate_stat_confidence(signals) != 1.0
+
+
+class TestF17ConcurrentSignals:
+    """F-17 (partial): the 19-signal statistical bundle + 8 classical
+    forensic detectors now run in a thread pool instead of one after
+    another. These tests cover what a passing test suite alone won't
+    catch for a concurrency change: determinism (no race corrupting a
+    result), and that the worker count is capped to the actual core
+    count rather than always spinning up 9 threads regardless of what
+    hardware is available.
+
+    Profiling this change (see PROFILING_F17.md) found a real trap:
+    on a single-core host, 9 threads contending for 1 core measured
+    ~1.5x SLOWER than plain sequential execution -- pure context-switch
+    overhead with zero real parallelism, not a hypothetical concern.
+    The fix caps max_workers at os.cpu_count(), so a single-core
+    deployment gracefully falls back to one-thread-at-a-time (matching
+    sequential performance) instead of regressing.
+    """
+
+    def test_repeated_runs_produce_identical_result(self, sample_image_bytes):
+        """The 9 concurrent signals must produce the same combined
+        result every time -- if the thread pool were racing on any
+        shared state, this would be the first place it would show up
+        as a flaky/inconsistent ai_probability across runs."""
+        from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
+
+        results = []
+        for _ in range(3):
+            detector = AdvancedEnsembleDetector(sample_image_bytes, "test.png")
+            report = detector.detect()
+            results.append(report["ai_probability"])
+            detector.cleanup()
+
+        assert len(set(results)) == 1, (
+            f"ai_probability varied across identical repeated runs: {results} "
+            "-- possible race condition in the concurrent signal pool"
+        )
+
+    def test_max_workers_capped_to_cpu_count(self, sample_image_bytes, monkeypatch):
+        """Direct regression test for the single-core slowdown: with
+        os.cpu_count() reporting 1, the pool must be constructed with
+        max_workers=1, not len(_signal_tasks) (9)."""
+        import backend.services.advanced_ensemble_detector as aed
+
+        captured = {}
+        real_executor_cls = aed.ThreadPoolExecutor
+
+        class _CapturingExecutor(real_executor_cls):
+            def __init__(self, max_workers=None, *a, **kw):
+                captured["max_workers"] = max_workers
+                super().__init__(max_workers=max_workers, *a, **kw)
+
+        monkeypatch.setattr(aed, "ThreadPoolExecutor", _CapturingExecutor)
+        monkeypatch.setattr(aed.os, "cpu_count", lambda: 1)
+
+        detector = aed.AdvancedEnsembleDetector(sample_image_bytes, "test.png")
+        detector.detect()
+        detector.cleanup()
+
+        assert captured["max_workers"] == 1
+
+    def test_max_workers_never_exceeds_signal_count(self, sample_image_bytes, monkeypatch):
+        """On a many-core host, the pool still shouldn't over-allocate
+        past the 9 actual tasks -- min(9, cpu_count), not cpu_count."""
+        import backend.services.advanced_ensemble_detector as aed
+
+        captured = {}
+        real_executor_cls = aed.ThreadPoolExecutor
+
+        class _CapturingExecutor(real_executor_cls):
+            def __init__(self, max_workers=None, *a, **kw):
+                captured["max_workers"] = max_workers
+                super().__init__(max_workers=max_workers, *a, **kw)
+
+        monkeypatch.setattr(aed, "ThreadPoolExecutor", _CapturingExecutor)
+        monkeypatch.setattr(aed.os, "cpu_count", lambda: 64)
+
+        detector = aed.AdvancedEnsembleDetector(sample_image_bytes, "test.png")
+        detector.detect()
+        detector.cleanup()
+
+        assert captured["max_workers"] == 9
+
+    def test_cpu_count_none_treated_as_one_worker(self, sample_image_bytes, monkeypatch):
+        """os.cpu_count() can return None on some restricted containers
+        -- must not crash, and must be treated the same as a genuinely
+        single-core host (max_workers=1), not passed through as None
+        (which ThreadPoolExecutor would otherwise interpret as
+        "use a default based on os.cpu_count()", silently reintroducing
+        the oversubscription this fix exists to prevent)."""
+        import backend.services.advanced_ensemble_detector as aed
+
+        monkeypatch.setattr(aed.os, "cpu_count", lambda: None)
+
+        detector = aed.AdvancedEnsembleDetector(sample_image_bytes, "test.png")
+        report = detector.detect()  # must not raise
+        detector.cleanup()
+
+        assert report["total_signals"] == 30
