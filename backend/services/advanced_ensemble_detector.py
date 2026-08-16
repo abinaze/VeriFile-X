@@ -4,9 +4,11 @@ Advanced Ensemble Detector combining Statistical + DIRE + CLIP + Phase-20/21/22 
 This module must have its docstring as the first statement so that
 help(), IDEs, and documentation generators can find it.
 """
+import os
 import pickle
 import numpy as np
 from pathlib import Path as _Path
+from concurrent.futures import ThreadPoolExecutor
 
 _XGB_MODEL_PATH = _Path(__file__).parent.parent.parent / "data" / "reference" / "ensemble_xgb.pkl"
 _xgb_cache: dict = {}
@@ -121,12 +123,12 @@ class AdvancedEnsembleDetector:
         """
         logger.info(f"Starting advanced ensemble detection for {self.filename}")
 
-        # Run the composed statistical bundle (19 signals)
-        base_report = self._stat.detect()
-
-        # Gate camera-forensic signals by image content type.
-        # PRNU/ELA/metadata are designed for camera photos — running them on
-        # screenshots, illustrations, or documents injects noise into the ensemble.
+        # Gate camera-forensic signals by image content type. Run this
+        # first, synchronously -- prnu/ela/metadata below need its result
+        # to decide whether to run at all, and it's fast enough (~0.1s
+        # measured) that serializing just this one call ahead of the
+        # parallel batch below is a negligible cost next to what
+        # parallelizing the rest saves.
         from backend.services.image_type_classifier import classify_image_type as _classify
         _img_type = _classify(self.image_bytes, self.filename)
         logger.info(
@@ -149,24 +151,66 @@ class AdvancedEnsembleDetector:
                 "method":         method,
             }
 
-        # Deep-learning and forensic signals
-        dire_result       = self.dire_detector.detect(self.image_bytes, self.filename)
-        clip_result       = self.clip_detector.detect(self.image_bytes, self.filename)
-        own_result        = self.own_detector.detect(self.image_bytes, self.filename)
-        prnu_result       = (detect_prnu(self.image_bytes, self.filename)
-                             if _img_type["run_prnu"]
-                             else _skipped("PRNU Camera Fingerprint", "prnu_skipped"))
-        ela_result        = (detect_ela(self.image_bytes, self.filename)
-                             if _img_type["run_ela"]
-                             else _skipped("ELA Compression Analysis", "ela_skipped"))
-        metadata_result   = (analyze_metadata(self.image_bytes, self.filename)
-                             if _img_type["run_metadata"]
-                             else _skipped("Metadata Forensics", "metadata_skipped"))
-        dct_result        = detect_dct_artifacts(self.image_bytes, self.filename)
-        jpeg_ghost_result = detect_jpeg_ghost(self.image_bytes, self.filename)
-        noise_map_result  = detect_noise_map(self.image_bytes, self.filename)
-        noiseprint_result = detect_noiseprint(self.image_bytes, self.filename)
-        cfa_result        = detect_cfa_artifacts(self.image_bytes, self.filename)
+        # F-17 (partial): these 9 calls -- the 19-signal statistical
+        # bundle plus the 8 classical forensic detectors -- are mutually
+        # independent (no shared mutable state; every module involved
+        # was grepped for module-level caches/singletons before this
+        # change -- see PROFILING_F17.md) and were previously run one
+        # after another. Profiled sequential sum on a 1600x1200 JPEG:
+        # ~5.4s. Run concurrently in a thread pool, wall-clock drops to
+        # roughly the slowest single signal (~2.1s, the statistical
+        # bundle) -- numpy/opencv/scipy release the GIL during their
+        # heavy lifting, so a thread pool (not just asyncio bookkeeping)
+        # gives real wall-clock parallelism here, not just concurrency.
+        #
+        # DIRE/CLIP/own-embedding are deliberately NOT included in this
+        # pool yet: DIRE loads a DDIMScheduler that's cached and shared
+        # process-wide (see dire_detector.py's _load_model), and both
+        # add_noise() and the denoising loop mutate it -- running DIRE
+        # concurrently with itself needs that resolved first (tracked
+        # separately; not blocking this lower-risk half of F-17).
+        _signal_tasks = {
+            "stat":       lambda: self._stat.detect(),
+            "prnu":       lambda: (detect_prnu(self.image_bytes, self.filename)
+                                    if _img_type["run_prnu"]
+                                    else _skipped("PRNU Camera Fingerprint", "prnu_skipped")),
+            "ela":        lambda: (detect_ela(self.image_bytes, self.filename)
+                                    if _img_type["run_ela"]
+                                    else _skipped("ELA Compression Analysis", "ela_skipped")),
+            "metadata":   lambda: (analyze_metadata(self.image_bytes, self.filename)
+                                    if _img_type["run_metadata"]
+                                    else _skipped("Metadata Forensics", "metadata_skipped")),
+            "dct":        lambda: detect_dct_artifacts(self.image_bytes, self.filename),
+            "jpeg_ghost": lambda: detect_jpeg_ghost(self.image_bytes, self.filename),
+            "noise_map":  lambda: detect_noise_map(self.image_bytes, self.filename),
+            "noiseprint": lambda: detect_noiseprint(self.image_bytes, self.filename),
+            "cfa":        lambda: detect_cfa_artifacts(self.image_bytes, self.filename),
+        }
+        # Cap workers at the actual core count: on a single-core deployment,
+        # 9 threads competing for 1 core is pure context-switch overhead
+        # with zero real parallelism -- measured ~1.5x SLOWER than plain
+        # sequential in that case, not faster (see PROFILING_F17.md).
+        # os.cpu_count() can return None (e.g. some restricted containers);
+        # treat that as 1, same as a genuinely single-core host.
+        _max_workers = min(len(_signal_tasks), max(1, os.cpu_count() or 1))
+        with ThreadPoolExecutor(max_workers=_max_workers) as _pool:
+            _futures = {name: _pool.submit(fn) for name, fn in _signal_tasks.items()}
+            _results = {name: future.result() for name, future in _futures.items()}
+
+        base_report        = _results["stat"]
+        prnu_result        = _results["prnu"]
+        ela_result         = _results["ela"]
+        metadata_result    = _results["metadata"]
+        dct_result         = _results["dct"]
+        jpeg_ghost_result  = _results["jpeg_ghost"]
+        noise_map_result   = _results["noise_map"]
+        noiseprint_result  = _results["noiseprint"]
+        cfa_result         = _results["cfa"]
+
+        # Deep-learning signals -- still sequential (deferred, see above)
+        dire_result = self.dire_detector.detect(self.image_bytes, self.filename)
+        clip_result = self.clip_detector.detect(self.image_bytes, self.filename)
+        own_result  = self.own_detector.detect(self.image_bytes, self.filename)
 
         return self.combine_signals(
             base_report, dire_result, clip_result, own_result, prnu_result,
