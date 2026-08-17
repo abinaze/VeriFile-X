@@ -33,6 +33,52 @@ def pytest_configure(config):
     )
 
 
+def pytest_sessionstart(session):
+    """
+    Pre-warm the process-wide ModelCache (F-7) before any individual
+    test's timeout clock starts.
+
+    Root cause this works around: DIRE/CLIP/own-embedding models are
+    loaded lazily into a process-wide singleton cache
+    (backend.core.model_cache) -- the FIRST test in the whole session
+    that touches any of them pays the full cold-load cost (network
+    download, ~4-5GB for DIRE's Stable Diffusion pipeline alone; no
+    caching between CI runs -- see .github/workflows/ci.yml). Tests
+    that directly unit-test DIRE/CLIP are marked @pytest.mark.slow
+    (300s timeout, own job), but tests that trigger the exact same
+    load indirectly through the full pipeline (generate_forensic_report,
+    AdvancedEnsembleDetector.detect -- e.g. test_advanced_ai_detector.py
+    ::test_forensics_integration) are not, and pytest collects/runs
+    test files in roughly alphabetical order -- so whichever one
+    happens to run first absorbs an unbounded cold-load cost inside the
+    fast tier's 60s per-test budget, essentially at random depending on
+    network conditions on that CI run.
+
+    pytest_sessionstart runs once, before test collection/execution
+    begins, and is not subject to any per-test timeout -- loading here
+    instead removes the timing risk entirely rather than playing
+    whack-a-mole marking individual indirect-load tests slow one at a
+    time as each is discovered by a flaky CI run.
+
+    Best-effort and silent on failure: if this can't complete (no
+    network, no torch, etc.), each detector's own existing
+    fallback-to-neutral-result handling takes over per-test exactly as
+    it would have anyway -- this hook only removes a timing risk, it
+    never changes correctness, so a failure here must never fail the
+    session itself.
+    """
+    try:
+        from backend.services.dire_detector import DIREDetector
+        from backend.services.clip_detector import CLIPDetector
+        from backend.services.own_embedding_detector import OwnEmbeddingDetector
+
+        DIREDetector()._load_model()
+        CLIPDetector()._load_model()
+        OwnEmbeddingDetector()._load_model()
+    except Exception:
+        pass
+
+
 @pytest.fixture
 def _test_keys(tmp_path, monkeypatch):
     """

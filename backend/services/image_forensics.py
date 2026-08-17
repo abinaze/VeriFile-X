@@ -20,6 +20,42 @@ from backend.core.config import settings
 
 logger = setup_logger(__name__)
 
+# EXIF "Software" tag substrings from common photo/image editors (F-28).
+# Flags a tampering *possibility*, not proof -- lowercase, matched as a
+# substring against the (already-lowercased) Software field. Not
+# exhaustive -- new tools launch constantly -- but the original 5-tool
+# list (photoshop/gimp/paint.net/pixlr/canva) missed most mainstream
+# editors entirely, including Adobe's own Lightroom.
+EDITING_TOOLS = [
+    "photoshop", "lightroom", "gimp", "paint.net", "pixlr", "canva",
+    "affinity photo", "affinity designer", "capture one", "luminar",
+    "snapseed", "picsart", "fotor", "vsco", "paintshop pro",
+    "corel paintshop", "acdsee", "dxo photolab", "on1 photo",
+    "topaz photo ai", "topaz gigapixel", "pixelmator", "polarr",
+    "google photos", "apple photos",
+]
+
+# Substrings that show up in EXIF fields (most often Software, Artist,
+# or ImageDescription/UserComment) when an image was produced or
+# post-processed by an AI image generator (F-28). Lowercase, matched
+# as a substring against each already-lowercased EXIF value. Not
+# exhaustive -- new generators launch constantly -- but the original
+# 4-keyword list (midjourney/dall-e/stable diffusion/"ai generated")
+# missed most of the mainstream ones as of this fix, including Adobe's
+# own Firefly and every diffusion-model UI/service that doesn't spell
+# its name "stable diffusion" verbatim.
+AI_GENERATION_MARKERS = [
+    "midjourney", "dall-e", "dall\u00b7e", "dalle", "stable diffusion",
+    "stablediffusion", "sdxl", "ai generated", "ai-generated",
+    "adobe firefly", "firefly", "leonardo.ai", "leonardo ai",
+    "ideogram", "flux.1", "flux ai", "runway", "runwayml",
+    "sora", "imagen", "nightcafe", "craiyon", "dreamstudio",
+    "bing image creator", "image creator from designer",
+    "playground ai", "artbreeder", "deep dream generator",
+    "novelai", "recraft", "magnific", "krea ai", "comfyui",
+    "automatic1111", "generative fill",
+]
+
 
 class ImageForensics:
     """Complete image forensics analysis pipeline with advanced detection."""
@@ -77,12 +113,10 @@ class ImageForensics:
             suspicious_flags.append("Missing EXIF metadata")
         if exif_data.get("Software"):
             software = exif_data["Software"].lower()
-            editing_tools = ["photoshop", "gimp", "paint.net", "pixlr", "canva"]
-            if any(tool in software for tool in editing_tools):
+            if any(tool in software for tool in EDITING_TOOLS):
                 suspicious_flags.append(f"Editing software detected: {exif_data['Software']}")
-        ai_keywords = ["midjourney", "dall-e", "stable diffusion", "ai generated"]
         for key, value in exif_data.items():
-            if isinstance(value, str) and any(kw in value.lower() for kw in ai_keywords):
+            if isinstance(value, str) and any(kw in value.lower() for kw in AI_GENERATION_MARKERS):
                 suspicious_flags.append(f"AI generation marker in {key}")
         confidence = "high" if len(suspicious_flags) == 0 else "medium" if len(suspicious_flags) <= 2 else "low"
         logger.info(f"Tampering analysis complete: {len(suspicious_flags)} flags")
