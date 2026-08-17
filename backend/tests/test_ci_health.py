@@ -108,3 +108,66 @@ def test_root_endpoint(client):
     """Root endpoint must respond 200."""
     response = client.get("/")
     assert response.status_code == 200
+
+
+class TestSessionStartModelPrewarm:
+    """conftest.py's pytest_sessionstart pre-warms the process-wide
+    ModelCache (F-7) before any individual test's timeout clock starts,
+    so the cold DIRE/CLIP/own-embedding load cost lands on session
+    startup (no timeout) instead of on whichever full-pipeline test
+    happens to run first alphabetically (previously inside the fast
+    tier's 60s per-test budget -- see conftest.py's docstring for the
+    full story, and PR #166's CI run for a real example of the failure
+    this prevents: test_advanced_ai_detector.py::test_forensics_integration
+    timed out at 60s despite doing nothing wrong itself)."""
+
+    def test_sessionstart_calls_load_model_on_all_three_detectors(self, monkeypatch):
+        """Direct regression test for the actual bug: pre-warming must
+        touch DIRE, CLIP, and own-embedding, not just one or two of
+        them -- any full-pipeline test can be the unlucky first one to
+        touch whichever detector isn't pre-warmed."""
+        import backend.tests.conftest as conftest_mod
+
+        calls = []
+
+        class _FakeDetector:
+            def __init__(self, name):
+                self._name = name
+            def _load_model(self):
+                calls.append(self._name)
+
+        monkeypatch.setattr(
+            "backend.services.dire_detector.DIREDetector",
+            lambda: _FakeDetector("dire"),
+        )
+        monkeypatch.setattr(
+            "backend.services.clip_detector.CLIPDetector",
+            lambda: _FakeDetector("clip"),
+        )
+        monkeypatch.setattr(
+            "backend.services.own_embedding_detector.OwnEmbeddingDetector",
+            lambda: _FakeDetector("own"),
+        )
+
+        conftest_mod.pytest_sessionstart(session=None)
+
+        assert set(calls) == {"dire", "clip", "own"}
+
+    def test_sessionstart_never_raises_even_if_loading_fails(self, monkeypatch):
+        """Pre-warming is an optimization, not a correctness requirement
+        -- if it can't complete (no network, no torch, etc.), the
+        session must still start normally and let each detector's own
+        existing fallback-to-neutral-result handling take over
+        per-test, exactly as it would have without this hook."""
+        import backend.tests.conftest as conftest_mod
+
+        def _raise():
+            raise RuntimeError("simulated load failure")
+
+        monkeypatch.setattr(
+            "backend.services.dire_detector.DIREDetector",
+            lambda: (_ for _ in ()).throw(RuntimeError("simulated import/construct failure")),
+        )
+
+        # Must not raise.
+        conftest_mod.pytest_sessionstart(session=None)
