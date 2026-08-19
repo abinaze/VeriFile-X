@@ -54,6 +54,28 @@ class DIREDetector:
         
         logger.info(f"DIRE Detector initialized (device: {self.device})")
 
+    def _clone_scheduler(self, cached_scheduler):
+        """Return a fresh, independent scheduler instance instead of the
+        cached one directly.
+
+        Why: DDIMScheduler.set_timesteps()/step()/add_noise() mutate
+        instance state (self.timesteps, etc.) -- every DIREDetector
+        instance previously took cached_model['scheduler'] directly,
+        meaning every request (a fresh DIREDetector each time, per
+        AdvancedEnsembleDetector.__init__) shared the exact same
+        scheduler *object*. Two concurrent DIRE calls racing on
+        set_timesteps()/step() against that one shared object is a real
+        thread-safety risk, not a hypothetical one -- flagged during
+        F-17 profiling as the reason DIRE wasn't included in that
+        round's parallel signal pool. from_config() reconstructs a new
+        scheduler from the same config dict -- no disk/network I/O, just
+        Python object construction -- so cloning on every cache hit is
+        negligible overhead. self.pipe (the actual UNet/VAE weights)
+        stays shared: frozen, eval-mode forward passes don't mutate
+        shared state, so sharing that part is safe as before.
+        """
+        return type(cached_scheduler).from_config(cached_scheduler.config)
+
     def _load_model(self):
         """Lazy load Stable Diffusion model with caching (10x faster on cache hit)."""
         if self._model_loaded:
@@ -65,7 +87,7 @@ class DIREDetector:
         if cached_model is not None:
             logger.info("Loading Stable Diffusion from cache")
             self.pipe = cached_model['pipe']
-            self.scheduler = cached_model['scheduler']
+            self.scheduler = self._clone_scheduler(cached_model['scheduler'])
             self._model_loaded = True
             self._from_cache = True
             logger.info("Loaded from cache in <1s")
@@ -82,7 +104,7 @@ class DIREDetector:
             if cached_model is not None:
                 logger.info("Loading Stable Diffusion from cache (loaded by a concurrent request)")
                 self.pipe = cached_model['pipe']
-                self.scheduler = cached_model['scheduler']
+                self.scheduler = self._clone_scheduler(cached_model['scheduler'])
                 self._model_loaded = True
                 self._from_cache = True
                 return

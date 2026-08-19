@@ -69,7 +69,11 @@ def test_load_model_is_not_duplicated_under_concurrency(monkeypatch):
     call_count_lock = threading.Lock()
 
     class _FakeScheduler:
-        pass
+        config = {"fake": "config"}
+
+        @classmethod
+        def from_config(cls, config):
+            return cls()
 
     class _FakePipe:
         def to(self, device):
@@ -101,3 +105,55 @@ def test_load_model_is_not_duplicated_under_concurrency(monkeypatch):
     )
     for d in detectors:
         assert d._model_loaded is True
+
+
+def test_scheduler_is_not_shared_across_instances(monkeypatch):
+    """Direct regression test for the scheduler thread-safety fix.
+
+    DDIMScheduler.set_timesteps()/step()/add_noise() mutate instance
+    state -- every DIREDetector instance previously took
+    cached_model['scheduler'] directly, meaning every request (a fresh
+    DIREDetector each time) shared the exact same scheduler *object*.
+    Two DIREDetector instances that both hit the cache (one that just
+    loaded it, one on a later cache-hit) must end up with two DISTINCT
+    scheduler objects, not two references to the same one -- otherwise
+    concurrent DIRE calls racing on set_timesteps()/step() against that
+    one shared object is a real bug, not a hypothetical one.
+    """
+    from backend.services.dire_detector import DIREDetector
+    from backend.core.model_cache import get_model_cache
+
+    get_model_cache().clear()
+
+    class _FakeScheduler:
+        config = {"fake": "config"}
+
+        @classmethod
+        def from_config(cls, config):
+            return cls()
+
+    class _FakePipe:
+        def to(self, device):
+            return self
+
+    monkeypatch.setattr(
+        "diffusers.DDIMScheduler.from_pretrained",
+        staticmethod(lambda *a, **kw: _FakeScheduler()),
+    )
+    monkeypatch.setattr(
+        "diffusers.StableDiffusionPipeline.from_pretrained",
+        staticmethod(lambda *a, **kw: _FakePipe()),
+    )
+
+    first = DIREDetector()
+    first._load_model()  # cold load -- populates the cache
+
+    second = DIREDetector()
+    second._load_model()  # cache hit -- must clone, not share
+
+    assert first.scheduler is not second.scheduler, (
+        "two DIREDetector instances share the exact same scheduler object "
+        "-- set_timesteps()/step() racing against it under concurrent "
+        "DIRE calls would be a real thread-safety bug"
+    )
+    assert isinstance(second.scheduler, _FakeScheduler)  # still the right type/config
