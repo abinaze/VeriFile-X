@@ -69,7 +69,11 @@ def test_load_model_is_not_duplicated_under_concurrency(monkeypatch):
     call_count_lock = threading.Lock()
 
     class _FakeScheduler:
-        pass
+        config = {"fake": "config"}
+
+        @classmethod
+        def from_config(cls, config):
+            return cls()
 
     class _FakePipe:
         def to(self, device):
