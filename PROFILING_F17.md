@@ -63,17 +63,36 @@ for _ in range(3):
 print(f"DIRE mean: {statistics.mean(times):.2f}s  (min {min(times):.2f}s, max {max(times):.2f}s)")
 ```
 
-## The scheduler-sharing risk (why DIRE/CLIP/own-embedding are deliberately NOT parallelized yet)
+## The scheduler-sharing risk — RESOLVED
 
-DIRE's `DDIMScheduler` is loaded once and cached process-wide (`ModelCache`, F-7) —
-`cached_model['scheduler']` — and every `DIREDetector` instance shares that *same object*. Both
+DIRE's `DDIMScheduler` was loaded once and cached process-wide (`ModelCache`, F-7) —
+`cached_model['scheduler']` — with every `DIREDetector` instance sharing that *same object*. Both
 `_add_noise()` and the denoising loop call mutating methods on it (`scheduler.add_noise()`,
-`scheduler.set_timesteps()`, `scheduler.step()`). `denoise_steps` is currently hardcoded to `20`,
-so a `set_timesteps(20)` race between two concurrent DIRE calls likely produces the same values
-either way — probably not silently wrong today. But that's incidental, not a guarantee, and this
-is exactly the risk the original F-17 planning flagged as "a plausible interaction risk nobody has
-tested yet." Resolve this (explicit thread-safety test, or a per-instance scheduler clone instead
-of sharing the cached one) before enabling concurrent DIRE calls.
+`scheduler.set_timesteps()`, `scheduler.step()`). `denoise_steps` is hardcoded to `20`, so a
+`set_timesteps(20)` race between two concurrent DIRE calls likely produced the same values either
+way — probably not silently wrong in practice. But that was incidental, not a guarantee, and it was
+exactly the risk the original F-17 planning flagged as "a plausible interaction risk nobody has
+tested yet."
+
+**Fixed** (follow-up commit, after this document was first written): `DIREDetector._load_model()`
+now clones a fresh scheduler from the cached one's config on every cache hit
+(`type(cached_scheduler).from_config(cached_scheduler.config)`) instead of sharing the cached
+object directly. `from_config()` does no disk/network I/O — just Python object construction from a
+config dict — so this is negligible overhead per request. `self.pipe` (the actual UNet/VAE weights)
+stays shared: frozen, eval-mode forward passes don't mutate shared state, so sharing that part
+remains safe. Verified directly: two `DIREDetector` instances that both hit the cache now get two
+distinct scheduler objects (`first.scheduler is not second.scheduler`); confirmed this is a real
+fix, not just plausible, by reverting it and watching the new regression test fail with exactly the
+shared-object assertion error, then pass again once restored.
+
+**This does not by itself mean DIRE should join the parallel signal pool.** The remaining open
+question is the one this document's "DIRE / CLIP / own-embedding — structural estimate, not
+measured" section above already raised: there's still no real DIRE timing number, so it's not known
+whether DIRE dominates total latency so heavily that parallelizing it alongside anything else
+provides only a marginal win, or whether there's a genuine, substantial gain available. Get a real
+number (the script above) before deciding whether extending the thread pool to DIRE/CLIP/
+own-embedding is worth the added complexity — the thread-safety blocker is gone, but the
+latency-value question isn't answered yet.
 
 ## What was actually shipped this round (partial F-17)
 
