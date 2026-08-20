@@ -3,6 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--
+  F-29: the frontend previously had NO Content-Security-Policy at all --
+  the backend's CSP header (backend/main.py) only applies to API
+  responses, not to this static file (GitHub Pages serves it directly
+  and can't attach custom response headers, so a <meta> tag is the only
+  way to apply CSP here). This mirrors the backend's existing posture
+  (accept 'unsafe-inline', since this is a deliberately single-file,
+  no-build-step app whose one <script>/<style> block is inline by
+  design) while hardening every directive the backend's own header
+  doesn't set: object-src none (blocks plugin-based attacks),
+  base-uri self (blocks base-tag injection), frame-ancestors none
+  (blocks clickjacking, equivalent to X-Frame-Options: DENY).
+  script-src/style-src/font-src allow exactly the three external
+  origins this page actually loads from (cdnjs for jsPDF/Three.js,
+  Google Fonts); connect-src allows the production API origin plus the
+  localhost:8000 fallback this page's own JS uses in local dev.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://abinazebinoy-verifile-x-api.hf.space http://localhost:8000; object-src 'none'; base-uri 'self'; frame-ancestors 'none'">
 <title>VeriFile-X | Forensic AI Image Verification</title>
 <meta name="description" content="VeriFile-X runs 30 independent forensic signals — diffusion reconstruction, CLIP embeddings, sensor-noise fingerprinting, compression and metadata forensics — to determine whether an image is AI-generated, and returns a detailed, exportable evidence report.">
 <meta name="theme-color" content="#0B0E13">
