@@ -47,4 +47,4 @@ If your deployment has additional privacy requirements (for example, not recordi
 
 ## License and Responsible Disclosure
 
-This project is licensed under the terms in [LICENSE](LICENSE) (PolyForm Noncommercial 1.0.0). Reporting a vulnerability does not grant any additional rights beyond that license, and does not obligate the maintainer to a bug bounty or similar compensation.
+This project is licensed under the terms in [LICENSE](LICENSE). Reporting a vulnerability does not grant any additional rights beyond that license, and does not obligate the maintainer to a bug bounty or similar compensation.
