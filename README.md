@@ -16,13 +16,23 @@ pinned: false
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-2d3748?style=for-the-badge)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/Tests-480%2B%20Passing-2f855a?style=for-the-badge)](backend/tests/)
+[![Tests](https://img.shields.io/badge/Tests-530%2B%20Passing-2f855a?style=for-the-badge)](backend/tests/)
 [![Coverage](https://img.shields.io/badge/Coverage-~82%25-2f855a?style=for-the-badge)](backend/tests/)
 [![Version](https://img.shields.io/badge/Version-8.5.0-2b6cb0?style=for-the-badge)](backend/core/config.py)
 
 [Live Demo](https://abinaze.github.io/VeriFile-X) · [API Docs](https://abinazebinoy-verifile-x-api.hf.space/docs) · [Report an Issue](../../issues) · [Security Policy](SECURITY.md)
 
 </div>
+
+---
+
+> **This is a demo, not a validated production forensics tool.** The learned components (the
+> fine-tuned classifier and the reference-database signals) were trained on a small dataset, and no
+> validated real-world accuracy figure exists for this deployment. Full detail, including a
+> specific known data-leakage caveat on the one training run available, is in
+> [Accuracy, Validation, and Honest Limitations](#accuracy-validation-and-honest-limitations) —
+> read it before treating any output from the live demo as a reliable verdict, and never as the
+> sole basis for a legal, journalistic, or moderation decision.
 
 ---
 
@@ -37,6 +47,7 @@ pinned: false
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Building Reference Models](#building-reference-models)
+- [Full Step-by-Step Setup Guide](SETUP_GUIDE.md)
 - [Configuration](#configuration)
 - [API Reference](#api-reference)
 - [Usage Example](#usage-example)
@@ -203,6 +214,10 @@ VeriFile-X/
 
 ## Getting Started
 
+> This section is the quick path. For a genuinely step-by-step walkthrough — including *why* each
+> step matters, how to verify it worked, and how to build a real (not placeholder) training
+> dataset — see [`SETUP_GUIDE.md`](SETUP_GUIDE.md).
+
 ### Prerequisites
 
 - Python 3.11 or later
@@ -231,6 +246,12 @@ After starting the server, check `GET /health` to see which detector models are 
 For Docker and production deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Building Reference Models
+
+> The commands below reproduce this repo's own placeholder reference data quickly — useful for
+> seeing the pipeline work end-to-end, but `scripts/generate_ai_samples.py` (step 1) generates
+> *synthetic* placeholder images, not real AI-generator output, and won't itself produce a
+> classifier worth trusting. [`SETUP_GUIDE.md`](SETUP_GUIDE.md) covers both this fast path and the
+> real one (building an actually-sized, real dataset) in full, with explanations at each step.
 
 Without built reference models, the ensemble runs on the statistical and metadata signals only, with CLIP, OwnEmbedding, and the XGBoost meta-model excluded and their weights renormalized across the remaining signals.
 
