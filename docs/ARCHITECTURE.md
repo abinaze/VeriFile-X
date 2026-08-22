@@ -18,64 +18,64 @@ score, but which signals fired, at what confidence, and why.
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │  Client (browser SPA, or curl / any HTTP client)                     │
-└───────────────────────────────┬────────────────────────────────────┘
-                                 │ HTTPS, multipart/form-data upload
-                                 ▼
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │ HTTPS, multipart/form-data upload
+                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │  FastAPI app (backend/main.py)                                       │
 │  • Security headers middleware (CSP, HSTS, X-Frame-Options, ...)     │
 │  • CORS                                                              │
 │  • Per-IP sliding-window rate limiting (slowapi)                     │
 │  • API-key auth dependency (require_role_for_method / _or_demo)      │
-└───────────────────────────────┬────────────────────────────────────┘
-                                 ▼
+└───────────────────────────────┬──────────────────────────────────────┘
+                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │  Upload validation (backend/utils/validators.py)                     │
 │  • MIME/magic-byte check, extension cross-check, size limit          │
 │  • Decompression-bomb guard (checked BEFORE EXIF re-encode)          │
-└───────────────────────────────┬────────────────────────────────────┘
-                                 ▼
+└───────────────────────────────┬──────────────────────────────────────┘
+                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │  ImageForensics.generate_forensic_report()                           │
 │  (backend/services/image_forensics.py)                               │
-│                                                                        │
+│                                                                      │
 │  1. EXIF extraction + orientation normalize                          │
 │  2. Hash generation (SHA-256, MD5, perceptual hash)                  │
 │  3. Tampering indicators (editing-tool / AI-marker EXIF keyword scan)│
 │  4. detect_ai_generation() → AdvancedEnsembleDetector.detect()       │
 │  5. Generator attribution, platform-of-origin, C2PA scan             │
-└───────────────────────────────┬────────────────────────────────────┘
-                                 ▼
+└───────────────────────────────┬──────────────────────────────────────┘
+                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│  AdvancedEnsembleDetector.detect()                                    │
+│  AdvancedEnsembleDetector.detect()                                   │
 │  (backend/services/advanced_ensemble_detector.py)                    │
-│                                                                        │
+│                                                                      │
 │  Runs 9 mutually-independent, non-torch signals concurrently in a    │
 │  ThreadPoolExecutor (capped to os.cpu_count()):                      │
 │    • Statistical bundle (19 sub-signals, see below)                  │
 │    • PRNU, ELA, Metadata, DCT, JPEG Ghost, Noise Map,                │
 │      Noiseprint, CFA                                                 │
-│                                                                        │
+│                                                                      │
 │  Then runs 3 deep-learning signals sequentially (deliberately not    │
 │  yet parallelized — see PROFILING_F17.md):                           │
 │    • DIRE     — diffusion reconstruction error (Stable Diffusion 2.1)│
 │    • CLIP     — zero-shot embedding-centroid distance                │
 │    • OwnEmbedding — fine-tuned EfficientNet-B0 classifier            │
-│                                                                        │
+│                                                                      │
 │  30 signals total. combine_signals() applies confidence-gated,       │
 │  static per-category weights (see table below), renormalizing when   │
 │  a signal is excluded (confidence == 0 — e.g. lossless format with   │
 │  no JPEG history, missing reference database, tiny image).           │
-└───────────────────────────────┬────────────────────────────────────┘
-                                 ▼
+└───────────────────────────────┬──────────────────────────────────────┘
+                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│  Calibration + uncertainty                                            │
+│  Calibration + uncertainty                                           │
 │  • Platt-scaling calibration (backend/services/platt_calibrator.py)  │
 │  • MCMC posterior (Metropolis-Hastings) — point estimate, 50%/90%    │
 │    credible intervals, certainty label                               │
 │  • XGBoost meta-model override, when a trained model is present      │
-└───────────────────────────────┬────────────────────────────────────┘
-                                 ▼
+└───────────────────────────────┬──────────────────────────────────────┘
+                                ▼
                     Forensic report (JSON), keyed by a stable
                     evidence_id (UUID5 of the file's SHA-256 hash)
 ```
