@@ -1,309 +1,156 @@
 # VeriFile-X Architecture
 
-## System Overview
+This document describes how a request actually flows through the current system. If you're new to
+the codebase, read this alongside [`SETUP_GUIDE.md`](../SETUP_GUIDE.md), which walks through
+building and running every piece described here from nothing.
 
-VeriFile-X is a privacy-preserving digital forensics platform that analyzes images for authenticity using statistical analysis and metadata extraction.
+> **This file was previously out of date** — an earlier version described a much simpler,
+> statistics-only pipeline with a hardcoded 10MB limit and no deep-learning signals. That no longer
+> matches the code. Everything below was checked against the actual source as of v8.5.0.
+
+## System overview
+
+VeriFile-X is a FastAPI backend plus a static single-page frontend. A client uploads one image; the
+backend runs **30 independent detection signals** across five detector families, combines them
+through a confidence-gated weighted ensemble, and returns a full forensic report — not just a
+score, but which signals fired, at what confidence, and why.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Client                               │
-│                   (Browser / curl)                          │
-└────────────────────────┬────────────────────────────────────┘
-                         │ HTTPS
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    FastAPI Backend                          │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Rate Limiter (10 req/min)               │   │
-│  └──────────────────────┬───────────────────────────────┘   │
-│                         ▼                                   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           API Routes (/api/v1/...)                   │   │
-│  │  • /upload/validate  - File validation               │   │
-│  │  • /analyze/image    - Forensic analysis             │   │
-│  └──────────────────────┬───────────────────────────────┘   │
-│                         ▼                                   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              Validation Layer                        │   │
-│  │  • MIME type check (python-magic)                    │   │
-│  │  • Size limit (10MB)                                 │   │
-│  │  • Content-type header validation                    │   │
-│  └──────────────────────┬───────────────────────────────┘   │
-│                         ▼                                   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           SHA-256 Hash Cache                         │   │
-│  │  • Check for duplicate (cache hit)                   │   │
-│  │  • Return cached result if found                     │   │
-│  └──────────────────────┬───────────────────────────────┘   │
-│                         ▼                                   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │         Forensics Analysis Pipeline                  │   │
-│  │                                                      │   │
-│  │  ┌────────────────────────────────────────────────┐  │   │
-│  │  │  1. Metadata Extraction (EXIF, GPS)            │  │   │
-│  │  │     - Camera make/model                        │  │   │
-│  │  │     - GPS coordinates                          │  │   │
-│  │  │     - Software used                            │  │   │
-│  │  │     - Timestamps                               │  │   │
-│  │  └────────────────────────────────────────────────┘  │   │
-│  │  ┌────────────────────────────────────────────────┐  │   │
-│  │  │  2. Hash Generation                            │  │   │
-│  │  │     - SHA-256 (cryptographic)                  │  │   │
-│  │  │     - MD5 (legacy)                             │  │   │
-│  │  │     - Perceptual hash (similarity)             │  │   │
-│  │  └────────────────────────────────────────────────┘  │   │
-│  │  ┌────────────────────────────────────────────────┐  │   │
-│  │  │  3. AI Detection (Statistical)                 │  │   │
-│  │  │     - Noise pattern analysis (Laplacian)       │  │   │
-│  │  │     - Frequency domain (2D FFT)                │  │   │
-│  │  │     - JPEG artifacts (DCT blocks)              │  │   │
-│  │  │     - Color distribution (HSV entropy)         │  │   │
-│  │  └────────────────────────────────────────────────┘  │   │
-│  │  ┌────────────────────────────────────────────────┐  │   │
-│  │  │  4. Tampering Detection                        │  │   │
-│  │  │     - Missing EXIF indicators                  │  │   │
-│  │  │     - Software manipulation traces             │  │   │
-│  │  │     - AI generation signatures                 │  │   │
-│  │  └────────────────────────────────────────────────┘  │   │
-│  │                                                      │   │
-│  └──────────────────────┬───────────────────────────────┘   │
-│                         ▼                                   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           Response Generation                        │   │
-│  │  • Compile forensic report (JSON)                    │   │
-│  │  • Cache result for duplicates                       │   │
-│  │  • Return to client                                  │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Core Components
-
-### 1. API Layer (`backend/api/`)
-- **Purpose:** HTTP endpoint routing and request handling
-- **Technology:** FastAPI (async ASGI)
-- **Security:** Rate limiting (slowapi), CORS, input validation
-- **Routes:**
-  - `POST /api/v1/upload/validate` - Fast file validation
-  - `POST /api/v1/analyze/image` - Full forensic analysis
-
-### 2. Validation Layer (`backend/utils/`)
-- **Purpose:** Multi-layer file security validation
-- **Components:**
-  - Content-type header check (fast fail)
-  - python-magic MIME verification (reads file signature)
-  - Size limit enforcement (10MB max)
-  - Malicious file rejection
-
-### 3. Cache System (`backend/core/cache.py`)
-- **Purpose:** Performance optimization via deduplication
-- **Implementation:** In-memory SHA-256 keyed cache
-- **Strategy:** LRU eviction, 60min TTL, 500 entry limit
-- **Privacy:** Stores analysis results only, never file bytes
-
-### 4. Forensics Engine (`backend/services/`)
-
-#### Image Forensics (`image_forensics.py`)
-- **EXIF Extraction:** Pillow + ExifTags parsing
-- **GPS Decoding:** DMS to decimal degrees conversion
-- **Hash Generation:** SHA-256, MD5, perceptual (imagehash)
-- **Tampering Detection:** Software traces, missing metadata
-
-#### AI Detector (`ai_detector.py`)
-- **Approach:** Statistical analysis (no heavy ML models)
-- **Signals:**
-  1. **Noise Analysis:** Laplacian operator + local variance
-     - Metric: `consistency = σ_local / μ_local`
-     - Real photos: Higher variance diversity
-  2. **Frequency Domain:** 2D FFT spectral analysis
-     - Metric: `ratio = LowFreq / HighFreq`
-     - AI images: Abnormal spectral signatures
-  3. **JPEG Artifacts:** DCT block boundary analysis
-     - Metric: Blockiness + edge density
-     - AI images: Over-smoothed or missing artifacts
-  4. **Color Distribution:** HSV histogram entropy
-     - Metric: `H(X) = -Σ p(x)log p(x)`
-     - AI images: Lower entropy, oversaturation
-
-### 5. Configuration (`backend/core/config.py`)
-- **Pydantic Settings:** Type-safe env var management
-- **Environment-based:** DEBUG, CORS_ORIGINS, file size limits
-- **Security:** No secrets in code, .env for local dev
-
-### 6. Testing (`backend/tests/`)
-- **Framework:** pytest + pytest-asyncio
-- **Coverage:** 31 tests across all modules
-- **Strategy:** Unit tests per component + integration tests for API
-
-## Data Flow
-
-### Typical Request Flow
-
-1. **Client uploads image** → POST /api/v1/analyze/image
-2. **Rate limiter** checks IP (10 req/min limit)
-3. **Validation** checks content-type, size, MIME
-4. **Cache lookup** via SHA-256 hash
-   - **Cache hit:** Return cached result (instant)
-   - **Cache miss:** Continue to analysis
-5. **Forensics pipeline:**
-   - Extract EXIF metadata
-   - Generate hashes (SHA-256, perceptual)
-   - Run AI detection (4 statistical signals)
-   - Detect tampering indicators
-6. **Report generation** (JSON)
-7. **Cache storage** for future duplicates
-8. **Response** to client with complete analysis
-
-## Security Architecture
-
-### Defense Layers
-
-1. **Rate Limiting:** 10 requests/minute per IP
-2. **Input Validation:**
-   - Content-type header check
-   - python-magic MIME type verification
-   - 10MB size limit
-3. **Memory Safety:**
-   - All processing in-memory
-   - No disk writes (privacy-first)
-   - File handles closed in `finally` blocks
-4. **Type Safety:** Pydantic models for all I/O
-5. **Logging:** Structured logs without PII
-
-### Privacy Guarantees
-
-- **Zero file storage:** Files never touch disk
-- **In-memory only:** Bytes processed in RAM
-- **No PII logging:** File content never logged
-- **Cache privacy:** Stores results only, not file data
-- **Auto-cleanup:** Cache clears on restart
-
-## Performance Characteristics
-
-### Timing Breakdown (100x100 image)
-
-| Operation | Time | Cacheable |
-|-----------|------|-----------|
-| File validation | ~5ms | No |
-| EXIF extraction | ~10ms | Yes |
-| Hash generation | ~15ms | Yes |
-| AI detection | ~200ms | Yes |
-| Tampering check | ~5ms | Yes |
-| **Total (cache miss)** | **~235ms** | - |
-| **Total (cache hit)** | **~5ms** | - |
-
-### Scalability Considerations
-
-- **Bottleneck:** AI detection (CPU-intensive FFT)
-- **Cache benefit:** 47x speedup on duplicates
-- **Rate limiting:** Prevents DoS on CPU-heavy ops
-- **Async I/O:** Non-blocking file reads
-- **Horizontal scaling:** Stateless design (cache per instance)
-
-## Technology Stack
-
-### Core Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| FastAPI | 0.109.0 | Async web framework |
-| Pydantic | 2.5.3 | Data validation |
-| python-magic | 0.4.27 | MIME type detection |
-| Pillow | 10.2.0 | Image processing + EXIF |
-| OpenCV | 4.9.0 | Computer vision operations |
-| NumPy | 1.26.3 | Numerical computing |
-| SciPy | 1.11.4 | Scientific computing (FFT) |
-| imagehash | 4.3.1 | Perceptual hashing |
-| slowapi | 0.1.9 | Rate limiting |
-
-### Development Tools
-
-- **Testing:** pytest, pytest-asyncio, httpx
-- **Linting:** (recommended: ruff, black)
-- **CI/CD:** GitHub Actions
-- **Python:** 3.11+ (for performance)
-
-## Design Decisions
-
-### Why Statistical AI Detection (Not Deep Learning)?
-
-**Pros:**
-- ✅ No heavy model downloads (TensorFlow/PyTorch)
-- ✅ Fast inference (<1 second)
-- ✅ Interpretable results (signal breakdown)
-- ✅ Works offline
-- ✅ Lower memory footprint
-
-**Cons:**
-- ⚠️ ~70-80% accuracy vs ~90%+ with CNNs
-- ⚠️ Vulnerable to adversarial attacks
-
-**Justification:** For a portfolio/learning project, statistical approach demonstrates understanding of signal processing, computer vision fundamentals, and engineering tradeoffs without requiring GPU infrastructure.
-
-### Why In-Memory Only (No Database)?
-
-**Pros:**
-- ✅ True privacy (nothing persisted)
-- ✅ Simpler deployment (no DB management)
-- ✅ Faster (no I/O overhead)
-- ✅ GDPR/privacy compliant by design
-
-**Cons:**
-- ⚠️ No historical analysis
-- ⚠️ Cache lost on restart
-- ⚠️ No user accounts/sessions
-
-**Justification:** Privacy-first design is the core value proposition. For a forensics tool, users may not want their files tracked.
-
-### Why FastAPI (Not Flask/Django)?
-
-- **Async support:** Non-blocking I/O for file uploads
-- **Auto documentation:** OpenAPI/Swagger UI
-- **Type safety:** Pydantic integration
-- **Performance:** Faster than Flask
-- **Modern:** Python 3.11+ features
-
-## Future Enhancements
-
-### Short-term (Next Iterations)
-1. Frontend UI (React/Vue)
-2. Video forensics support
-3. Document analysis (PDF tampering)
-4. Batch processing endpoint
-
-### Long-term (Production)
-1. CNN-based AI detection (higher accuracy)
-2. Redis cache (persistent across restarts)
-3. PostgreSQL for audit logs (optional)
-4. Kubernetes deployment
-5. WebSocket real-time progress
-6. Fine-tuned models on custom dataset
-
-## Development Setup
-
-See main README for full setup instructions.
-
-## Testing
-```bash
-# Run all tests
-pytest backend/tests/ -v
-
-# Run with coverage
-pytest backend/tests/ --cov=backend --cov-report=html
-
-# Run specific module
-pytest backend/tests/test_ai_detector.py -v
+┌──────────────────────────────────────────────────────────────────────┐
+│  Client (browser SPA, or curl / any HTTP client)                     │
+└───────────────────────────────┬────────────────────────────────────┘
+                                 │ HTTPS, multipart/form-data upload
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  FastAPI app (backend/main.py)                                       │
+│  • Security headers middleware (CSP, HSTS, X-Frame-Options, ...)     │
+│  • CORS                                                              │
+│  • Per-IP sliding-window rate limiting (slowapi)                     │
+│  • API-key auth dependency (require_role_for_method / _or_demo)      │
+└───────────────────────────────┬────────────────────────────────────┘
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  Upload validation (backend/utils/validators.py)                     │
+│  • MIME/magic-byte check, extension cross-check, size limit          │
+│  • Decompression-bomb guard (checked BEFORE EXIF re-encode)          │
+└───────────────────────────────┬────────────────────────────────────┘
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  ImageForensics.generate_forensic_report()                           │
+│  (backend/services/image_forensics.py)                               │
+│                                                                        │
+│  1. EXIF extraction + orientation normalize                          │
+│  2. Hash generation (SHA-256, MD5, perceptual hash)                  │
+│  3. Tampering indicators (editing-tool / AI-marker EXIF keyword scan)│
+│  4. detect_ai_generation() → AdvancedEnsembleDetector.detect()       │
+│  5. Generator attribution, platform-of-origin, C2PA scan             │
+└───────────────────────────────┬────────────────────────────────────┘
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  AdvancedEnsembleDetector.detect()                                    │
+│  (backend/services/advanced_ensemble_detector.py)                    │
+│                                                                        │
+│  Runs 9 mutually-independent, non-torch signals concurrently in a    │
+│  ThreadPoolExecutor (capped to os.cpu_count()):                      │
+│    • Statistical bundle (19 sub-signals, see below)                  │
+│    • PRNU, ELA, Metadata, DCT, JPEG Ghost, Noise Map,                │
+│      Noiseprint, CFA                                                 │
+│                                                                        │
+│  Then runs 3 deep-learning signals sequentially (deliberately not    │
+│  yet parallelized — see PROFILING_F17.md):                           │
+│    • DIRE     — diffusion reconstruction error (Stable Diffusion 2.1)│
+│    • CLIP     — zero-shot embedding-centroid distance                │
+│    • OwnEmbedding — fine-tuned EfficientNet-B0 classifier            │
+│                                                                        │
+│  30 signals total. combine_signals() applies confidence-gated,       │
+│  static per-category weights (see table below), renormalizing when   │
+│  a signal is excluded (confidence == 0 — e.g. lossless format with   │
+│  no JPEG history, missing reference database, tiny image).           │
+└───────────────────────────────┬────────────────────────────────────┘
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  Calibration + uncertainty                                            │
+│  • Platt-scaling calibration (backend/services/platt_calibrator.py)  │
+│  • MCMC posterior (Metropolis-Hastings) — point estimate, 50%/90%    │
+│    credible intervals, certainty label                               │
+│  • XGBoost meta-model override, when a trained model is present      │
+└───────────────────────────────┬────────────────────────────────────┘
+                                 ▼
+                    Forensic report (JSON), keyed by a stable
+                    evidence_id (UUID5 of the file's SHA-256 hash)
 ```
 
-## Deployment
+## The 19-signal statistical bundle
 
-Currently designed for single-instance deployment (Render, Railway, fly.io). For production scale, consider:
-- Load balancer (Nginx)
-- Redis for shared cache
-- Separate worker processes for CPU-heavy operations
-- CDN for static assets
+Since the F-16 refactor, this bundle is composition-based, not inheritance-based —
+`backend/services/statistical_signals.py` defines four independent components sharing a read-only
+`ImageContext` dataclass:
 
----
+| Component | Signal count | What it covers |
+|---|---|---|
+| `BasicSignals` | 10 | FFT radial spectrum, DCT coefficients, wavelet energy, GLCM texture, LBP texture, noise residual, spectral entropy, edge statistics, color correlation, compression artifacts |
+| `UltraSignals` | 3 | Perturbation stability, radial frequency ratio, inter-block regularity |
+| `CovarianceSignals` | 3 | Local covariance, patch anisotropy variance, eigenvalue spread |
+| `AdvancedSignals` | 3 | Mahalanobis distance, KL divergence, color distribution outlier detection |
 
-**Last Updated:** February 2026  
-**Version:** 1.0.0  
-**Author:** Abinaze Binoy
+`AdvancedAIDetector` / `UltraAdvancedDetector` / `CovarianceDetector` / `StatisticalDetector` — the
+original four classes from before F-16 — still exist as thin, backward-compatible facades over
+these components (kept because tests construct them directly), but the real production entry
+point, `AdvancedEnsembleDetector`, composes a `StatisticalDetector` instance rather than inheriting
+from it.
+
+## Ensemble weighting
+
+Static per-category weights, summing to exactly 1.00:
+
+| Signal | Weight |
+|---|---|
+| DIRE (diffusion reconstruction) | 0.21 |
+| Statistical bundle (19 sub-signals) | 0.20 |
+| CLIP embedding distance | 0.14 |
+| OwnEmbedding (EfficientNet-B0) | 0.08 |
+| PRNU-style noise heuristic | 0.08 |
+| ELA compression analysis | 0.07 |
+| Metadata / EXIF forensics | 0.06 |
+| DCT frequency artifacts | 0.05 |
+| JPEG Ghost | 0.04 |
+| Noiseprint | 0.03 |
+| Noise Map | 0.02 |
+| CFA Bayer correlation | 0.02 |
+
+Confidence **gates inclusion** — a signal with `confidence == 0` is dropped and the remaining
+weights renormalize to still sum to 1.0 — it does not scale a signal's contribution proportionally.
+A signal with any nonzero confidence contributes its full static weight.
+
+## Model caching and concurrency
+
+`backend/core/model_cache.py` provides a process-wide singleton (`ModelCache`) that DIRE, CLIP, and
+OwnEmbedding all load into, guarded by a per-key lock so concurrent cold-start requests don't each
+independently trigger a full model load. Two concurrency-relevant details worth knowing if you're
+extending this:
+
+- **CLIP and OwnEmbedding** cache only frozen, eval-mode model weights — safe to share across
+  concurrent requests, since inference-only forward passes don't mutate shared state.
+- **DIRE** additionally caches a `DDIMScheduler`, which *is* mutable
+  (`set_timesteps()`/`step()`/`add_noise()` all write instance state). Every `DIREDetector`
+  instance clones a fresh scheduler from the cached one's config on every cache hit
+  (`_clone_scheduler()`) rather than sharing the cached object directly — this was a real
+  thread-safety bug, fixed after being flagged during F-17 profiling, not a defensive-for-its-own-
+  sake pattern.
+
+## Request/response shape
+
+Every analysis is keyed by a stable `evidence_id` — a UUID5 derived from the file's SHA-256 hash,
+so re-analyzing the same file always produces the same ID. The full, generated response schema is
+authoritative at `/docs` (Swagger UI) and `/redoc`; it isn't duplicated here to avoid this document
+drifting out of sync with the code the way its predecessor did.
+
+## Where to go next
+
+- **Setting this whole system up from nothing, including training the ML components**:
+  [`SETUP_GUIDE.md`](../SETUP_GUIDE.md)
+- **API endpoint reference**: [`README.md`](../README.md#api-reference)
+- **Security model**: [`SECURITY.md`](../SECURITY.md)
+- **Deployment**: [`DEPLOYMENT.md`](../DEPLOYMENT.md)
+- **Development history, phase by phase**: [`PHASE_ROADMAP.md`](../PHASE_ROADMAP.md)
+- **Signal latency profiling and the parallelization work**: [`PROFILING_F17.md`](../PROFILING_F17.md)
