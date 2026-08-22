@@ -1250,6 +1250,29 @@ a:focus-visible, button:focus-visible, input:focus-visible {
     }
     .reveal { opacity: 1 !important; transform: none !important; }
 }
+/* F-29-adjacent: demo/accuracy disclaimer banner. Uses the existing
+   --orange/--yellow/--border tokens so it matches the site's own
+   palette in both themes rather than looking like a bolted-on alert box. */
+.demo-banner {
+    background: var(--bg2);
+    border-bottom: 2px solid var(--yellow);
+    padding: 10px 24px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+    text-align: center;
+    position: relative;
+    z-index: 5;
+}
+.demo-banner strong {
+    color: var(--yellow);
+    font-weight: 700;
+}
+.demo-banner a {
+    color: var(--primary2);
+    text-decoration: underline;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -1279,6 +1302,15 @@ a:focus-visible, button:focus-visible, input:focus-visible {
         </div>
     </div>
 </nav>
+ 
+<!-- DEMO / ACCURACY DISCLAIMER — deliberately placed here, above the
+     hero copy, so it can't be missed or scrolled past unseen. -->
+<div class="demo-banner" role="note">
+    <strong>Demo, not a production forensics tool.</strong>
+    The learned components (the fine-tuned classifier and the reference-database signals) were
+    trained on a small dataset, and no validated real-world accuracy figure exists for this
+    deployment — see the <a href="https://github.com/abinaze/VeriFile-X#accuracy-validation-and-honest-limitations" target="_blank" rel="noopener">honest limitations</a> in the project README. Don't use results here as the sole basis for a legal, journalistic, or moderation decision.
+</div>
  
 <!-- HERO -->
 <section class="hero">
