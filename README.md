@@ -13,7 +13,7 @@ pinned: false
 
 **A 30-signal ensemble platform for detecting AI-generated images, with fully explainable, per-signal forensic reports.**
 
-[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-2d3748?style=for-the-badge)](LICENSE)
+[![License: Custom Noncommercial](https://img.shields.io/badge/License-Custom%20Noncommercial-2d3748?style=for-the-badge)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.139-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Tests](https://img.shields.io/badge/Tests-530%2B%20Passing-2f855a?style=for-the-badge)](backend/tests/)
@@ -434,9 +434,9 @@ Contributions are welcome under the terms of the project [License](#license) —
 
 ## License
 
-VeriFile-X is licensed under the **PolyForm Noncommercial License 1.0.0** — see [LICENSE](LICENSE) for the full text.
+VeriFile-X is released under a custom license — see [LICENSE](LICENSE) for the full text.
 
-In short: you are free to use, study, modify, and share this project — including its code, methodology, and any findings derived from it — for personal, academic, research, nonprofit, and government purposes. You may not sell it, or use it or its output to provide a commercial product or service, without a separate commercial license from the maintainer.
+In short: you're free to use, study, modify, and share this project — including its code, methodology, and any findings derived from it — for personal, academic, research, nonprofit, and any other non-commercial purpose. You may **not** use it, or anything built from it, for business or profit-making purposes without the author's prior written permission, and you must keep the license and copyright notice intact and credit the original author — this work may not be presented as created by anyone else. For commercial licensing or any other permission request, contact **Abinaze Binoy** at **abinazebinoy@gmail.com**.
 
 ## Author
 

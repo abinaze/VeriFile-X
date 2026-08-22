@@ -1,6 +1,6 @@
 # Contributing to VeriFile-X
 
-Contributions are welcome under the terms of the project's [license](LICENSE) (PolyForm Noncommercial 1.0.0) — by submitting a pull request, you agree your contribution is licensed under the same terms.
+Contributions are welcome under the terms of the project's [license](LICENSE) — by submitting a pull request, you agree your contribution is licensed under the same terms.
 
 ## Before You Start
 
