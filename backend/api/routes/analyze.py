@@ -702,9 +702,22 @@ async def analyze_segment(
     insertion (real background with AI-generated subject composited in).
     """
     try:
+        # C-3 fix: this endpoint previously relied solely on validate_file()'s
+        # general-purpose 50MB (MAX_FILE_SIZE_MB) ceiling -- five times higher
+        # than the 10MB (MAX_ANALYSIS_SIZE_MB) limit every sibling CPU-heavy
+        # analysis endpoint enforces. Both the pre-read Content-Length guard
+        # and an explicit post-read check now use the same, intended ceiling.
+        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
         image_bytes = await file.read()
+        if len(image_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
+            )
         from backend.utils.validators import validate_file, FileValidationError as _FVE
         validate_file(image_bytes, file.filename or "upload")
+    except HTTPException:
+        raise
     except _FVE as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception:
@@ -718,6 +731,10 @@ async def analyze_segment(
     except Exception:
         logger.error("Segment detection error", exc_info=True)
         raise HTTPException(status_code=500, detail="Segment analysis failed")
+    finally:
+        # C-3 fix: this was the only file-accepting endpoint in this router
+        # that never closed its UploadFile in a finally block.
+        await file.close()
 
 
 @router.post(
