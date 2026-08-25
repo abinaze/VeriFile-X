@@ -645,7 +645,7 @@ async def analyze_batch(
     files: List[UploadFile] = File(..., description="Images to analyze (max 10)")
 ):
     """Process multiple images through the full forensic pipeline."""
-    from backend.services.batch_processor import process_batch, MAX_BATCH_SIZE
+    from backend.services.batch_processor import process_batch, MAX_BATCH_SIZE, MAX_IMAGE_BYTES
 
     try:
         if len(files) > MAX_BATCH_SIZE:
@@ -654,12 +654,28 @@ async def analyze_batch(
                 detail=f"Too many files. Max {MAX_BATCH_SIZE} per batch request."
             )
 
+        # C-3 fix: this endpoint previously had NO size check anywhere in the
+        # route handler at all -- the 5MB MAX_IMAGE_BYTES cap only existed
+        # inside batch_processor.process_batch(), checked only after all
+        # (up to 10) files were already fully buffered into memory. A coarse
+        # pre-read guard on the whole request's declared size catches the
+        # obviously-oversized case before any file is read; a genuine
+        # per-file check (below) rejects individually-oversized files
+        # before they're retained for the downstream pipeline.
+        _reject_if_content_length_exceeds(request, MAX_BATCH_SIZE * MAX_IMAGE_BYTES)
+
         images = []
         for file in files:
             if file.content_type not in ALLOWED_IMAGE_TYPES:
                 logger.warning(f"Batch: skipping {file.filename} — unsupported type {file.content_type}")
                 continue
             data = await file.read()
+            if len(data) > MAX_IMAGE_BYTES:
+                logger.warning(
+                    f"Batch: skipping {file.filename} — "
+                    f"{len(data)} bytes exceeds {MAX_IMAGE_BYTES} byte per-image limit"
+                )
+                continue
             images.append({"filename": file.filename, "data": data})
 
         if not images:
