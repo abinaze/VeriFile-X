@@ -161,6 +161,39 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/tiff", "i
 MAX_ANALYSIS_SIZE_BYTES = settings.MAX_ANALYSIS_SIZE_MB * 1024 * 1024
 
 
+def _reject_if_content_length_exceeds(request: Request, max_bytes: int) -> None:
+    """C-3 (resource-exhaustion stopgap): reject a request BEFORE its body
+    is read into memory, using the Content-Length header, whenever the
+    client declares a size over the limit.
+
+    Seven of this router's nine file-accepting endpoints previously read
+    the entire request body via `await file.read()` before checking its
+    size at all -- meaning a very large upload was fully buffered into
+    memory before ever being rejected. Only POST /image had this
+    pre-check; this helper lets every sibling endpoint apply the same
+    guard consistently without duplicating the same few lines nine times.
+
+    This is a stopgap, not a full fix: Content-Length is client-supplied
+    and can be absent, wrong, or (for chunked transfer encoding) simply
+    not sent -- in all of those cases this check silently no-ops and the
+    existing post-read size check (unchanged, still present on every
+    endpoint) remains the actual backstop. A real fix would enforce a
+    hard cap while STREAMING the body, which is a larger change tracked
+    separately as part of consolidating upload validation into one
+    shared dependency used by all nine endpoints.
+    """
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > max_bytes:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Payload too large. Max size: {max_bytes // (1024*1024)}MB"
+                )
+        except ValueError:
+            pass  # Invalid Content-Length header -- proceed, the post-read check still applies
+
+
 @router.post(
     "/image",
     summary="Analyze image forensics",
@@ -411,6 +444,7 @@ async def analyze_image_heatmap(
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
 
+        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
         file_bytes = await file.read()
 
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
@@ -458,6 +492,7 @@ async def analyze_attribution(
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
 
+        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
         file_bytes = await file.read()
 
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
@@ -500,6 +535,7 @@ async def analyze_platform(
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
 
+        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
         file_bytes = await file.read()
 
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
@@ -540,6 +576,7 @@ async def analyze_c2pa(
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
+        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
         file_bytes = await file.read()
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
@@ -576,6 +613,7 @@ async def analyze_robustness(
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
+        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
         file_bytes = await file.read()
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
@@ -607,7 +645,7 @@ async def analyze_batch(
     files: List[UploadFile] = File(..., description="Images to analyze (max 10)")
 ):
     """Process multiple images through the full forensic pipeline."""
-    from backend.services.batch_processor import process_batch, MAX_BATCH_SIZE
+    from backend.services.batch_processor import process_batch, MAX_BATCH_SIZE, MAX_IMAGE_BYTES
 
     try:
         if len(files) > MAX_BATCH_SIZE:
@@ -616,12 +654,28 @@ async def analyze_batch(
                 detail=f"Too many files. Max {MAX_BATCH_SIZE} per batch request."
             )
 
+        # C-3 fix: this endpoint previously had NO size check anywhere in the
+        # route handler at all -- the 5MB MAX_IMAGE_BYTES cap only existed
+        # inside batch_processor.process_batch(), checked only after all
+        # (up to 10) files were already fully buffered into memory. A coarse
+        # pre-read guard on the whole request's declared size catches the
+        # obviously-oversized case before any file is read; a genuine
+        # per-file check (below) rejects individually-oversized files
+        # before they're retained for the downstream pipeline.
+        _reject_if_content_length_exceeds(request, MAX_BATCH_SIZE * MAX_IMAGE_BYTES)
+
         images = []
         for file in files:
             if file.content_type not in ALLOWED_IMAGE_TYPES:
                 logger.warning(f"Batch: skipping {file.filename} — unsupported type {file.content_type}")
                 continue
             data = await file.read()
+            if len(data) > MAX_IMAGE_BYTES:
+                logger.warning(
+                    f"Batch: skipping {file.filename} — "
+                    f"{len(data)} bytes exceeds {MAX_IMAGE_BYTES} byte per-image limit"
+                )
+                continue
             images.append({"filename": file.filename, "data": data})
 
         if not images:
@@ -664,9 +718,22 @@ async def analyze_segment(
     insertion (real background with AI-generated subject composited in).
     """
     try:
+        # C-3 fix: this endpoint previously relied solely on validate_file()'s
+        # general-purpose 50MB (MAX_FILE_SIZE_MB) ceiling -- five times higher
+        # than the 10MB (MAX_ANALYSIS_SIZE_MB) limit every sibling CPU-heavy
+        # analysis endpoint enforces. Both the pre-read Content-Length guard
+        # and an explicit post-read check now use the same, intended ceiling.
+        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
         image_bytes = await file.read()
+        if len(image_bytes) > MAX_ANALYSIS_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
+            )
         from backend.utils.validators import validate_file, FileValidationError as _FVE
         validate_file(image_bytes, file.filename or "upload")
+    except HTTPException:
+        raise
     except _FVE as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception:
@@ -680,6 +747,10 @@ async def analyze_segment(
     except Exception:
         logger.error("Segment detection error", exc_info=True)
         raise HTTPException(status_code=500, detail="Segment analysis failed")
+    finally:
+        # C-3 fix: this was the only file-accepting endpoint in this router
+        # that never closed its UploadFile in a finally block.
+        await file.close()
 
 
 @router.post(
@@ -703,6 +774,7 @@ async def export_report(
     try:
         if file.content_type not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
+        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
         file_bytes = await file.read()
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
@@ -770,6 +842,7 @@ async def analyze_image_stream(
     if file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=415, detail=f"Unsupported: {file.content_type}")
 
+    _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
     file_bytes = await file.read()
     if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
         raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
