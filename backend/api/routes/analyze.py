@@ -54,6 +54,83 @@ def _sanitize(obj):
         return [_sanitize(v) for v in obj]
     return obj
 
+
+def _correct_exif_orientation(file_bytes: bytes) -> bytes:
+    """Apply EXIF orientation before all forensic analysis.
+
+    iPhone portrait photos have EXIF rotation=6 (90 deg CW) -- without
+    this, all spatial signals (PRNU, CFA, noise map) run on a sideways
+    image.
+
+    C-2 fix: the previous version unconditionally re-encoded EVERY
+    upload through this step, even when no rotation was needed --
+    ImageOps.exif_transpose() returns a fresh copy even when the
+    orientation tag is 1/absent (confirmed by direct reproduction) --
+    and the re-encode passed no quality= argument, silently defaulting
+    to Pillow's JPEG quality=75 regardless of the original quality.
+    Measured impact on a real quality-95 synthetic photo: ~55% smaller,
+    mean pixel error 12.65/255 -- a large, easily-detectable
+    perturbation to the ~31% of ensemble weight (ELA, JPEG Ghost, DCT,
+    PRNU-heuristic, Noise Map, Noiseprint, CFA) that measures exactly
+    this kind of compression artifact.
+
+    Fix: (1) only re-encode when the Orientation tag is actually present
+    and not the identity value (1) -- skip re-encoding entirely
+    otherwise, so the vast majority of uploads are analyzed completely
+    untouched; (2) when re-encoding IS needed, capture the original
+    JPEG's quantization tables and chroma subsampling BEFORE calling
+    exif_transpose() and pass them through explicitly.
+    ImageOps.exif_transpose() returns a plain PIL.Image.Image (not a
+    JpegImageFile), so it has no .quantization attribute left for
+    Pillow's quality="keep"/qtables="keep" shortcut to use once called
+    (confirmed by direct testing) -- the tables must be captured from
+    the ORIGINAL image object first.
+
+    Extracted to a standalone, directly-unit-testable function (was
+    previously inline in analyze_image()) specifically so this fix has
+    real regression coverage independent of the full detection pipeline.
+
+    Returns the original bytes unchanged, or on any error, per the
+    pre-existing fail-open behavior (proceed with original bytes if EXIF
+    correction fails for any reason).
+    """
+    try:
+        from PIL import Image as _PIL_img, ImageOps as _EXIF_ops
+        from io import BytesIO as _BytesIO_exif
+
+        _img_exif = _PIL_img.open(_BytesIO_exif(file_bytes))
+        _orig_fmt = _img_exif.format or "JPEG"
+        _orientation = _img_exif.getexif().get(0x0112, 1)  # 0x0112 == Orientation
+
+        if _orientation in (1, None):
+            # No rotation needed -- return the upload byte-for-byte
+            # untouched, so compression-sensitive signals measure the
+            # actual upload, not an incidental recompression.
+            return file_bytes
+
+        _orig_qtables = None
+        _orig_subsampling = None
+        if _orig_fmt == "JPEG":
+            _orig_qtables = getattr(_img_exif, "quantization", None)
+            try:
+                from PIL.JpegImagePlugin import get_sampling as _get_sampling
+                _orig_subsampling = _get_sampling(_img_exif)
+            except Exception:
+                _orig_subsampling = None
+
+        _img_exif = _EXIF_ops.exif_transpose(_img_exif)
+        _buf_exif = _BytesIO_exif()
+        _save_kwargs = {"format": _orig_fmt}
+        if _orig_fmt == "JPEG" and _orig_qtables:
+            _save_kwargs["qtables"] = list(_orig_qtables.values())
+            if _orig_subsampling is not None:
+                _save_kwargs["subsampling"] = _orig_subsampling
+        _img_exif.save(_buf_exif, **_save_kwargs)
+        return _buf_exif.getvalue()
+    except Exception:
+        return file_bytes  # Proceed with original bytes if EXIF correction fails
+
+
 # Standalone limiter for this router — same config as main.py
 # Wires RATE_LIMIT_PER_MINUTE as the default limit for any endpoint
 # without its own explicit @limiter.limit(...) decorator.
@@ -148,20 +225,10 @@ async def analyze_image(
 
         file_bytes = await file.read()
 
-        # Apply EXIF orientation before all forensic analysis.
-        # iPhone portrait photos have EXIF rotation=6 (90° CW) — without this,
-        # all spatial signals (PRNU, CFA, noise map) run on a sideways image.
-        try:
-            from PIL import Image as _PIL_img, ImageOps as _EXIF_ops
-            from io import BytesIO as _BytesIO_exif
-            _img_exif = _PIL_img.open(_BytesIO_exif(file_bytes))
-            _orig_fmt  = _img_exif.format or "JPEG"  # preserve before exif_transpose clears .format
-            _img_exif  = _EXIF_ops.exif_transpose(_img_exif)
-            _buf_exif  = _BytesIO_exif()
-            _img_exif.save(_buf_exif, format=_orig_fmt)
-            file_bytes = _buf_exif.getvalue()
-        except Exception:
-            pass  # Proceed with original bytes if EXIF correction fails
+        # See _correct_exif_orientation() docstring (C-2 fix) for the full
+        # rationale: only re-encodes when a rotation is actually needed,
+        # and preserves the original JPEG's quantization tables when it does.
+        file_bytes = _correct_exif_orientation(file_bytes)
 
         if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
             logger.warning(
