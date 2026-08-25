@@ -5,10 +5,40 @@ import uuid
 from typing import Dict, Any
 from datetime import datetime
 from PIL import Image
-from PIL.ExifTags import TAGS, GPSTAGS
+from PIL.ExifTags import TAGS, GPSTAGS, IFD as _ExifIFD
 import hashlib
 import imagehash
 from io import BytesIO
+
+# C-1: the sub-IFD tag id for GPSInfo, used with Exif.get_ifd() to actually
+# resolve GPS sub-tags (see extract_exif() below for why this is necessary).
+_GPS_IFD_TAG = _ExifIFD.GPSInfo
+
+
+def _gps_value_to_native(value):
+    """Recursively convert IFDRational / tuple-of-IFDRational GPS EXIF
+    values into plain, JSON-serializable Python types.
+
+    C-1 fix: Pillow's resolved GPS sub-IFD values are frequently
+    PIL.TiffImagePlugin.IFDRational fractions -- not natively
+    JSON-serializable by FastAPI's jsonable_encoder -- either directly
+    (e.g. a scalar tag like GPSAltitude) or nested one level inside a
+    tuple (e.g. GPSLatitude's (degrees, minutes, seconds)). Confirmed by
+    direct reproduction: even after correctly resolving the GPS sub-IFD
+    (see below), a raw IFDRational scalar still reaches
+    jsonable_encoder() and raises ValueError/TypeError unless converted
+    here first.
+    """
+    if isinstance(value, tuple):
+        return tuple(_gps_value_to_native(v) for v in value)
+    if hasattr(value, "numerator") and hasattr(value, "denominator"):
+        try:
+            return float(value)
+        except (ZeroDivisionError, ValueError):
+            return None
+    if isinstance(value, bytes):
+        return value.decode("ascii", errors="replace")
+    return value
 
 from backend.core.logger import setup_logger
 from backend.services.advanced_ensemble_detector import AdvancedEnsembleDetector
@@ -79,15 +109,32 @@ class ImageForensics:
             for tag_id, value in exif.items():
                 tag = TAGS.get(tag_id, tag_id)
                 if tag == "GPSInfo":
+                    # C-1 fix: Image.getexif() only returns the GPSInfo
+                    # tag as an unresolved IFD pointer -- an int (the
+                    # sub-IFD's byte offset in the file) -- NOT a dict of
+                    # GPS sub-tags. The previous code (`for gps_tag_id in
+                    # value`) iterated that raw int directly, which
+                    # raises "TypeError: 'int' object is not iterable" on
+                    # every GPS-bearing photo (confirmed by direct
+                    # reproduction against a real geotagged JPEG -- this
+                    # is not a hypothetical). The sub-IFD must be resolved
+                    # explicitly via get_ifd(). Once resolved, individual
+                    # GPS values can still be raw IFDRational objects or
+                    # tuples of them, so they're converted to native types
+                    # via _gps_value_to_native() before storage.
                     gps_data = {}
-                    for gps_tag_id in value:
+                    try:
+                        gps_ifd = exif_obj.get_ifd(_GPS_IFD_TAG)
+                    except Exception:
+                        gps_ifd = value if isinstance(value, dict) else {}
+                    for gps_tag_id, gps_value in gps_ifd.items():
                         gps_tag = GPSTAGS.get(gps_tag_id, gps_tag_id)
-                        gps_data[gps_tag] = value[gps_tag_id]
+                        gps_data[gps_tag] = _gps_value_to_native(gps_value)
                     exif_data["gps"] = gps_data
                 else:
                     exif_data[tag] = str(value)
             logger.info(f"Extracted EXIF: {len(exif_data)} fields")
-        except (AttributeError, KeyError, IndexError) as e:
+        except (AttributeError, KeyError, IndexError, TypeError) as e:
             logger.warning(f"Error extracting EXIF: {e}")
             exif_data["has_exif"] = False
         return exif_data
