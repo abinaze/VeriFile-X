@@ -102,28 +102,30 @@ def test_gradient_image():
 
 
 def test_random_valid_images():
-    """Fuzz test with random valid images (use safe dimensions)."""
+    """Fuzz test with random valid images. H-3 fix: this used to wrap the
+    call in try/except (TypeError, ValueError) and pytest.skip() on
+    failure -- silently hiding a real crash class (an unprotected
+    statistical-signal method raising on an edge-case input) as a
+    "skipped" test instead of a failure. Now that every signal in the
+    bundle catches its own exceptions and degrades to a neutral result
+    (see statistical_signals.py's _safe_compute), the detector should
+    never raise here at all -- so this asserts that directly."""
     from backend.services.statistical_detector import StatisticalDetector
-    
+
     for i in range(5):
         # Use safer dimensions (min 100, avoid very small heights)
         width = random.randint(100, 200)
         height = random.randint(100, 200)
-        
+
         pixels = np.random.randint(0, 256, (height, width, 3), dtype=np.uint8)
-        
+
         img = Image.fromarray(pixels)
         buffer = BytesIO()
         img.save(buffer, format='PNG')
         img_bytes = buffer.getvalue()
-        
-        try:
-            detector = StatisticalDetector(img_bytes, f"random_{width}x{height}.png")
-            report = detector.detect()
-            
-            assert report["total_signals"] == 19  # 16 base + 3 statistical = 19 (StatisticalDetector only)
-            assert 0 <= report["ai_probability"] <= 1
-        except (TypeError, ValueError):
-            # Skip if random dimensions cause FFT issues
-            pytest.skip(f"Random image {width}x{height} caused FFT edge case")
-            break
+
+        detector = StatisticalDetector(img_bytes, f"random_{width}x{height}.png")
+        report = detector.detect()
+
+        assert report["total_signals"] == 19  # 16 base + 3 statistical = 19 (StatisticalDetector only)
+        assert 0 <= report["ai_probability"] <= 1
