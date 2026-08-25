@@ -42,6 +42,26 @@ from backend.core.logger import setup_logger
 logger = setup_logger(__name__)
 
 
+def _safe_compute(signal_name: str, method: str, fn) -> Dict[str, Any]:
+    """Run one signal computation; on any exception, return the same
+    neutral, non-participating shape the codebase already uses elsewhere
+    (see AdvancedSignals' own try/except methods) instead of letting the
+    exception propagate and take down the entire signal bundle (H-3)."""
+    try:
+        return fn()
+    except Exception as e:
+        logger.warning(f"{signal_name} analysis failed: {e}")
+        return {
+            "signal_name": signal_name,
+            "score": 0.0,
+            "confidence": 0.0,
+            "explanation": "Analysis failed - insufficient data",
+            "raw_value": 0.0,
+            "expected_range": "N/A",
+            "method": method,
+        }
+
+
 @dataclass
 class ImageContext:
     """Shared, read-only decoded-image state every signal provider
@@ -517,16 +537,16 @@ class BasicSignals:
 
     def compute_all(self) -> List[Dict[str, Any]]:
         return [
-            self.analyze_fft_radial_spectrum(),
-            self.analyze_dct_coefficients(),
-            self.analyze_wavelet_energy(),
-            self.analyze_glcm_texture(),
-            self.analyze_noise_residual(),
-            self.analyze_spectral_entropy(),
-            self.analyze_lbp_texture(),
-            self.analyze_edge_statistics(),
-            self.analyze_color_correlation(),
-            self.analyze_compression_artifacts(),
+            _safe_compute("FFT Radial Spectrum", "fft_radial_spectrum", self.analyze_fft_radial_spectrum),
+            _safe_compute("DCT Coefficients", "dct_coefficients", self.analyze_dct_coefficients),
+            _safe_compute("Wavelet Energy", "wavelet_energy", self.analyze_wavelet_energy),
+            _safe_compute("GLCM Texture", "glcm_texture", self.analyze_glcm_texture),
+            _safe_compute("Noise Residual", "noise_residual", self.analyze_noise_residual),
+            _safe_compute("Spectral Entropy", "spectral_entropy", self.analyze_spectral_entropy),
+            _safe_compute("LBP Texture", "lbp_texture", self.analyze_lbp_texture),
+            _safe_compute("Edge Statistics", "edge_statistics", self.analyze_edge_statistics),
+            _safe_compute("Color Correlation", "color_correlation", self.analyze_color_correlation),
+            _safe_compute("Compression Artifacts", "compression_artifacts", self.analyze_compression_artifacts),
         ]
 
 
@@ -709,9 +729,9 @@ class UltraSignals:
 
     def compute_all(self) -> List[Dict[str, Any]]:
         return [
-            self.analyze_rgb_noise_covariance(),
-            self.analyze_patch_spectral_variance(),
-            self.analyze_natural_prior_deviation(),
+            _safe_compute("RGB Noise Covariance", "cross_channel_noise_covariance", self.analyze_rgb_noise_covariance),
+            _safe_compute("Patch Spectral Variance", "patch_level_fft_variance", self.analyze_patch_spectral_variance),
+            _safe_compute("Natural Prior Deviation", "natural_image_prior", self.analyze_natural_prior_deviation),
         ]
 
 
@@ -968,9 +988,9 @@ class CovarianceSignals:
 
     def compute_all(self) -> List[Dict[str, Any]]:
         return [
-            self.analyze_eigenvalue_spread(),
-            self.analyze_local_covariance_consistency(),
-            self.analyze_patch_anisotropy_variance(),
+            _safe_compute("Eigenvalue Spread", "covariance_eigenvalue_analysis", self.analyze_eigenvalue_spread),
+            _safe_compute("Local Covariance Consistency", "local_covariance_consistency", self.analyze_local_covariance_consistency),
+            _safe_compute("Patch Anisotropy Variance", "patch_anisotropy_variance", self.analyze_patch_anisotropy_variance),
         ]
 
 
