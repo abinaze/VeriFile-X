@@ -43,7 +43,7 @@ PyWavelets==1.4.1
 scikit-image==0.22.0
 
 # Cryptography
-cryptography==48.0.1
+cryptography==50.0.0
 
 # Deep Learning Detection
 torch==2.7.1
