@@ -71,6 +71,7 @@ jobs:
       run: |
         pytest backend/tests/ -v -m "not slow" --tb=short \
           --cov=backend --cov-report=xml --cov-report=term-missing \
+          --cov-fail-under=70 \
           --timeout=60
 
     - name: Upload coverage report
@@ -91,8 +92,8 @@ jobs:
         root = tree.getroot()
         rate = float(root.attrib.get('line-rate', 0)) * 100
         print(f'Overall coverage: {rate:.1f}%')
-        if rate < 60:
-            print('WARNING: Coverage below 60%')
+        if rate < 70:
+            print('WARNING: Coverage below 70% (the pytest --cov-fail-under=70 step above should already have failed the build)')
         "
       if: always()
 
