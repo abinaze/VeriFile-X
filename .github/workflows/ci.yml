@@ -63,7 +63,6 @@ jobs:
       run: |
         pip install pip-audit
         pip-audit
-      continue-on-error: true
 
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
