@@ -47,13 +47,13 @@ jobs:
       run: |
         pip install pytest-timeout pytest-xdist coverage[toml]
 
-    - name: Lint with flake8
+    - name: Lint with flake8 (advisory — does not block merge, see H-6)
       run: |
         pip install flake8
         flake8 backend/ --max-line-length=120 --exclude=backend/tests/,backend/__pycache__
       continue-on-error: true
 
-    - name: Type check with mypy
+    - name: Type check with mypy (advisory — does not block merge, see H-6)
       run: |
         pip install mypy
         mypy backend/ --config-file=mypy.ini
