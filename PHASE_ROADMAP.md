@@ -376,6 +376,12 @@ full sequence.
 - New non-commercial LICENSE (PolyForm Noncommercial 1.0.0), replacing MIT
 - New SVG project logo, replacing a Git-LFS-pointer PNG that did not actually resolve to an image
   in a plain repository download
+  **Correction (added later, see H-1):** this replacement was never actually completed in the
+  repository — `frontend/logo2.png` remains a Git LFS pointer stub today, no `.svg` logo file
+  exists anywhere in the repo, and `README.md`'s immutable header still references the `.png`
+  path. Either this work was reverted at some point or never merged; noted here rather than
+  silently edited, since rewriting the original claim would make the history less accurate, not
+  more. The logo itself is still an open item.
 
 ---
 
