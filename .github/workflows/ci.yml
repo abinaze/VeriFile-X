@@ -47,13 +47,13 @@ jobs:
       run: |
         pip install pytest-timeout pytest-xdist coverage[toml]
 
-    - name: Lint with flake8
+    - name: Lint with flake8 (advisory — does not block merge, see H-6)
       run: |
         pip install flake8
         flake8 backend/ --max-line-length=120 --exclude=backend/tests/,backend/__pycache__
       continue-on-error: true
 
-    - name: Type check with mypy
+    - name: Type check with mypy (advisory — does not block merge, see H-6)
       run: |
         pip install mypy
         mypy backend/ --config-file=mypy.ini
@@ -63,7 +63,6 @@ jobs:
       run: |
         pip install pip-audit
         pip-audit
-      continue-on-error: true
 
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
@@ -72,6 +71,7 @@ jobs:
       run: |
         pytest backend/tests/ -v -m "not slow" --tb=short \
           --cov=backend --cov-report=xml --cov-report=term-missing \
+          --cov-fail-under=70 \
           --timeout=60
 
     - name: Upload coverage report
@@ -92,8 +92,8 @@ jobs:
         root = tree.getroot()
         rate = float(root.attrib.get('line-rate', 0)) * 100
         print(f'Overall coverage: {rate:.1f}%')
-        if rate < 60:
-            print('WARNING: Coverage below 60%')
+        if rate < 70:
+            print('WARNING: Coverage below 70% (the pytest --cov-fail-under=70 step above should already have failed the build)')
         "
       if: always()
 
