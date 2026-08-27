@@ -222,7 +222,7 @@ VeriFile-X/
 
 - Python 3.11 or later
 - ~4 GB free disk space if you intend to run the DIRE detector locally (Stable Diffusion 2.1 weights); the system runs without it, with DIRE excluded from the ensemble and remaining weights renormalized
-- Git
+- Git, and [Git LFS](https://git-lfs.com/) if you want the real trained model files — a plain `git clone` or GitHub's "Download ZIP" only gives you LFS pointer stubs (harmless: the app degrades gracefully without them; see [`SETUP_GUIDE.md`](SETUP_GUIDE.md) to train your own)
 
 ### Installation
 
