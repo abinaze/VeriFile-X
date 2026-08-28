@@ -159,6 +159,49 @@ docker rm vfx            # remove it completely
 
 ## 4. Cloud Deployment
 
+### A note on data persistence before you pick a platform
+
+Every stateful feature — API keys (`backend/data/api_keys.jsonl`), cases
+(`backend/data/cases.jsonl`), webhook registrations and delivery logs
+(`backend/data/webhooks.jsonl`, `webhook_deliveries.jsonl`), analyst feedback
+and the adaptive signal-weight overrides (`backend/data/feedback.jsonl`,
+`signal_weights.json`), and the audit log (`backend/data/audit_log.jsonl`) —
+persists to plain files on the container's local filesystem. **None of the
+deployment options below attach persistent storage to that path by default.**
+On Hugging Face Spaces and most container platforms, that filesystem resets
+on every rebuild or restart, silently deleting all of it. Uploaded images
+themselves are not affected — those are only ever held in memory, never
+written to disk, regardless of platform.
+
+If you only need the bootstrap admin key (`ADMIN_KEY_HASH`, set as a platform
+secret — see below), you don't need to do anything extra: that survives
+because it's a platform-level environment variable, not a file. You need
+persistent storage specifically if you want keys created via the API, cases,
+webhook registrations, or feedback-driven weight adjustments to survive a
+restart:
+
+- **Hugging Face Spaces:** enable **Persistent Storage** in your Space's
+  **Settings → Persistent Storage** tab (paid, billed hourly by size — the
+  smallest tier is enough for this project's JSONL files) and mount it so it
+  contains the `backend/data/` path.
+- **Docker on a cloud VM (Option B below):** add a volume mount so the data
+  survives an image rebuild/redeploy, not just a container restart:
+  `docker run ... -v vfx_data:/app/backend/data ...`
+- **Render**, if you use it (see the `verifile-x-api` service in
+  `render.yaml` — whether this is still a live, intended deployment target is
+  a separate, undecided question, noted in that file's own comments): add a
+  [Disk](https://render.com/docs/disks) resource (paid) mounted at
+  `/app/backend/data` — either via the dashboard, or by adding a `disk:` block
+  to `render.yaml` yourself:
+```yaml
+  disk:
+    name: vfx-data
+    mountPath: /app/backend/data
+    sizeGB: 1
+```
+  This isn't added to `render.yaml` here since it provisions a paid resource —
+  worth doing deliberately, not as a side effect of a documentation fix.
+
 ### Option A — Hugging Face Spaces (free, recommended)
 
 VeriFile-X is pre-configured for Hugging Face Spaces.
