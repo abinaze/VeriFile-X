@@ -30,6 +30,7 @@ Protocol (each event is JSON):
 import json
 import asyncio
 from backend.core.logger import setup_logger
+from backend.utils.json_safe import sanitize as _sanitize
 from typing import AsyncGenerator
 
 logger = setup_logger(__name__)
@@ -224,17 +225,10 @@ async def stream_analysis(image_bytes: bytes, filename: str) -> AsyncGenerator[s
         finally:
             detector.cleanup()
 
-        # Sanitize NaN/Inf
-        import math
-        def _sanitize(obj):
-            if isinstance(obj, float):
-                return 0.0 if (math.isnan(obj) or math.isinf(obj)) else obj
-            if isinstance(obj, dict):
-                return {k: _sanitize(v) for k, v in obj.items()}
-            if isinstance(obj, list):
-                return [_sanitize(v) for v in obj]
-            return obj
-
+        # Sanitize NaN/Inf and numpy scalar types (H-5: was a local,
+        # incomplete duplicate of analyze.py's sanitizer -- missing the
+        # numpy-scalar conversion that copy has. Now the same shared
+        # implementation both use.)
         report = _sanitize(report)
 
         yield _sse("summary", {

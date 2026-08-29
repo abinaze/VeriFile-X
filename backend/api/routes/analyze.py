@@ -8,8 +8,6 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 import hashlib
 import time
-import math as _math
-import numpy as _np
 from typing import List
 
 from backend.services.image_forensics import ImageForensics
@@ -20,39 +18,9 @@ from backend.core.cache import forensics_cache
 from backend.services.metrics_collector import record_analysis
 from backend.core.audit_log import log_analysis
 from backend.core.config import settings
+from backend.utils.json_safe import sanitize as _sanitize
 
 logger = setup_logger(__name__)
-
-
-def _sanitize(obj):
-    """Recursively replace NaN/Infinity floats with 0.0 (F-8, F-27).
-
-    json.dumps() happily emits the literal tokens NaN/Infinity, which
-    are not valid per RFC 8259 and many non-Python JSON parsers reject
-    outright. Division-by-zero guards throughout the signal detectors
-    (e.g. "+ 1e-8" denominators in several cosine-similarity calcs)
-    mean a signal can legitimately produce a non-finite float.
-
-    This single shared helper replaces the two near-duplicate copies
-    that used to live inline in analyze_image() -- one for the
-    cache-miss path, one for the cache-hit path (_sanitize_hit) -- which
-    is exactly the kind of drift risk this project has been bitten by
-    before (see F-4). It is now called ONCE, immediately after
-    generate_forensic_report() returns and before the report is cached,
-    sent to any webhook, or written to the audit log -- previously all
-    three saw the raw, unsanitized report, and only the direct HTTP
-    response (sanitized too late, right before returning) was
-    guaranteed clean.
-    """
-    if isinstance(obj, _np.generic):
-        return obj.item()
-    if isinstance(obj, float):
-        return 0.0 if (_math.isnan(obj) or _math.isinf(obj)) else obj
-    if isinstance(obj, dict):
-        return {k: _sanitize(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_sanitize(v) for v in obj]
-    return obj
 
 
 def _correct_exif_orientation(file_bytes: bytes) -> bytes:
