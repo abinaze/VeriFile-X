@@ -2041,6 +2041,21 @@ function renderResults(data) {
     });
 }
  
+// PDF export is generated client-side, deliberately, not by calling the
+// backend's own POST /api/v1/analyze/export/pdf (H-5, part B). The two are
+// intentionally different artifacts, not accidental duplication:
+//   - This function renders instantly from data already in memory
+//     (window._lastReport, window._lastThumbnail) -- no network round-trip,
+//     no re-running the full (potentially expensive, DIRE-inclusive)
+//     analysis pipeline a second time just to get a PDF of a report the
+//     user already sees on screen. It includes the image thumbnail.
+//   - The backend endpoint re-analyzes the image from scratch and produces
+//     a plain-text, thumbnail-free "court-ready" document (see
+//     backend/services/report_exporter.py's own docstring) -- meant for a
+//     direct API consumer who wants an evidentiary export without going
+//     through this UI at all, not for this button.
+// If you're changing one, check whether the other should change too, but
+// they are not meant to be merged into one implementation.
 function downloadPDF() {
     const { jsPDF } = window.jspdf;
     const doc  = new jsPDF();
