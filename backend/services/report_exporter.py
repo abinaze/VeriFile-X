@@ -22,6 +22,18 @@ All exports include:
   - Generator attribution
   - Platform forensics
   - C2PA provenance status
+
+Reached only via POST /api/v1/analyze/export/{fmt}, which re-analyzes the
+uploaded image from scratch — this module never receives an already-computed
+report. The frontend's own "Download PDF Report" button does NOT call this
+endpoint (H-5, part B): it renders a PDF client-side, instantly, from the
+report and thumbnail already in the browser's memory, specifically to avoid
+a second upload plus a second full analysis pass just to get a PDF of a
+report the user is already looking at. This module's PDF output has no
+thumbnail and is meant as a plain, re-derivable evidentiary artifact for a
+direct API consumer, not as a replacement for that button. If you change the
+shape of one, check whether the other should change too, but they are
+deliberately not the same code path.
 """
 import json
 import csv
