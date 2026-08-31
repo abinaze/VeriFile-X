@@ -93,11 +93,13 @@ Since the F-16 refactor, this bundle is composition-based, not inheritance-based
 | `CovarianceSignals` | 3 | Local covariance, patch anisotropy variance, eigenvalue spread |
 | `AdvancedSignals` | 3 | Mahalanobis distance, KL divergence, color distribution outlier detection |
 
-`AdvancedAIDetector` / `UltraAdvancedDetector` / `CovarianceDetector` / `StatisticalDetector` — the
-original four classes from before F-16 — still exist as thin, backward-compatible facades over
-these components (kept because tests construct them directly), but the real production entry
-point, `AdvancedEnsembleDetector`, composes a `StatisticalDetector` instance rather than inheriting
-from it.
+`AdvancedAIDetector` / `UltraAdvancedDetector` / `CovarianceDetector` were thin, backward-compatible
+facades over these components, kept only because their own dedicated test files constructed them
+directly. Confirmed to have zero production imports anywhere else in the codebase, they were
+retired entirely (H-5, part C) rather than kept as dead weight; the real production entry point,
+`AdvancedEnsembleDetector`, composes a `StatisticalDetector` instance directly. `StatisticalDetector`
+itself is unaffected by that retirement — it's the actual, currently-used class exposing all 19
+signals, not one of the three that were removed.
 
 ## Ensemble weighting
 

@@ -145,7 +145,7 @@ Image Input (JPEG / PNG / WebP / TIFF / HEIC / HEIF)
   per-signal breakdown with individual scores/confidence/explanations
 ```
 
-Detector class hierarchy: `AdvancedAIDetector` -> `UltraAdvancedDetector` -> `CovarianceDetector` -> `StatisticalDetector` -> `AdvancedEnsembleDetector`, with the standalone deep-learning and forensic-signal modules composed in at the ensemble layer.
+Detector composition: `AdvancedEnsembleDetector` composes a `StatisticalDetector` (itself composing the 19-signal statistical bundle) alongside the standalone deep-learning and forensic-signal modules. An earlier inheritance-based design (`AdvancedAIDetector` -> `UltraAdvancedDetector` -> `CovarianceDetector` -> `StatisticalDetector`) was replaced by this composition-based structure; the three intermediate classes were later retired entirely once confirmed to have zero remaining production use (H-5).
 
 ## Ensemble Weighting
 
