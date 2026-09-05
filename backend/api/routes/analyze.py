@@ -798,12 +798,14 @@ async def export_report(
         raise HTTPException(status_code=400, detail="Format must be: pdf, json, or csv")
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): was content-type + size checks only -- now also
+        # gets EXIF correction, MIME/extension validation, and the quality
+        # gate via the shared prepare_upload() pipeline. fmt is validated
+        # above, before this runs, so an invalid fmt still 400s regardless
+        # of the file.
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
 
         from backend.services.image_forensics import ImageForensics
         import asyncio as _aio_export
@@ -865,13 +867,15 @@ async def analyze_image_stream(
     """Real-time streaming analysis — 26 signals arrive one by one as SSE events."""
     from backend.services.sse_analyzer import stream_analysis
 
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status_code=415, detail=f"Unsupported: {file.content_type}")
-
-    _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-    file_bytes = await file.read()
-    if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-        raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+    # C-3 (full fix): was content-type + size checks only -- now also gets
+    # EXIF correction, MIME/extension validation, and the quality gate via
+    # the shared prepare_upload() pipeline. Previously the only one of
+    # this router's 9 file-accepting endpoints that streamed spatial
+    # signals (PRNU, CFA, noise map, etc., inside stream_analysis()) on a
+    # rotated iPhone photo without ever correcting its orientation first.
+    file_bytes, _ = await prepare_upload(
+        request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+    )
 
     filename = file.filename or "unknown"
     await file.close()
