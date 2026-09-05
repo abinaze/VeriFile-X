@@ -543,14 +543,17 @@ async def analyze_platform(
     from backend.services.platform_detector import detect_platform
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): correct_exif=False is deliberate, not an
+        # oversight -- this endpoint keys partly on EXIF presence/absence
+        # (WhatsApp/Instagram/Telegram are known to strip EXIF; other
+        # platforms don't), and exif_transpose() strips the orientation
+        # tag as part of "correcting" it -- which would alter exactly the
+        # signal this endpoint exists to measure, for exactly the photos
+        # most likely to need rotation. Still gains MIME/extension
+        # validation and the quality gate via prepare_upload().
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=False
+        )
 
         import asyncio as _aio_plat
         result = await _aio_plat.to_thread(detect_platform, file_bytes, file.filename)
@@ -585,12 +588,18 @@ async def analyze_c2pa(
     from backend.services.c2pa_verifier import verify_c2pa
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): correct_exif=False is deliberate -- this
+        # endpoint looks for a binary JUMBF box containing a
+        # cryptographically-signed provenance manifest. A generic Pillow
+        # re-encode has no concept of this custom segment and will not
+        # preserve it -- "correcting" a real, C2PA-signed rotated photo
+        # would silently destroy the ability to verify it, the exact
+        # opposite of what a provenance-verification endpoint should do
+        # to its own input. Still gains MIME/extension validation and the
+        # quality gate via prepare_upload().
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=False
+        )
         import asyncio as _aio_c2pa
         result = await _aio_c2pa.to_thread(verify_c2pa, file_bytes, file.filename)
         logger.info(
