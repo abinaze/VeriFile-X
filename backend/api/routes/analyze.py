@@ -456,14 +456,12 @@ async def analyze_image_heatmap(
     from backend.services.heatmap_generator import generate_heatmap
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): was content-type + size checks only -- now also
+        # gets EXIF correction, MIME/extension validation, and the quality
+        # gate via the shared prepare_upload() pipeline.
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
 
         import asyncio as _aio_hm
         result = await _aio_hm.to_thread(generate_heatmap, file_bytes, file.filename)
@@ -504,14 +502,12 @@ async def analyze_attribution(
     from backend.services.generator_attribution import attribute_generator
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): was content-type + size checks only -- now also
+        # gets EXIF correction, MIME/extension validation, and the quality
+        # gate via the shared prepare_upload() pipeline.
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
 
         import asyncio as _aio_attr
         result = await _aio_attr.to_thread(attribute_generator, file_bytes, file.filename)
@@ -626,12 +622,12 @@ async def analyze_robustness(
     from backend.services.adversarial_tester import run_robustness_test
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): was content-type + size checks only -- now also
+        # gets EXIF correction, MIME/extension validation, and the quality
+        # gate via the shared prepare_upload() pipeline.
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
         import asyncio as _aio_rob
         result = await _aio_rob.to_thread(run_robustness_test, file_bytes, file.filename)
         logger.info(
