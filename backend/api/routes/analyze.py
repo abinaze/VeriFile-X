@@ -162,6 +162,106 @@ def _reject_if_content_length_exceeds(request: Request, max_bytes: int) -> None:
             pass  # Invalid Content-Length header -- proceed, the post-read check still applies
 
 
+def _prepare_image_bytes(
+    file_bytes: bytes,
+    filename: str,
+    max_bytes: int,
+    correct_exif: bool = True,
+):
+    """C-3 (full fix): the shared per-file-content half of the upload
+    pipeline -- optional EXIF-orientation correction, a post-correction
+    size re-check, MIME/extension validation, and the image-quality gate.
+
+    Before this, POST /image was the only one of this router's 9
+    file-accepting endpoints with all of these checks; the other 8 had an
+    inconsistent subset (see this file's module docstring history / the
+    audit's C-3 finding). This function is the single implementation the
+    other 8 now also call, via prepare_upload() below (or directly, for
+    /batch -- see analyze_batch()'s own comment for why it's the one
+    exception).
+
+    correct_exif=False exists specifically for /platform and /c2pa: both
+    fingerprint properties of the ORIGINAL file structure -- EXIF
+    presence/absence, and a binary JUMBF C2PA manifest respectively --
+    that even a careful, quality-preserving EXIF re-encode would corrupt
+    or destroy outright. Removing this parameter to "simplify" the
+    pipeline would silently reintroduce that bug. See analyze_platform()
+    and analyze_c2pa() below for the full rationale.
+
+    Returns (prepared_bytes, confidence_cap). Raises HTTPException(413)
+    if the (possibly re-encoded) bytes exceed max_bytes, or
+    HTTPException(422) if the file fails MIME/extension validation or the
+    quality gate. A missing/empty filename defaults to "upload" (matching
+    the fallback several endpoints already used ad hoc), rather than
+    letting validate_file()'s extension parsing fail on None.
+    """
+    filename = filename or "upload"
+
+    if correct_exif:
+        file_bytes = _correct_exif_orientation(file_bytes)
+
+    if len(file_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Payload too large. Max size: {max_bytes // (1024*1024)}MB"
+        )
+
+    try:
+        validation = validate_file(file_bytes, filename)
+    except FileValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    if not validation["mime_type"].startswith("image/"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"File content is not an image: {validation['mime_type']}"
+        )
+    if not validation.get("extension_valid", True):
+        raise HTTPException(
+            status_code=422,
+            detail=f"File extension not allowed: {validation.get('extension', 'unknown')}"
+        )
+
+    quality = assess_image_quality(file_bytes, filename)
+    if not quality["suitable"]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Image unsuitable for analysis: {quality['reason']}"
+        )
+
+    return file_bytes, quality.get("confidence_cap", 1.0)
+
+
+async def prepare_upload(
+    request: Request,
+    file: UploadFile,
+    max_bytes: int,
+    correct_exif: bool = True,
+):
+    """C-3 (full fix): the full shared upload pipeline -- content-type
+    header check (415) -> pre-read Content-Length guard (413) -> read
+    the body -> _prepare_image_bytes() (EXIF correction, post-read size
+    check, MIME/extension validation, quality gate).
+
+    Used by every file-accepting endpoint in this router except /batch,
+    which calls _prepare_image_bytes() directly per file inside its own
+    loop instead -- a per-file call here would re-check this same
+    whole-request Content-Length header against a much smaller per-file
+    threshold on every iteration of that loop, incorrectly rejecting
+    almost any real multi-file batch. See analyze_batch() below.
+    """
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp"
+        )
+
+    _reject_if_content_length_exceeds(request, max_bytes)
+    file_bytes = await file.read()
+
+    return _prepare_image_bytes(file_bytes, file.filename, max_bytes, correct_exif=correct_exif)
+
+
 @router.post(
     "/image",
     summary="Analyze image forensics",
@@ -202,44 +302,16 @@ async def analyze_image(
     6. SHA-256 hash caching (deduplication)
     """
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            logger.warning(
-                f"Rejected upload: content_type={file.content_type} "
-                f"from {get_remote_address(request)}"
-            )
-            raise HTTPException(
-                status_code=415,
-                detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp"
-            )
-
-        # Check Content-Length header BEFORE reading to avoid loading huge files into RAM
-        content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                if int(content_length) > MAX_ANALYSIS_SIZE_BYTES:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
-                    )
-            except ValueError:
-                pass  # Invalid Content-Length header — proceed and check after read
-
-        file_bytes = await file.read()
-
-        # See _correct_exif_orientation() docstring (C-2 fix) for the full
-        # rationale: only re-encodes when a rotation is actually needed,
-        # and preserves the original JPEG's quantization tables when it does.
-        file_bytes = _correct_exif_orientation(file_bytes)
-
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            logger.warning(
-                f"Rejected upload: size={len(file_bytes)} bytes "
-                f"exceeds {MAX_ANALYSIS_SIZE_BYTES} bytes"
-            )
-            raise HTTPException(
-                status_code=413,
-                detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
-            )
+        # C-3 (full fix): all of content-type check, pre-read Content-Length
+        # guard, EXIF-orientation correction, post-read size check,
+        # MIME/extension validation, and the quality gate now live in the
+        # shared prepare_upload() pipeline -- see its docstring above.
+        # This endpoint was the only one of the 9 with all six checks;
+        # the other 8 are migrated onto the same shared calls below it in
+        # this file.
+        file_bytes, _confidence_cap = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
 
         file_hash = hashlib.sha256(file_bytes).hexdigest()
 
@@ -249,27 +321,6 @@ async def analyze_image(
             f"sha256={file_hash[:16]}..., "
             f"content_type={file.content_type}"
         )
-
-        validation = validate_file(file_bytes, file.filename)
-
-        if not validation["mime_type"].startswith("image/"):
-            raise FileValidationError(
-                f"File content is not an image: {validation['mime_type']}"
-            )
-        # Use extension_valid from validate_file (previously silently discarded)
-        if not validation.get("extension_valid", True):
-            raise FileValidationError(
-                f"File extension not allowed: {validation.get('extension', 'unknown')}"
-            )
-
-        # Quality gate — reject images too small or unreadable for forensics
-        quality = assess_image_quality(file_bytes, file.filename)
-        if not quality["suitable"]:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Image unsuitable for analysis: {quality['reason']}"
-            )
-        _confidence_cap = quality.get("confidence_cap", 1.0)
 
         cached_result = forensics_cache.get(file_hash)
         if cached_result:
@@ -354,10 +405,6 @@ async def analyze_image(
 
         return report
 
-    except FileValidationError:
-        logger.warning("File validation failed", exc_info=True)
-        raise HTTPException(status_code=422, detail="File validation failed. Check file type and size.")
-
     except ValueError:
         logger.error("Value error during analysis", exc_info=True)
         raise HTTPException(status_code=400, detail="Invalid image data")
@@ -409,14 +456,12 @@ async def analyze_image_heatmap(
     from backend.services.heatmap_generator import generate_heatmap
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): was content-type + size checks only -- now also
+        # gets EXIF correction, MIME/extension validation, and the quality
+        # gate via the shared prepare_upload() pipeline.
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
 
         import asyncio as _aio_hm
         result = await _aio_hm.to_thread(generate_heatmap, file_bytes, file.filename)
@@ -457,14 +502,12 @@ async def analyze_attribution(
     from backend.services.generator_attribution import attribute_generator
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): was content-type + size checks only -- now also
+        # gets EXIF correction, MIME/extension validation, and the quality
+        # gate via the shared prepare_upload() pipeline.
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
 
         import asyncio as _aio_attr
         result = await _aio_attr.to_thread(attribute_generator, file_bytes, file.filename)
@@ -500,14 +543,17 @@ async def analyze_platform(
     from backend.services.platform_detector import detect_platform
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): correct_exif=False is deliberate, not an
+        # oversight -- this endpoint keys partly on EXIF presence/absence
+        # (WhatsApp/Instagram/Telegram are known to strip EXIF; other
+        # platforms don't), and exif_transpose() strips the orientation
+        # tag as part of "correcting" it -- which would alter exactly the
+        # signal this endpoint exists to measure, for exactly the photos
+        # most likely to need rotation. Still gains MIME/extension
+        # validation and the quality gate via prepare_upload().
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=False
+        )
 
         import asyncio as _aio_plat
         result = await _aio_plat.to_thread(detect_platform, file_bytes, file.filename)
@@ -542,12 +588,18 @@ async def analyze_c2pa(
     from backend.services.c2pa_verifier import verify_c2pa
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): correct_exif=False is deliberate -- this
+        # endpoint looks for a binary JUMBF box containing a
+        # cryptographically-signed provenance manifest. A generic Pillow
+        # re-encode has no concept of this custom segment and will not
+        # preserve it -- "correcting" a real, C2PA-signed rotated photo
+        # would silently destroy the ability to verify it, the exact
+        # opposite of what a provenance-verification endpoint should do
+        # to its own input. Still gains MIME/extension validation and the
+        # quality gate via prepare_upload().
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=False
+        )
         import asyncio as _aio_c2pa
         result = await _aio_c2pa.to_thread(verify_c2pa, file_bytes, file.filename)
         logger.info(
@@ -579,12 +631,12 @@ async def analyze_robustness(
     from backend.services.adversarial_tester import run_robustness_test
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): was content-type + size checks only -- now also
+        # gets EXIF correction, MIME/extension validation, and the quality
+        # gate via the shared prepare_upload() pipeline.
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
         import asyncio as _aio_rob
         result = await _aio_rob.to_thread(run_robustness_test, file_bytes, file.filename)
         logger.info(
@@ -638,11 +690,22 @@ async def analyze_batch(
                 logger.warning(f"Batch: skipping {file.filename} — unsupported type {file.content_type}")
                 continue
             data = await file.read()
-            if len(data) > MAX_IMAGE_BYTES:
-                logger.warning(
-                    f"Batch: skipping {file.filename} — "
-                    f"{len(data)} bytes exceeds {MAX_IMAGE_BYTES} byte per-image limit"
-                )
+            # C-3 (full fix): _prepare_image_bytes() directly, not
+            # prepare_upload() -- this loop already has its own
+            # request-level Content-Length precheck (above, against
+            # MAX_BATCH_SIZE * MAX_IMAGE_BYTES); calling prepare_upload()
+            # per file would re-check that same whole-request header
+            # against the much smaller per-file MAX_IMAGE_BYTES on every
+            # iteration, incorrectly rejecting almost any real multi-file
+            # batch. This still gains EXIF correction, MIME/extension
+            # validation, and the quality gate per file -- none of which
+            # this endpoint had before -- via the same
+            # skip-invalid-and-continue pattern already used above for
+            # content-type and (previously) size.
+            try:
+                data, _ = _prepare_image_bytes(data, file.filename, MAX_IMAGE_BYTES, correct_exif=True)
+            except HTTPException as exc:
+                logger.warning(f"Batch: skipping {file.filename} — {exc.detail}")
                 continue
             images.append({"filename": file.filename, "data": data})
 
@@ -686,24 +749,19 @@ async def analyze_segment(
     insertion (real background with AI-generated subject composited in).
     """
     try:
-        # C-3 fix: this endpoint previously relied solely on validate_file()'s
-        # general-purpose 50MB (MAX_FILE_SIZE_MB) ceiling -- five times higher
-        # than the 10MB (MAX_ANALYSIS_SIZE_MB) limit every sibling CPU-heavy
-        # analysis endpoint enforces. Both the pre-read Content-Length guard
-        # and an explicit post-read check now use the same, intended ceiling.
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        image_bytes = await file.read()
-        if len(image_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
-            )
-        from backend.utils.validators import validate_file, FileValidationError as _FVE
-        validate_file(image_bytes, file.filename or "upload")
+        # C-3 (full fix): this endpoint previously had NO content-type
+        # header check at all -- the only one of the 9 file-accepting
+        # endpoints in this router missing one (a real, previously
+        # undocumented inconsistency found while consolidating this).
+        # It already had validate_file() from the C-3 stopgap (with the
+        # correct 10MB ceiling, fixed there); now also gets a
+        # content-type check, EXIF correction, and the quality gate via
+        # the shared prepare_upload() pipeline, same as its siblings.
+        image_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
     except HTTPException:
         raise
-    except _FVE as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
     except Exception:
         logger.exception("Unexpected error validating /segment upload")
         raise HTTPException(status_code=422, detail="Invalid or unreadable image file")
@@ -740,12 +798,14 @@ async def export_report(
         raise HTTPException(status_code=400, detail="Format must be: pdf, json, or csv")
 
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            raise HTTPException(status_code=415, detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp")
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        file_bytes = await file.read()
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+        # C-3 (full fix): was content-type + size checks only -- now also
+        # gets EXIF correction, MIME/extension validation, and the quality
+        # gate via the shared prepare_upload() pipeline. fmt is validated
+        # above, before this runs, so an invalid fmt still 400s regardless
+        # of the file.
+        file_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
 
         from backend.services.image_forensics import ImageForensics
         import asyncio as _aio_export
@@ -807,13 +867,15 @@ async def analyze_image_stream(
     """Real-time streaming analysis — 26 signals arrive one by one as SSE events."""
     from backend.services.sse_analyzer import stream_analysis
 
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(status_code=415, detail=f"Unsupported: {file.content_type}")
-
-    _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-    file_bytes = await file.read()
-    if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-        raise HTTPException(status_code=413, detail="Payload too large. Max 10MB.")
+    # C-3 (full fix): was content-type + size checks only -- now also gets
+    # EXIF correction, MIME/extension validation, and the quality gate via
+    # the shared prepare_upload() pipeline. Previously the only one of
+    # this router's 9 file-accepting endpoints that streamed spatial
+    # signals (PRNU, CFA, noise map, etc., inside stream_analysis()) on a
+    # rotated iPhone photo without ever correcting its orientation first.
+    file_bytes, _ = await prepare_upload(
+        request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+    )
 
     filename = file.filename or "unknown"
     await file.close()
