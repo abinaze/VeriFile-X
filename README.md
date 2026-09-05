@@ -299,12 +299,17 @@ Interactive, always-current documentation: `/docs` (Swagger UI) and `/redoc`. Th
 
 ### Analysis (`/api/v1/analyze`) — requires an analyst or admin API key
 
+The frontend only calls `POST /image` (verified directly against `frontend/index.html`: it's
+the only `/api/v1/analyze/*` endpoint the UI ever calls). Every other endpoint below is
+real and fully tested, but API-only — reachable via `curl`/Postman/your own client, not
+from the web UI.
+
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/image` | Full 30-signal forensic analysis |
 | POST | `/image/stream` | Real-time Server-Sent Events stream, one event per signal |
 | POST | `/segment` | Per-tile AI-probability grid |
-| POST | `/heatmap` | Grad-CAM manipulation-localization heatmap |
+| POST | `/image/heatmap` | Grad-CAM manipulation-localization heatmap |
 | POST | `/attribution` | Generator attribution (which model family likely produced the image) |
 | POST | `/platform` | Social-platform re-encoding fingerprint detection |
 | POST | `/c2pa` | C2PA content-credential scan |
