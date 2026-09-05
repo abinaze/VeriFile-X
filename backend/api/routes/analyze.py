@@ -690,11 +690,22 @@ async def analyze_batch(
                 logger.warning(f"Batch: skipping {file.filename} — unsupported type {file.content_type}")
                 continue
             data = await file.read()
-            if len(data) > MAX_IMAGE_BYTES:
-                logger.warning(
-                    f"Batch: skipping {file.filename} — "
-                    f"{len(data)} bytes exceeds {MAX_IMAGE_BYTES} byte per-image limit"
-                )
+            # C-3 (full fix): _prepare_image_bytes() directly, not
+            # prepare_upload() -- this loop already has its own
+            # request-level Content-Length precheck (above, against
+            # MAX_BATCH_SIZE * MAX_IMAGE_BYTES); calling prepare_upload()
+            # per file would re-check that same whole-request header
+            # against the much smaller per-file MAX_IMAGE_BYTES on every
+            # iteration, incorrectly rejecting almost any real multi-file
+            # batch. This still gains EXIF correction, MIME/extension
+            # validation, and the quality gate per file -- none of which
+            # this endpoint had before -- via the same
+            # skip-invalid-and-continue pattern already used above for
+            # content-type and (previously) size.
+            try:
+                data, _ = _prepare_image_bytes(data, file.filename, MAX_IMAGE_BYTES, correct_exif=True)
+            except HTTPException as exc:
+                logger.warning(f"Batch: skipping {file.filename} — {exc.detail}")
                 continue
             images.append({"filename": file.filename, "data": data})
 
