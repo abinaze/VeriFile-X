@@ -162,6 +162,106 @@ def _reject_if_content_length_exceeds(request: Request, max_bytes: int) -> None:
             pass  # Invalid Content-Length header -- proceed, the post-read check still applies
 
 
+def _prepare_image_bytes(
+    file_bytes: bytes,
+    filename: str,
+    max_bytes: int,
+    correct_exif: bool = True,
+):
+    """C-3 (full fix): the shared per-file-content half of the upload
+    pipeline -- optional EXIF-orientation correction, a post-correction
+    size re-check, MIME/extension validation, and the image-quality gate.
+
+    Before this, POST /image was the only one of this router's 9
+    file-accepting endpoints with all of these checks; the other 8 had an
+    inconsistent subset (see this file's module docstring history / the
+    audit's C-3 finding). This function is the single implementation the
+    other 8 now also call, via prepare_upload() below (or directly, for
+    /batch -- see analyze_batch()'s own comment for why it's the one
+    exception).
+
+    correct_exif=False exists specifically for /platform and /c2pa: both
+    fingerprint properties of the ORIGINAL file structure -- EXIF
+    presence/absence, and a binary JUMBF C2PA manifest respectively --
+    that even a careful, quality-preserving EXIF re-encode would corrupt
+    or destroy outright. Removing this parameter to "simplify" the
+    pipeline would silently reintroduce that bug. See analyze_platform()
+    and analyze_c2pa() below for the full rationale.
+
+    Returns (prepared_bytes, confidence_cap). Raises HTTPException(413)
+    if the (possibly re-encoded) bytes exceed max_bytes, or
+    HTTPException(422) if the file fails MIME/extension validation or the
+    quality gate. A missing/empty filename defaults to "upload" (matching
+    the fallback several endpoints already used ad hoc), rather than
+    letting validate_file()'s extension parsing fail on None.
+    """
+    filename = filename or "upload"
+
+    if correct_exif:
+        file_bytes = _correct_exif_orientation(file_bytes)
+
+    if len(file_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Payload too large. Max size: {max_bytes // (1024*1024)}MB"
+        )
+
+    try:
+        validation = validate_file(file_bytes, filename)
+    except FileValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    if not validation["mime_type"].startswith("image/"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"File content is not an image: {validation['mime_type']}"
+        )
+    if not validation.get("extension_valid", True):
+        raise HTTPException(
+            status_code=422,
+            detail=f"File extension not allowed: {validation.get('extension', 'unknown')}"
+        )
+
+    quality = assess_image_quality(file_bytes, filename)
+    if not quality["suitable"]:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Image unsuitable for analysis: {quality['reason']}"
+        )
+
+    return file_bytes, quality.get("confidence_cap", 1.0)
+
+
+async def prepare_upload(
+    request: Request,
+    file: UploadFile,
+    max_bytes: int,
+    correct_exif: bool = True,
+):
+    """C-3 (full fix): the full shared upload pipeline -- content-type
+    header check (415) -> pre-read Content-Length guard (413) -> read
+    the body -> _prepare_image_bytes() (EXIF correction, post-read size
+    check, MIME/extension validation, quality gate).
+
+    Used by every file-accepting endpoint in this router except /batch,
+    which calls _prepare_image_bytes() directly per file inside its own
+    loop instead -- a per-file call here would re-check this same
+    whole-request Content-Length header against a much smaller per-file
+    threshold on every iteration of that loop, incorrectly rejecting
+    almost any real multi-file batch. See analyze_batch() below.
+    """
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp"
+        )
+
+    _reject_if_content_length_exceeds(request, max_bytes)
+    file_bytes = await file.read()
+
+    return _prepare_image_bytes(file_bytes, file.filename, max_bytes, correct_exif=correct_exif)
+
+
 @router.post(
     "/image",
     summary="Analyze image forensics",
@@ -202,44 +302,16 @@ async def analyze_image(
     6. SHA-256 hash caching (deduplication)
     """
     try:
-        if file.content_type not in ALLOWED_IMAGE_TYPES:
-            logger.warning(
-                f"Rejected upload: content_type={file.content_type} "
-                f"from {get_remote_address(request)}"
-            )
-            raise HTTPException(
-                status_code=415,
-                detail="Unsupported media type. Allowed: image/jpeg, image/png, image/webp"
-            )
-
-        # Check Content-Length header BEFORE reading to avoid loading huge files into RAM
-        content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                if int(content_length) > MAX_ANALYSIS_SIZE_BYTES:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
-                    )
-            except ValueError:
-                pass  # Invalid Content-Length header — proceed and check after read
-
-        file_bytes = await file.read()
-
-        # See _correct_exif_orientation() docstring (C-2 fix) for the full
-        # rationale: only re-encodes when a rotation is actually needed,
-        # and preserves the original JPEG's quantization tables when it does.
-        file_bytes = _correct_exif_orientation(file_bytes)
-
-        if len(file_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            logger.warning(
-                f"Rejected upload: size={len(file_bytes)} bytes "
-                f"exceeds {MAX_ANALYSIS_SIZE_BYTES} bytes"
-            )
-            raise HTTPException(
-                status_code=413,
-                detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
-            )
+        # C-3 (full fix): all of content-type check, pre-read Content-Length
+        # guard, EXIF-orientation correction, post-read size check,
+        # MIME/extension validation, and the quality gate now live in the
+        # shared prepare_upload() pipeline -- see its docstring above.
+        # This endpoint was the only one of the 9 with all six checks;
+        # the other 8 are migrated onto the same shared calls below it in
+        # this file.
+        file_bytes, _confidence_cap = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
 
         file_hash = hashlib.sha256(file_bytes).hexdigest()
 
@@ -249,27 +321,6 @@ async def analyze_image(
             f"sha256={file_hash[:16]}..., "
             f"content_type={file.content_type}"
         )
-
-        validation = validate_file(file_bytes, file.filename)
-
-        if not validation["mime_type"].startswith("image/"):
-            raise FileValidationError(
-                f"File content is not an image: {validation['mime_type']}"
-            )
-        # Use extension_valid from validate_file (previously silently discarded)
-        if not validation.get("extension_valid", True):
-            raise FileValidationError(
-                f"File extension not allowed: {validation.get('extension', 'unknown')}"
-            )
-
-        # Quality gate — reject images too small or unreadable for forensics
-        quality = assess_image_quality(file_bytes, file.filename)
-        if not quality["suitable"]:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Image unsuitable for analysis: {quality['reason']}"
-            )
-        _confidence_cap = quality.get("confidence_cap", 1.0)
 
         cached_result = forensics_cache.get(file_hash)
         if cached_result:
@@ -353,10 +404,6 @@ async def analyze_image(
             pass
 
         return report
-
-    except FileValidationError:
-        logger.warning("File validation failed", exc_info=True)
-        raise HTTPException(status_code=422, detail="File validation failed. Check file type and size.")
 
     except ValueError:
         logger.error("Value error during analysis", exc_info=True)
