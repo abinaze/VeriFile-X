@@ -749,24 +749,19 @@ async def analyze_segment(
     insertion (real background with AI-generated subject composited in).
     """
     try:
-        # C-3 fix: this endpoint previously relied solely on validate_file()'s
-        # general-purpose 50MB (MAX_FILE_SIZE_MB) ceiling -- five times higher
-        # than the 10MB (MAX_ANALYSIS_SIZE_MB) limit every sibling CPU-heavy
-        # analysis endpoint enforces. Both the pre-read Content-Length guard
-        # and an explicit post-read check now use the same, intended ceiling.
-        _reject_if_content_length_exceeds(request, MAX_ANALYSIS_SIZE_BYTES)
-        image_bytes = await file.read()
-        if len(image_bytes) > MAX_ANALYSIS_SIZE_BYTES:
-            raise HTTPException(
-                status_code=413,
-                detail=f"Payload too large. Max size: {MAX_ANALYSIS_SIZE_BYTES // (1024*1024)}MB"
-            )
-        from backend.utils.validators import validate_file, FileValidationError as _FVE
-        validate_file(image_bytes, file.filename or "upload")
+        # C-3 (full fix): this endpoint previously had NO content-type
+        # header check at all -- the only one of the 9 file-accepting
+        # endpoints in this router missing one (a real, previously
+        # undocumented inconsistency found while consolidating this).
+        # It already had validate_file() from the C-3 stopgap (with the
+        # correct 10MB ceiling, fixed there); now also gets a
+        # content-type check, EXIF correction, and the quality gate via
+        # the shared prepare_upload() pipeline, same as its siblings.
+        image_bytes, _ = await prepare_upload(
+            request, file, MAX_ANALYSIS_SIZE_BYTES, correct_exif=True
+        )
     except HTTPException:
         raise
-    except _FVE as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
     except Exception:
         logger.exception("Unexpected error validating /segment upload")
         raise HTTPException(status_code=422, detail="Invalid or unreadable image file")
