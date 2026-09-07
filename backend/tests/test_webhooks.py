@@ -252,7 +252,7 @@ class TestDeliveryTimeSSRFGuard:
             def __enter__(self): return self
             def __exit__(self, *a): return False
 
-        monkeypatch.setattr(wm, "urlopen", lambda req, timeout=10: _FakeResponse())
+        monkeypatch.setattr(wm._NO_REDIRECT_OPENER, "open", lambda req, timeout=10: _FakeResponse())
 
         success, status_code, error = wm._attempt_delivery(
             "https://example.com/hook", b"{}", "sig", "webhook-1", "delivery-1"
@@ -261,3 +261,73 @@ class TestDeliveryTimeSSRFGuard:
         assert success is True
         assert status_code == 200
         assert error is None
+
+
+class TestRedirectBasedSSRFBypass:
+    """Independent finding (not from the numbered audit): urlopen()'s
+    default opener follows HTTP redirects automatically.
+    _reject_unsafe_webhook_target() only validates the REGISTERED url's
+    hostname -- it never inspects a redirect's Location header, so a
+    webhook target that legitimately passes SSRF validation at
+    registration and at delivery-time re-check could still respond with
+    a 301/302/303/307/308 pointing at an internal address (e.g. the cloud
+    metadata IP, 169.254.169.254) and have it followed transparently.
+
+    Uses a real local HTTP server, not a mock, to reproduce this exactly
+    the way an attacker's webhook endpoint would behave -- confirmed to
+    actually reach the "internal" target under the pre-fix code before
+    writing the fix.
+    """
+
+    def test_delivery_does_not_follow_redirect_to_internal_target(self, monkeypatch):
+        import http.server
+        import backend.services.webhook_manager as wm
+
+        reached_internal = threading.Event()
+
+        class _RedirectingHandler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.send_response(302)
+                self.send_header("Location", f"http://127.0.0.1:{internal_port}/metadata")
+                self.end_headers()
+            def log_message(self, *a):
+                pass
+
+        class _InternalHandler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                reached_internal.set()
+                self.send_response(200)
+                self.end_headers()
+            def log_message(self, *a):
+                pass
+
+        redirect_srv = http.server.HTTPServer(("127.0.0.1", 0), _RedirectingHandler)
+        internal_srv = http.server.HTTPServer(("127.0.0.1", 0), _InternalHandler)
+        redirect_port = redirect_srv.server_address[1]
+        internal_port = internal_srv.server_address[1]
+
+        threading.Thread(target=redirect_srv.serve_forever, daemon=True).start()
+        threading.Thread(target=internal_srv.serve_forever, daemon=True).start()
+        try:
+            # The redirecting server is a real, non-private loopback-bound
+            # server for this test's purposes -- bypass the SSRF hostname
+            # guard itself (already covered by other tests) to isolate
+            # exactly the redirect-following behavior.
+            monkeypatch.setattr(wm, "_reject_unsafe_webhook_target", lambda url: None)
+
+            success, status_code, error = wm._attempt_delivery(
+                f"http://127.0.0.1:{redirect_port}/webhook",
+                b"{}", "sig", "webhook-1", "delivery-1",
+            )
+
+            assert reached_internal.is_set() is False, (
+                "delivery followed a redirect to the 'internal' target -- "
+                "the SSRF defense does not cover redirects issued at "
+                "delivery time"
+            )
+            assert success is False
+            assert status_code == 302
+            assert "redirect" in (error or "").lower()
+        finally:
+            redirect_srv.shutdown()
+            internal_srv.shutdown()
