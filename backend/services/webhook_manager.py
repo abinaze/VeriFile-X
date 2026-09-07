@@ -23,10 +23,41 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from urllib.request import urlopen, Request as _URLRequest
+from urllib.request import Request as _URLRequest
 from urllib.error import URLError, HTTPError
+import urllib.request as _urllib_request
 
 logger = setup_logger(__name__)
+
+# Independent finding (not from the numbered audit): urlopen()'s default
+# opener follows HTTP redirects (301/302/303/307/308) transparently and
+# automatically. _reject_unsafe_webhook_target() only validates the
+# REGISTERED url's hostname -- it never sees a redirect's Location header,
+# so a webhook target that passes SSRF validation (a normal, public-looking
+# endpoint) can respond at delivery time with a redirect to
+# http://169.254.169.254/... (cloud metadata) or any other internal
+# address, and the default opener will follow it straight there. Verified
+# empirically: a local test server responding 302 to an "internal" target
+# is reached by plain urlopen() every time. Confirmed no existing test
+# covers this (test_webhooks.py's F-9 tests cover DNS rebinding between
+# registration and delivery, not a redirect issued at delivery time).
+#
+# Fix: a custom opener whose HTTPRedirectHandler refuses to build a
+# redirect request at all, raising HTTPError instead -- this surfaces as
+# a normal delivery failure (caught by the existing except HTTPError
+# clause below), flowing through the same retry/suspend/logging machinery
+# as any other failed delivery, not a crash.
+class _NoRedirectHandler(_urllib_request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(
+            req.full_url, code,
+            f"Webhook delivery does not follow redirects (SSRF defense) -- "
+            f"target attempted to redirect to {newurl}",
+            headers, fp,
+        )
+
+
+_NO_REDIRECT_OPENER = _urllib_request.build_opener(_NoRedirectHandler)
 
 # ── Storage paths (always relative to this file, never CWD) ─────────────────
 _DATA_DIR = Path(__file__).parent.parent / "data"
@@ -372,7 +403,7 @@ def _attempt_delivery(
         method="POST",
     )
     try:
-        with urlopen(req, timeout=10) as resp:  # noqa: S310
+        with _NO_REDIRECT_OPENER.open(req, timeout=10) as resp:  # noqa: S310
             return True, resp.status, None
     except HTTPError as exc:
         return False, exc.code, str(exc)
